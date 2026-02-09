@@ -75,6 +75,8 @@ namespace APS.WebApp.Services
 
                             _logger.LogInformation($"--- 🏗️ Processando Projeto: {projName} ---");
 
+                            /*  
+
                             // ==============================================================================
                             // ETAPA 0/9: RESET E CARGA DA ABA TIMESHEET (SQL BRUTO)
                             // ==============================================================================
@@ -166,6 +168,8 @@ namespace APS.WebApp.Services
                             }
                             catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 7: {ex.Message}"); }
 
+                            */  
+                            
                             // ==============================================================================
                             // ETAPA 8/9: SINCRONIZAÇÃO DE CRONOGRAMA (AVANÇO FÍSICO)
                             // ==============================================================================
@@ -177,6 +181,8 @@ namespace APS.WebApp.Services
                             }
                             catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 8: {ex.Message}"); }
 
+                            
+                            /*
                             // ==============================================================================
                             // ETAPA 9/9: ESPELHAMENTO (CONTROLE -> PROJETO)
                             // ==============================================================================
@@ -189,6 +195,7 @@ namespace APS.WebApp.Services
                             catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 9: {ex.Message}"); }
 
                             _logger.LogInformation($"🏁 Ciclo concluído para {projName}.");
+                            */
                         }
                     }
 
