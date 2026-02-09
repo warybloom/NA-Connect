@@ -137,5 +137,33 @@ namespace NA_Connect.Services
                 }
             }
         }
+
+        public DataTable GetProjetosAtivos()
+        {
+            using (var conn = new Microsoft.Data.SqlClient.SqlConnection(_connectionString))
+            {
+                // Esta query busca apenas os projetos que você marcou como Is_Ativo = 1 no SSMS
+                string query = @"
+                    SELECT P.Project_ID_ACC, P.Nome_Projeto, H.Account_ID_ACC 
+                    FROM Projetos P
+                    JOIN Hubs_Conta H ON P.HubContaID = H.HubContaID
+                    WHERE P.Is_Ativo = 1";
+
+                using (var cmd = new Microsoft.Data.SqlClient.SqlCommand(query, conn))
+                {
+                    var dt = new DataTable();
+                    conn.Open();
+                    using (var da = new Microsoft.Data.SqlClient.SqlDataAdapter(cmd))
+                    {
+                        da.Fill(dt);
+                    }
+                    return dt;
+                }
+            }
+        }
+
+
+
+
     }
 }
