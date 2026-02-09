@@ -1,0 +1,49 @@
+@using APS.WebApp
+@using System.Text.Json
+
+<div class="alert alert-success mt-4">
+    <h3>Bem-vindo!</h3>
+</div>
+
+@if (!string.IsNullOrEmpty(ViewBag.UserName))
+{
+<p class="lead">Usuário Logado: <strong>@ViewBag.UserName</strong></p>
+}
+
+@{
+    var projects = ViewBag.Projects as List<JsonElement>;
+}
+
+@if (projects != null && projects.Any())
+{
+<div style="text-align: left; margin-top: 30px;">
+    <h3>Seus Projetos</h3>
+    <ul class="list-group">
+        @foreach (var project in projects)
+            {
+        <li class="list-group-item">
+            @{
+                        string projectName = "[Projeto sem nome]";
+                        if (project.TryGetProperty("name", out var nameProperty) && nameProperty.ValueKind == JsonValueKind.String)
+                        {
+                            projectName = nameProperty.GetString();
+                        }
+            }
+            @projectName
+        </li>
+            }
+    </ul>
+</div>
+}
+else if (!string.IsNullOrEmpty(ViewBag.ApiError))
+{
+<h4>Erro ao buscar a lista de projetos:</h4>
+<div class="alert alert-danger" style="text-align: left; white-space: pre-wrap;">
+    <p>A API retornou o seguinte erro:</p>
+    <code>@ViewBag.ApiError</code>
+    <hr>
+    <p class="mb-0"><strong>Possíveis Causas:</strong> Verifique se o seu `AccountId` no arquivo `appsettings.json` está correto e se sua aplicação na Autodesk tem permissão para a API "Account Admin".</p>
+</div>
+}
+
+<a class="btn btn-secondary mt-4" href="@Url.Action("Logout", "OAuth")">Sair</a>

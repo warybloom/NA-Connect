@@ -1,0 +1,17 @@
+# Pastas de compilação (Onde estão os arquivos pesados)
+[Bb]in/
+[Oo]bj/
+
+# Dependências de Front-end
+node_modules/
+
+# Configurações do Visual Studio e VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Arquivos temporários e Logs
+*.log
+*.cache
+*.tmp

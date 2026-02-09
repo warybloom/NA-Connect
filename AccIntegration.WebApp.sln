@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccIntegration.WebApp", "AccIntegration.WebApp.csproj", "{BB2B1889-71C2-E4FE-FA44-99332A163A42}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BB2B1889-71C2-E4FE-FA44-99332A163A42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB2B1889-71C2-E4FE-FA44-99332A163A42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB2B1889-71C2-E4FE-FA44-99332A163A42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB2B1889-71C2-E4FE-FA44-99332A163A42}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D955138D-6DE7-4D8E-A615-1BD4370EC6F4}
+	EndGlobalSection
+EndGlobal

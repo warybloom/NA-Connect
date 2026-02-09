@@ -1,0 +1,257 @@
+@using System.Text.Json
+@model JsonElement
+
+@{
+    ViewData["Title"] = "Arquivos de Projeto";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="modal fade" id="versionsModal" tabindex="-1" aria-labelledby="versionsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="versionsModalLabel">Histórico de Versões</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Carregando versões...</p>
+        <div id="versions-list-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Hubs", "Data", new { area = "DataManagement" })">Contas</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Projetos", "Data", new { area = "DataManagement", hubId = ViewBag.HubId })">Projetos</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Arquivos de Projeto</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Arquivos e Pastas</h2>
+        <a class="btn btn-outline-secondary" href="@Url.Action("Logout", "OAuth", new { area = "Authentication" })">Sair</a>
+    </div>
+    <hr />
+
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th scope="col" style="width: 50%;">Nome</th>
+                <th scope="col">Última Modificação</th>
+                <th scope="col" class="text-end" style="width: 35%;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.TryGetProperty("data", out var items) && items.EnumerateArray().Any())
+            {
+                var sortedItems = items.EnumerateArray()
+                                        .OrderBy(i => i.GetProperty("type").GetString() == "folders" ? 0 : 1)
+                                        .ThenBy(i => i.GetProperty("attributes").GetProperty("displayName").GetString());
+
+                foreach (var item in sortedItems)
+                {
+                    // ... (código para extrair variáveis como type, name, etc. continua o mesmo)
+                    var type = item.GetProperty("type").GetString();
+                    var attributes = item.GetProperty("attributes");
+                    var name = attributes.TryGetProperty("displayName", out var dName) ? dName.GetString() : "[Sem nome]";
+                    var lastModified = attributes.TryGetProperty("lastModifiedTime", out var lmTime) ? lmTime.GetDateTime().ToString("dd/MM/yyyy HH:mm") : "N/A";
+                    var id = item.GetProperty("id").GetString();
+                    var projectId = ViewBag.ProjectId;
+                    var hubId = ViewBag.HubId;
+                    var storageUrn = "";
+
+                    if (type == "items" && Model.TryGetProperty("included", out var included))
+                    {
+                        var version = included.EnumerateArray().FirstOrDefault(v => v.GetProperty("relationships").GetProperty("item").GetProperty("data").GetProperty("id").GetString() == id);
+                        if(version.TryGetProperty("relationships", out var vRels) && vRels.TryGetProperty("storage", out var storage) && storage.TryGetProperty("data", out var sData) && sData.TryGetProperty("id", out var sId))
+                        {
+                            storageUrn = sId.GetString() ?? "";
+                        }
+                    }
+
+                    <tr>
+                        <td>
+                             @if (type == "folders")
+                            {
+                                <a href="@Url.Action("ConteudoPasta", "Data", new { area = "DataManagement", hubId = hubId, projectId = projectId, folderId = id })" class="text-decoration-none text-dark fw-bold">
+                                    <i class="fas fa-folder fa-lg text-primary me-2"></i> @name
+                                </a>
+                            }
+                            else
+                            {
+                                <span><i class="fas fa-file-alt fa-lg text-secondary me-2"></i> @name</span>
+                                <div class="version-form mt-2">
+                                    <input type="file" class="form-control form-control-sm" style="display: none;" name="newVersionFile_@id" required>
+                                    <button type="button" class="btn btn-sm btn-link text-success p-0 btn-show-upload" data-target="newVersionFile_@id">
+                                        + Enviar Nova Versão
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary btn-upload-version"
+                                            style="display: none;"
+                                            data-project-id="@projectId"
+                                            data-item-id="@id">
+                                        Confirmar Envio
+                                    </button>
+                                </div>
+                            }
+                        </td>
+                        <td>@lastModified</td>
+                        <td class="text-end">
+                            @if (type == "items" && !string.IsNullOrEmpty(storageUrn))
+                            {
+                                <a href="@Url.Action("DownloadArquivo", "Data", new { area = "DataManagement", storageUrn = storageUrn })"
+                                   class="btn btn-sm btn-outline-success me-2"
+                                   target="_blank">
+                                    Download
+                                </a>
+                                
+                                <button type="button" class="btn btn-sm btn-outline-info btn-view-versions" 
+                                        data-bs-toggle="modal" data-bs-target="#versionsModal"
+                                        data-project-id="@projectId" data-item-id="@id" data-item-name="@name">
+                                    Ver Versões
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="3" class="text-center text-muted p-4">Esta pasta está vazia.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Lógica para mostrar/esconder o campo de upload (já existente)
+    document.querySelectorAll('.btn-show-upload').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const fileInput = document.querySelector(`input[name="${targetId}"]`);
+            const confirmButton = this.nextElementSibling;
+            fileInput.style.display = 'block';
+            confirmButton.style.display = 'inline-block';
+            this.style.display = 'none';
+        });
+    });
+
+    // Lógica para enviar o arquivo (já existente)
+    document.querySelectorAll('.btn-upload-version').forEach(button => {
+        button.addEventListener('click', async function(event) {
+            // ... (código do upload continua o mesmo)
+            const buttonElement = event.currentTarget;
+            const formContainer = buttonElement.closest('.version-form');
+            const fileInput = formContainer.querySelector('input[type="file"]');
+            const file = fileInput.files[0];
+
+            if (!file) { alert('Por favor, selecione um arquivo para enviar.'); return; }
+
+            const projectId = buttonElement.dataset.projectId;
+            const itemId = buttonElement.dataset.itemId;
+            const folderId = new URLSearchParams(window.location.search).get('folderId');
+
+            const formData = new FormData();
+            formData.append('newVersionFile', file);
+            formData.append('projectId', projectId);
+            formData.append('itemId', itemId);
+            formData.append('folderId', folderId);
+
+            const originalButtonText = buttonElement.textContent;
+            buttonElement.disabled = true;
+            buttonElement.textContent = 'Enviando...';
+            fileInput.disabled = true;
+
+            try {
+                const response = await fetch('/DataManagement/Data/UploadNewVersion', { method: 'POST', body: formData });
+                if (response.ok) {
+                    alert('Nova versão enviada com sucesso! A página será atualizada.');
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Erro ao enviar: ${error.message || 'Ocorreu um erro desconhecido.'}`);
+                    buttonElement.disabled = false;
+                    buttonElement.textContent = originalButtonText;
+                    fileInput.disabled = false;
+                }
+            } catch (error) {
+                console.error('Erro na requisição de rede:', error);
+                alert('Ocorreu um erro de rede. Verifique o console para mais detalhes.');
+                buttonElement.disabled = false;
+                buttonElement.textContent = originalButtonText;
+                fileInput.disabled = false;
+            }
+        });
+    });
+
+
+    // ✅ NOVO: Lógica para buscar e exibir as versões
+    const versionsModal = document.getElementById('versionsModal');
+    const versionsListContainer = document.getElementById('versions-list-container');
+
+    versionsModal.addEventListener('show.bs.modal', async function (event) {
+        const button = event.relatedTarget; // O botão que acionou o modal
+        const projectId = button.dataset.projectId;
+        const itemId = button.dataset.itemId;
+        const itemName = button.dataset.itemName;
+
+        // Atualiza o título do modal e mostra mensagem de "carregando"
+        const modalTitle = versionsModal.querySelector('.modal-title');
+        modalTitle.textContent = `Histórico de Versões: ${itemName}`;
+        versionsListContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+        try {
+            const response = await fetch(`/DataManagement/Data/GetItemVersions?projectId=${projectId}&itemId=${itemId}`);
+            
+            if (!response.ok) {
+                throw new Error('Falha ao carregar o histórico de versões.');
+            }
+
+            const result = await response.json();
+            const versions = result.data;
+
+            // Inverte a ordem para mostrar a mais nova primeiro
+            versions.reverse(); 
+
+            let versionsHtml = '<ul class="list-group">';
+            versions.forEach(version => {
+                const versionName = version.attributes.displayName;
+                const versionNumber = version.attributes.versionNumber;
+                const lastModified = new Date(version.attributes.lastModifiedTime).toLocaleString('pt-BR');
+                const author = version.attributes.lastModifiedUserName;
+                
+                // Pega a URN de storage para o botão de download
+                const storageUrn = version.relationships?.storage?.data?.id || '';
+
+                versionsHtml += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>v${versionNumber}</strong>: ${versionName}
+                            <small class="d-block text-muted">por ${author} em ${lastModified}</small>
+                        </div>
+                        <a href="@Url.Action("DownloadArquivo", "Data", new { area = "DataManagement" })?storageUrn=${storageUrn}" 
+                           class="btn btn-sm btn-outline-secondary ${!storageUrn ? 'disabled' : ''}" 
+                           target="_blank">
+                           Baixar
+                        </a>
+                    </li>`;
+            });
+            versionsHtml += '</ul>';
+
+            versionsListContainer.innerHTML = versionsHtml;
+
+        } catch (error) {
+            versionsListContainer.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            console.error(error);
+        }
+    });
+});
+</script>
+}
