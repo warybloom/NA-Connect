@@ -13,7 +13,10 @@ using System.Threading.Tasks;
 using net.sf.mpxj;
 using net.sf.mpxj.reader;
 using MpxjTask = net.sf.mpxj.Task;
+
+// 🎯 IMPORTANTE: Usando o namespace correto dos modelos para evitar ambiguidade
 using NA_Connect.Services;
+using NA_Connect.Models; 
 
 namespace APS.WebApp.Services
 {
@@ -23,17 +26,20 @@ namespace APS.WebApp.Services
         private readonly DatabaseService _dbService;
         private readonly ILogger<AccScheduleSyncService> _logger;
         private readonly IConfiguration _config;
+        private readonly ProjectAutoDiscoveryService _discoveryService;
 
         public AccScheduleSyncService(
             AutodeskApiService autodeskApi, 
             DatabaseService dbService, 
             ILogger<AccScheduleSyncService> logger, 
-            IConfiguration config)
+            IConfiguration config,
+            ProjectAutoDiscoveryService discoveryService)
         {
             _autodeskApi = autodeskApi;
             _dbService = dbService;
             _logger = logger;
             _config = config;
+            _discoveryService = discoveryService;
         }
 
         private readonly List<(string[] LdpNames, string SchKey)> _columnMappings = new()
@@ -45,82 +51,77 @@ namespace APS.WebApp.Services
             (new[] { "%PREDICTED PHYSICAL", "%FÍSICO PREVISTO", "% PREDICTED PHYSICAL" }, "TEXT4")
         };
 
-        public async Task<string> SyncScheduleToLdpAsync(string hubId, string projectId, string accessToken)
+        /// <summary>
+        /// Sincroniza o cronograma do ACC para a planilha LDP e persiste no SQL para o Power BI.
+        /// </summary>
+       public async Task<string> SyncScheduleToLdpAsync(string hubId, string projectId, string accessToken, string ldpFileId)
 {
     _logger.LogInformation($"📅 [CRONOGRAMA] INICIANDO SINCRONIZAÇÃO COMPLETA PARA {projectId}...");
 
-    // 1. Preparação de caminhos e chaves
     string configKey = projectId.StartsWith("b.") ? projectId : "b." + projectId;
-    string cachedLdpFileId = _dbService.GetLdpFileIdFromCache(projectId); 
-    string ldpFileNameSearch = _config[$"ProjectSettings:{configKey}:LdpFileName"] ?? "LDP";
-
     string mppPath = Path.Combine(Path.GetTempPath(), $"SCH_{Guid.NewGuid()}.mpp");
     string ldpPath = Path.Combine(Path.GetTempPath(), $"LDP_MASTER_{Guid.NewGuid()}.xlsx");
 
     try
     {
-        // 2. Localização de Pastas e Downloads (Mantendo lógica bilíngue)
+        // -----------------------------------------------------------------------
+        // 1. VACINA: RECUPERA DETALHES DA LDP (Versão e PASTA)
+        // -----------------------------------------------------------------------
+        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
+        if (itemDetails == null) throw new Exception("Detalhes da LDP não encontrados.");
+
+        string ldpVersionUrn = itemDetails.TipVersionUrn;
+        string ldpParentFolderId = itemDetails.ParentFolderId; // 🎯 OBRIGATÓRIO PARA O UPLOAD
+        string ldpRealName = itemDetails.DisplayName;
+
+        // -----------------------------------------------------------------------
+        // 2. BUSCA O CRONOGRAMA (.mpp) - Esse ainda precisa procurar a pasta
+        // -----------------------------------------------------------------------
         var folderSchId = await FindFolderByPaths(hubId, projectId, new[] {
             new[] { "01 - PLANEJAMENTO E CONTROLE", "01.03 - CRONOGRAMA FÍSICO, CURVAS DE AVANÇO" },
             new[] { "01 - PLANNING & CONTROL", "01.03 - PROJECT SCHEDULE & PROGRESS CURVES" }
         }, accessToken);
 
-        var folderLdpId = await FindFolderByPaths(hubId, projectId, new[] {
-            new[] { "09 - DESENVOLVIMENTO", "09.10 - GESTÃO" },
-            new[] { "09 - MODEL DEVELOPING", "09.10 - MANAGEMENT" }
-        }, accessToken);
-
         if (string.IsNullOrEmpty(folderSchId)) return "Falha: Pasta de Cronograma não encontrada.";
 
-        // Gerenciamento de Cache LDP
-        string finalLdpFileId = cachedLdpFileId;
-        if (string.IsNullOrEmpty(finalLdpFileId))
-        {
-            var ldpRes = await _autodeskApi.FindItemIdByNamePartAsync(projectId, folderLdpId, ldpFileNameSearch, accessToken);
-            if (string.IsNullOrEmpty(ldpRes.FileId)) ldpRes = await _autodeskApi.FindItemIdByNamePartAsync(projectId, folderLdpId, ".xlsx", accessToken);
-            
-            if (!string.IsNullOrEmpty(ldpRes.FileId)) {
-                finalLdpFileId = ldpRes.FileId;
-                _dbService.AtualizarIdLdpProjeto(projectId, finalLdpFileId);
-            }
-        }
-
         var schRes = await _autodeskApi.FindItemIdByNamePartAsync(projectId, folderSchId, ".mpp", accessToken);
-        if (string.IsNullOrEmpty(schRes.FileId) || string.IsNullOrEmpty(finalLdpFileId)) return "Falha: Arquivos não localizados.";
+        if (string.IsNullOrEmpty(schRes.FileId)) return "Falha: Arquivo .mpp não localizado.";
 
-        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, schRes.FileId, accessToken))
+        // -----------------------------------------------------------------------
+        // 3. DOWNLOADS (MPP + LDP)
+        // -----------------------------------------------------------------------
+        
+        // MPP (Pega detalhes para garantir a versão correta também)
+        var mppDetails = await _autodeskApi.GetItemDetailsAsync(projectId, schRes.FileId, accessToken);
+        string mppVersionUrn = mppDetails?.TipVersionUrn ?? schRes.FileId; // Fallback se falhar
+
+        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, mppVersionUrn, accessToken))
         using (var fs = new FileStream(mppPath, FileMode.Create)) await dl.CopyToAsync(fs);
 
-        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, finalLdpFileId, accessToken))
+        // LDP (Usa a versão correta descoberta no passo 1)
+        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, ldpVersionUrn, accessToken))
         using (var fs = new FileStream(ldpPath, FileMode.Create)) await dl.CopyToAsync(fs);
 
-        // 3. Extração de Dados (MPP) - Sem filtros para o Gantt
+        // -----------------------------------------------------------------------
+        // 4. PROCESSAMENTO (MPXJ e EPPlus) - Lógica Mantida
+        // -----------------------------------------------------------------------
         var projectFile = LoadMppFile(mppPath);
         var scheduleData = ExtractMppData(projectFile); 
 
         int totalUpdates = 0;
         string projetoCodigo = ""; 
 
-        // --- 🏗️ ETAPA 9: ATUALIZAÇÃO EXCEL E CAPTURA DO CR-OS (Y8) ---
         using (var package = new ExcelPackage(new FileInfo(ldpPath)))
         {
             var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) ?? package.Workbook.Worksheets[0];
             
-            // 🎯 AJUSTE CRÍTICO: Pegando o valor na Linha 8 (Primeira linha de dados)
-            projetoCodigo = ws.Cells[8, 25].Text?.Trim(); // Coluna Y = 25
-
-            if (string.IsNullOrEmpty(projetoCodigo)) {
-                projetoCodigo = configKey.Replace("b.", ""); 
-                _logger.LogWarning($">>> [AVISO] Célula Y8 vazia. Usando fallback: {projetoCodigo}");
-            } else {
-                _logger.LogInformation($">>> [SUCESSO] CR-OS Capturado: {projetoCodigo}");
-            }
+            projetoCodigo = ws.Cells[8, 25].Text?.Trim();
+            if (string.IsNullOrEmpty(projetoCodigo)) projetoCodigo = configKey.Replace("b.", ""); 
 
             var ldpCols = MapLdpHeaders(ws);
             int matchColIndex = ldpCols.FirstOrDefault(x => x.Value.Contains("N&A DOCUMENT NUMBER", StringComparison.OrdinalIgnoreCase)).Key;
             if (matchColIndex == 0) matchColIndex = 4;
 
-            // Loop para atualizar os percentuais no Excel
             for (int row = 8; row <= ws.Dimension.End.Row; row++)
             {
                 string docCodeExcel = ws.Cells[row, matchColIndex].Text?.Trim();
@@ -149,21 +150,24 @@ namespace APS.WebApp.Services
             package.Save();
         }
 
-        // --- 🏗️ ETAPA 8: PERSISTÊNCIA SQL COMPLETA (Para o Gráfico de Gantt) ---
-        // Aqui removemos o filtro N&A para trazer a árvore hierárquica completa
+        // Salva no SQL (opcional, mantido)
         PersistToSql(projectId, projectFile, projetoCodigo);
 
+        // -----------------------------------------------------------------------
+        // 5. UPLOAD CORRIGIDO (LDP)
+        // -----------------------------------------------------------------------
         if (totalUpdates > 0)
         {
             using (var ul = new FileStream(ldpPath, FileMode.Open))
-                await _autodeskApi.CreateNewVersionAsync(projectId, finalLdpFileId, folderLdpId, "LDP_Atualizada.xlsx", ul, accessToken);
+                // 🎯 Passa ldpParentFolderId para evitar erro BAD_INPUT
+                await _autodeskApi.CreateNewVersionAsync(projectId, ldpFileId, ldpParentFolderId, ldpRealName, ul, accessToken);
         }
 
-        return "✅ Sucesso! Cronograma Completo e CR-OS corrigidos no SQL.";
+        return "✅ Sucesso! Cronograma Completo e CR-OS corrigidos.";
     }
     catch (Exception ex)
     {
-        _logger.LogError($"❌ Erro Crítico: {ex.Message}");
+        _logger.LogError($"❌ Erro Crítico Cronograma: {ex.Message}");
         return $"Falha: {ex.Message}";
     }
     finally
@@ -173,85 +177,102 @@ namespace APS.WebApp.Services
     }
 }
 
-private void PersistToSql(string projectIdAcc, ProjectFile project, string projetoCodigo)
-{
-    var tasks = project.getTasks();
-    var iterTasks = tasks.iterator();
-    while (iterTasks.hasNext())
-    {
-        MpxjTask task = (MpxjTask)iterTasks.next();
-        if (task == null || task.getID() == null) continue;
+        /// <summary>
+        /// Gerencia a memória do projeto (Padrão de Nome e Idioma) via Banco ou Descoberta.
+        /// </summary>
+        public async Task<NA_Connect.Models.ProjectDiscoveryResult> GetOrDiscoverProjectContext(string projectId, string ldpPath, string accessToken)
+        {
+            // 🎯 CORREÇÃO: Usando o tipo explícito do namespace Models para evitar conflitos
+            var cachedContext = _dbService.ObterContextoProjeto(projectId);
 
-        string uid = task.getGUID()?.ToString() ?? task.getUniqueID()?.ToString() ?? "";
-        string docNumber = task.get(TaskField.TEXT1)?.ToString() ?? ""; 
-        string taskName = task.getName() ?? "Sem Nome";
-        string edtWbs = task.getWBS() ?? ""; 
+            if (cachedContext != null && !string.IsNullOrEmpty(cachedContext.NamingStandard))
+            {
+                _logger.LogInformation($">>> [MEMÓRIA] Contexto recuperado do Banco: {cachedContext.NamingStandard} | {cachedContext.Language}");
+                return cachedContext;
+            }
 
-        // % FÍSICO REAL
-        decimal physicalDone = 0;
-        var rawPercent = task.getPercentageComplete();
-        if (rawPercent != null)
-            physicalDone = (decimal)((java.lang.Number)rawPercent).doubleValue() / 10m;
+            _logger.LogWarning("🔍 Contexto não encontrado no banco. Iniciando Auto-Detecção...");
+            
+            // Certifique-se que o método ExecuteDiscoveryAsync também retorna o tipo NA_Connect.Models.ProjectDiscoveryResult
+            var discovery = await _discoveryService.ExecuteDiscoveryAsync(projectId, ldpPath, accessToken);
 
-        // 🎯 % PREVISTO (Captura do campo Número1 do Project)
-        decimal predictedDone = 0;
-        var rawPredicted = task.get(TaskField.NUMBER1); 
-        if (rawPredicted != null)
-            predictedDone = (decimal)((java.lang.Number)rawPredicted).doubleValue();
+            _dbService.SalvarContextoProjeto(projectId, discovery.NamingStandard, discovery.Language);
+            
+            _logger.LogInformation($">>> [SUCESSO] Contexto salvo no Banco para uso futuro.");
+            
+            return discovery;
+        }
 
-        // 🎯 WBS % (Captura do campo Texto3 do Project)
-        string wbsPercent = task.get(TaskField.TEXT3)?.ToString() ?? ""; 
+        private void PersistToSql(string projectIdAcc, ProjectFile project, string projetoCodigo)
+        {
+            var tasks = project.getTasks();
+            var iterTasks = tasks.iterator();
+            while (iterTasks.hasNext())
+            {
+                MpxjTask task = (MpxjTask)iterTasks.next();
+                if (task == null || task.getID() == null) continue;
 
-        // Datas para o Gráfico de Gantt
-        DateTime? start = task.getStart() != null ? DateTime.Parse(task.getStart().toString()) : null;
-        DateTime? baseline = task.getBaselineFinish() != null ? DateTime.Parse(task.getBaselineFinish().toString()) : null;
-        DateTime? finish = task.getFinish() != null ? DateTime.Parse(task.getFinish().toString()) : null;
+                string uid = task.getGUID()?.ToString() ?? task.getUniqueID()?.ToString() ?? "";
+                string docNumber = task.get(TaskField.TEXT1)?.ToString() ?? ""; 
+                string taskName = task.getName() ?? "Sem Nome";
+                string edtWbs = task.getWBS() ?? ""; 
 
-        _dbService.SalvarTarefaCronograma(
-            projectIdAcc, uid, docNumber, taskName, 
-            physicalDone, predictedDone, wbsPercent, 
-            start, baseline, finish, edtWbs, projetoCodigo
-        );
-    }
-}
+                decimal physicalDone = 0;
+                var rawPercent = task.getPercentageComplete();
+                if (rawPercent != null)
+                    physicalDone = (decimal)((java.lang.Number)rawPercent).doubleValue() / 10m;
 
+                decimal predictedDone = 0;
+                var rawPredicted = task.get(TaskField.NUMBER1); 
+                if (rawPredicted != null)
+                    predictedDone = (decimal)((java.lang.Number)rawPredicted).doubleValue();
 
+                string wbsPercent = task.get(TaskField.TEXT3)?.ToString() ?? ""; 
 
-private Dictionary<string, Dictionary<string, string>> ExtractMppData(ProjectFile project)
-{
-    var result = new Dictionary<string, Dictionary<string, string>>();
-    var tasks = project.getTasks();
-    var iterTasks = tasks.iterator();
+                DateTime? start = task.getStart() != null ? DateTime.Parse(task.getStart().toString()) : null;
+                DateTime? baseline = task.getBaselineFinish() != null ? DateTime.Parse(task.getBaselineFinish().toString()) : null;
+                DateTime? finish = task.getFinish() != null ? DateTime.Parse(task.getFinish().toString()) : null;
 
-    while (iterTasks.hasNext())
-    {
-        MpxjTask task = (MpxjTask)iterTasks.next();
-        
-        // No dicionário do Excel, ainda precisamos de uma chave. 
-        // Se não tem código N&A, usamos o nome da tarefa para não dar erro no TryGetValue.
-        string? code = task.get(TaskField.TEXT1)?.ToString();
-        if (string.IsNullOrWhiteSpace(code)) code = task.getName(); 
-        if (string.IsNullOrWhiteSpace(code)) continue;
+                _dbService.SalvarTarefaCronograma(
+                    projectIdAcc, uid, docNumber, taskName, 
+                    physicalDone, predictedDone, wbsPercent, 
+                    start, baseline, finish, edtWbs, projetoCodigo
+                );
+            }
+        }
 
-        string key = NormalizeDoc(code);
-        var vals = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        
-        double rawPct = 0;
-        var mpxjPct = task.getPercentageComplete();
-        if (mpxjPct != null) rawPct = ((java.lang.Number)mpxjPct).doubleValue() / 10.0;
-        
-        vals["PERCENT_COMPLETE"] = rawPct.ToString("0.##", CultureInfo.InvariantCulture) + "%";
-        vals["TEXT4"] = (task.get(TaskField.TEXT4)?.ToString() ?? "") + (task.get(TaskField.TEXT4)?.ToString().Contains("%") == true ? "" : "%");
-        vals["WBS_PERCENT"] = task.get(TaskField.TEXT3)?.ToString() ?? "";
-        vals["BASELINE_FINISH"] = FormatProjectDate(task.getBaselineFinish());
-        vals["CURRENT_FINISH"] = FormatProjectDate(task.getFinish());
+        private Dictionary<string, Dictionary<string, string>> ExtractMppData(ProjectFile project)
+        {
+            var result = new Dictionary<string, Dictionary<string, string>>();
+            var tasks = project.getTasks();
+            var iterTasks = tasks.iterator();
 
-        if (!result.ContainsKey(key)) result[key] = vals;
-    }
-    return result;
-}
+            while (iterTasks.hasNext())
+            {
+                MpxjTask task = (MpxjTask)iterTasks.next();
+                
+                string? code = task.get(TaskField.TEXT1)?.ToString();
+                if (string.IsNullOrWhiteSpace(code)) code = task.getName(); 
+                if (string.IsNullOrWhiteSpace(code)) continue;
 
-        
+                string key = NormalizeDoc(code);
+                var vals = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                
+                double rawPct = 0;
+                var mpxjPct = task.getPercentageComplete();
+                if (mpxjPct != null) rawPct = ((java.lang.Number)mpxjPct).doubleValue() / 10.0;
+                
+                vals["PERCENT_COMPLETE"] = rawPct.ToString("0.##", CultureInfo.InvariantCulture) + "%";
+                vals["TEXT4"] = (task.get(TaskField.TEXT4)?.ToString() ?? "") + (task.get(TaskField.TEXT4)?.ToString().Contains("%") == true ? "" : "%");
+                vals["WBS_PERCENT"] = task.get(TaskField.TEXT3)?.ToString() ?? "";
+                vals["BASELINE_FINISH"] = FormatProjectDate(task.getBaselineFinish());
+                vals["CURRENT_FINISH"] = FormatProjectDate(task.getFinish());
+
+                if (!result.ContainsKey(key)) result[key] = vals;
+            }
+            return result;
+        }
+
         private ProjectFile LoadMppFile(string path)
         {
             try { java.lang.System.setProperty("log4j2.loggerContextFactory", "org.apache.logging.log4j.simple.SimpleLoggerContextFactory"); } catch { }
@@ -287,16 +308,26 @@ private Dictionary<string, Dictionary<string, string>> ExtractMppData(ProjectFil
             return match.Key;
         }
 
-        private async Task<string> FindFolderByPaths(string hub, string proj, string[][] paths, string token)
+        // Modulo: Services/AccScheduleSyncService.cs
+
+// 🎯 ALTERAÇÃO: Mude de 'private' para 'public'
+public async Task<string> FindFolderByPaths(string hub, string proj, string[][] paths, string token)
+{
+    foreach (var pathArray in paths) 
+    {
+        try 
         {
-            foreach (var pathArray in paths) {
-                try {
-                    var id = await _autodeskApi.FindFolderIdByPathAsync(hub, proj, pathArray, token);
-                    if (!string.IsNullOrEmpty(id)) return id;
-                } catch { }
-            }
-            return null;
+            // Este método chama a API para navegar nas subpastas
+            var id = await _autodeskApi.FindFolderIdByPathAsync(hub, proj, pathArray, token);
+            if (!string.IsNullOrEmpty(id)) return id;
+        } 
+        catch 
+        { 
+            // Se não encontrar em um caminho, tenta o próximo (PT ou EN)
         }
+    }
+    return null;
+}
 
         private string NormalizeDoc(string s) => Regex.Replace((s ?? "").Trim().ToUpper(), @"[^A-Z0-9]", "");
     }

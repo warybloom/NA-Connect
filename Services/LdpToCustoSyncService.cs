@@ -37,115 +37,113 @@ namespace APS.WebApp.Services
         /// <summary>
         /// Orquestra o processo de sincronização entre as abas LDP e CUSTO
         /// </summary>
-        public async Task<string> ExecuteFullSyncProcessAsync(string hubId, string projectId, string accessToken)
+        public async Task<string> ExecuteFullSyncProcessAsync(string hubId, string projectId, string accessToken, string ldpFileId)
+{
+    _logger.LogInformation("📊 [ETAPA 6/11] Sincronizando LDP -> CUSTO (Preservando Estilos e Fórmulas O-AH)...");
+    string tempPath = Path.Combine(Path.GetTempPath(), $"SYNC_CUSTO_{Guid.NewGuid()}.xlsx");
+
+    try
+    {
+        // -----------------------------------------------------------------------
+        // 1. VACINA: RECUPERA DETALHES (Versão para Download e PASTA para Upload)
+        // -----------------------------------------------------------------------
+        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
+        if (itemDetails == null) throw new Exception("Detalhes do arquivo não encontrados (Item/Folder).");
+
+        string versionUrn = itemDetails.TipVersionUrn;
+        string parentFolderId = itemDetails.ParentFolderId; // 🎯 OBRIGATÓRIO PARA O UPLOAD
+        string realFileName = itemDetails.DisplayName;
+
+        // 2. DOWNLOAD DIRETO (Usando a versão correta)
+        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, versionUrn, accessToken))
+        using (var fs = new FileStream(tempPath, FileMode.Create)) await dl.CopyToAsync(fs);
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        using (var package = new ExcelPackage(new FileInfo(tempPath)))
         {
-            _logger.LogInformation("📊 [ETAPA 3/7] Sincronizando LDP -> CUSTO (Preservando Estilos e Fórmulas O-AH)...");
-            string tempPath = Path.Combine(Path.GetTempPath(), $"SYNC_CUSTO_{Guid.NewGuid()}.xlsx");
+            var wsLdp = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("LDP", StringComparison.OrdinalIgnoreCase));
+            var wsCusto = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("CUSTO", StringComparison.OrdinalIgnoreCase));
 
-            try
+            if (wsLdp == null || wsCusto == null) throw new Exception("Abas 'LDP' ou 'CUSTO' não encontradas no arquivo!");
+
+            // 3. Mapeamento Dinâmico dos Cabeçalhos
+            var mapLdp = MapearColunas(wsLdp);
+            var mapCusto = MapearColunas(wsCusto);
+
+            string[] colunasParaCopiar = {
+                "ITEM", "DISCIPLINE", "N&A DOCUMENT NUMBER", "CLIENT DOCUMENT NUMBER",
+                "DOCUMENT TITLE", "FORMAT", "DOCUMENT STATUS", "CR", "CR-OS",
+                "AREA CODE", "DISCIPLINE ACTIVITY", "DOC TYPE CODE", "SEQ"
+            };
+
+            // 4. Limpeza Controlada da aba CUSTO
+            int LINHA_CABECALHO = 7;
+            int LINHA_INICIO_DADOS = 8;
+            int COLUNA_LIMITE_TECNICO = 14; // Coluna N
+
+            int ultimaLinhaExistenteCusto = wsCusto.Dimension?.End.Row ?? LINHA_CABECALHO;
+            if (ultimaLinhaExistenteCusto >= LINHA_INICIO_DADOS)
             {
-                // 1. Localizar o arquivo LDP de controle no ACC
-                string ldpSearchName = GetLdpFileNameFromConfig(projectId);
-                var folderId = await FindFolderIdByAlternativePathsAsync(hubId, projectId, accessToken);
-                var (itemId, actualFileName) = await _autodeskApi.FindItemIdByNamePartAsync(projectId, folderId, ldpSearchName, accessToken);
+                // Limpa conteúdo mantendo formatação
+                wsCusto.Cells[LINHA_INICIO_DADOS, 1, ultimaLinhaExistenteCusto, COLUNA_LIMITE_TECNICO].Value = null;
+            }
 
-                if (string.IsNullOrEmpty(itemId)) throw new Exception("Arquivo LDP não localizado no ACC.");
+            // 5. Loop de Cópia de Dados
+            int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS;
+            int linhaDestino = LINHA_INICIO_DADOS;
+            int colKeyLdp = mapLdp.GetValueOrDefault("N&A DOCUMENT NUMBER", 0);
 
-                // 2. Download do arquivo para processamento local
-                using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, itemId, accessToken))
-                using (var fs = new FileStream(tempPath, FileMode.Create)) await dl.CopyToAsync(fs);
+            for (int r = LINHA_INICIO_DADOS; r <= ultimaLinhaLdp; r++)
+            {
+                string docCode = wsLdp.Cells[r, colKeyLdp].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(docCode)) continue;
 
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                using (var package = new ExcelPackage(new FileInfo(tempPath)))
+                // Cópia Direta de Colunas Específicas
+                wsCusto.Cells[linhaDestino, 11].Value = wsLdp.Cells[r, 26].Value; // Area
+                wsCusto.Cells[linhaDestino, 14].Value = wsLdp.Cells[r, 29].Value; // Seq
+
+                // Sincronização Dinâmica
+                foreach (var nomeCol in colunasParaCopiar)
                 {
-                    var wsLdp = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("LDP", StringComparison.OrdinalIgnoreCase));
-                    var wsCusto = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("CUSTO", StringComparison.OrdinalIgnoreCase));
+                    if (nomeCol.Contains("AREA") || nomeCol.Contains("SEQ")) continue;
 
-                    if (wsLdp == null || wsCusto == null) throw new Exception("Abas 'LDP' ou 'CUSTO' não encontradas no arquivo!");
-
-                    // 3. Mapeamento Dinâmico dos Cabeçalhos (Acha a posição de cada coluna na Linha 7)
-                    var mapLdp = MapearColunas(wsLdp);
-                    var mapCusto = MapearColunas(wsCusto);
-
-                    // Lista das colunas técnicas que devem ser espelhadas
-                    string[] colunasParaCopiar = {
-                        "ITEM", "DISCIPLINE", "N&A DOCUMENT NUMBER", "CLIENT DOCUMENT NUMBER",
-                        "DOCUMENT TITLE", "FORMAT", "DOCUMENT STATUS", "CR", "CR-OS",
-                        "AREA CODE", "DISCIPLINE ACTIVITY", "DOC TYPE CODE", "SEQ"
-                    };
-
-                    // 4. Limpeza Controlada da aba CUSTO (Preservando Estilos)
-                    int ultimaLinhaExistenteCusto = wsCusto.Dimension?.End.Row ?? LINHA_CABECALHO;
-                    if (ultimaLinhaExistenteCusto >= LINHA_INICIO_DADOS)
+                    if (mapLdp.ContainsKey(nomeCol) && mapCusto.ContainsKey(nomeCol))
                     {
-                        // CORREÇÃO: Definir .Value = null apaga o CONTEÚDO mas mantém BORDAS e CORES
-                        // Limpamos apenas o intervalo A:N (Colunas 1 a 14)
-                        wsCusto.Cells[LINHA_INICIO_DADOS, 1, ultimaLinhaExistenteCusto, COLUNA_LIMITE_TECNICO].Value = null;
-                    }
+                        int cOrigem = mapLdp[nomeCol];
+                        int cDestino = mapCusto[nomeCol];
 
-                    // 5. Loop de Cópia de Dados
-                    int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS;
-                    int linhaDestino = LINHA_INICIO_DADOS;
-
-                    // Chave primária para validar se a linha da LDP deve ser copiada
-                    int colKeyLdp = mapLdp.GetValueOrDefault("N&A DOCUMENT NUMBER", 0);
-
-                    // --- LOOP DE CÓPIA AJUSTADO COM HARD MAPPING ---
-                    // 5. Loop de Cópia de Dados (AJUSTADO)
-                    // 5. Loop de Cópia de Dados (Ajustado para Copiar Direto entre Abas)
-                    for (int r = LINHA_INICIO_DADOS; r <= ultimaLinhaLdp; r++)
-                    {
-                        string docCode = wsLdp.Cells[r, colKeyLdp].Text?.Trim();
-                        if (string.IsNullOrWhiteSpace(docCode)) continue;
-
-                        // --- 🎯 AJUSTE AREA E SEQUENTIAL (COPIA DIRETA ENTRE ABAS) ---
-                        // Copia o valor da Coluna Z (26) da LDP para a Coluna K (11) da Custo
-                        wsCusto.Cells[linhaDestino, 11].Value = wsLdp.Cells[r, 26].Value;
-
-                        // Copia o valor da Coluna AC (29) da LDP para a Coluna N (14) da Custo
-                        wsCusto.Cells[linhaDestino, 14].Value = wsLdp.Cells[r, 29].Value;
-
-                        // --- SINCRONIZAÇÃO DINÂMICA PARA O RESTANTE (ITEM, TÍTULO, ETC) ---
-                        foreach (var nomeCol in colunasParaCopiar)
+                        if (cDestino <= COLUNA_LIMITE_TECNICO)
                         {
-                            // Ignoramos os dois que já fizemos manualmente acima para não dar erro
-                            if (nomeCol.Contains("AREA") || nomeCol.Contains("SEQ")) continue;
-
-                            if (mapLdp.ContainsKey(nomeCol) && mapCusto.ContainsKey(nomeCol))
-                            {
-                                int cOrigem = mapLdp[nomeCol];
-                                int cDestino = mapCusto[nomeCol];
-
-                                if (cDestino <= COLUNA_LIMITE_TECNICO)
-                                {
-                                    wsCusto.Cells[linhaDestino, cDestino].Value = wsLdp.Cells[r, cOrigem].Value;
-                                }
-                            }
+                            wsCusto.Cells[linhaDestino, cDestino].Value = wsLdp.Cells[r, cOrigem].Value;
                         }
-                        linhaDestino++;
                     }
-
-                    _logger.LogInformation($"✅ Sincronização LDP->CUSTO: {linhaDestino - LINHA_INICIO_DADOS} documentos copiados. Estilos e Fórmulas (O-AH) preservados.");
-                    package.Save();
                 }
+                linhaDestino++;
+            }
 
-                // 6. Upload da nova versão para o ACC
-                using (var ul = new FileStream(tempPath, FileMode.Open))
-                    await _autodeskApi.CreateNewVersionAsync(projectId, itemId, folderId, actualFileName, ul, accessToken);
-
-                return "Sincronização concluída. Formatação e Fórmulas preservadas.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"❌ Erro na Etapa 3: {ex.Message}");
-                throw;
-            }
-            finally 
-            { 
-                if (File.Exists(tempPath)) File.Delete(tempPath); 
-            }
+            _logger.LogInformation($"✅ Sincronização LDP->CUSTO: {linhaDestino - LINHA_INICIO_DADOS} documentos copiados.");
+            package.Save();
         }
 
+        // 6. UPLOAD CORRIGIDO
+        using (var ul = new FileStream(tempPath, FileMode.Open))
+        {
+            // 🎯 AQUI: Passamos parentFolderId e o nome real
+            await _autodeskApi.CreateNewVersionAsync(projectId, ldpFileId, parentFolderId, realFileName, ul, accessToken);
+        }
+
+        return "Sincronização concluída. Formatação e Fórmulas preservadas.";
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError($"❌ Erro na Etapa 6 (Custo): {ex.Message}");
+        throw;
+    }
+    finally 
+    { 
+        if (File.Exists(tempPath)) File.Delete(tempPath); 
+    }
+}
         // --- MÉTODOS AUXILIARES ---
 
         private Dictionary<string, int> MapearColunas(ExcelWorksheet ws)

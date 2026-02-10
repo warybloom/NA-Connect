@@ -7,8 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Linq;
 using APS.WebApp.Services;
-using NA_Connect.Services; // Namespace do seu DatabaseService
+using NA_Connect.Services;
+using NA_Connect.Models;
 
 namespace APS.WebApp.Services
 {
@@ -16,7 +19,6 @@ namespace APS.WebApp.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<GrdAutomationWorker> _logger;
-        //private readonly TimeSpan _period = TimeSpan.FromMinutes(100);
         private readonly TimeSpan _period = TimeSpan.FromSeconds(5);
 
         public GrdAutomationWorker(IServiceProvider serviceProvider, ILogger<GrdAutomationWorker> logger)
@@ -42,7 +44,6 @@ namespace APS.WebApp.Services
 
                     using (var scope = _serviceProvider.CreateScope())
                     {
-                        // Injeção dos serviços necessários
                         var dbService = scope.ServiceProvider.GetRequiredService<DatabaseService>();
                         var autodeskApi = scope.ServiceProvider.GetRequiredService<AutodeskApiService>();
                         var ldpUpdateService = scope.ServiceProvider.GetRequiredService<LdpUpdateService>();
@@ -52,7 +53,6 @@ namespace APS.WebApp.Services
                         var ldpToCustoService = scope.ServiceProvider.GetRequiredService<LdpToCustoSyncService>();
                         var scheduleService = scope.ServiceProvider.GetRequiredService<AccScheduleSyncService>();
 
-                        // 1. BUSCA PROJETOS ATIVOS NO BANCO (Substitui a lista manual anterior)
                         _logger.LogInformation("🔍 Consultando SQL para identificar projetos ativos...");
                         DataTable dtAtivos = dbService.GetProjetosAtivos();
 
@@ -63,161 +63,260 @@ namespace APS.WebApp.Services
                         }
 
                         _logger.LogInformation($"✅ {dtAtivos.Rows.Count} projetos encontrados para processamento.");
-
                         string robotToken = await autodeskApi.Get2LeggedTokenAsync();
 
-                        // 2. LOOP DE PROCESSAMENTO BASEADO NO SQL
-                        foreach (DataRow row in dtAtivos.Rows)
+                        foreach (DataRow projectRow in dtAtivos.Rows)
                         {
-                            string projName = row["Nome_Projeto"].ToString();
-                            string hubId = row["Account_ID_ACC"].ToString();
-                            string projectId = row["Project_ID_ACC"].ToString();
+                            string projName = projectRow["Nome_Projeto"].ToString();
+                            string projectId = projectRow["Project_ID_ACC"].ToString(); // ID original para SQL
+                            string hubId = projectRow["Account_ID_ACC"].ToString();
+                            string ldpPath = Path.Combine(Path.GetTempPath(), $"LDP_{projectId}_{Guid.NewGuid()}.xlsx");
+
+                            // 🎯 AJUSTE APS: Garante o prefixo 'b.' para as chamadas de API da Autodesk
+                            string formattedProjectId = projectId.StartsWith("b.") ? projectId : $"b.{projectId}";
 
                             _logger.LogInformation($"--- 🏗️ Processando Projeto: {projName} ---");
 
-                            /*  
-
-                            // ==============================================================================
-                            // ETAPA 0/9: RESET E CARGA DA ABA TIMESHEET (SQL BRUTO)
-                            // ==============================================================================
-                            _logger.LogInformation($"🧹 [0/9] Reconstruindo aba TIMESHEET via SQL Bruto...");
                             try
                             {
-                                var result0 = await tsDumpService.ResetAndDumpTimesheetAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 0: {result0}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 0: {ex.Message}"); }
+                                // ==============================================================================
+                                // PREPARAÇÃO OBRIGATÓRIA: LOCALIZAÇÃO E DESCOBERTA DA LDP
+                                // ==============================================================================
+                                string ldpFileId = dbService.GetLdpFileIdFromCache(projectId);
+                                string ldpRealName = "";
 
-                            // ==============================================================================
-                            // ETAPA 1/9: BANCO DE DADOS E REVISÃO (HH + REV.)
-                            // ==============================================================================
-                            _logger.LogInformation($"💾 [1/9] Atualizando LDP: Horas do Banco e Atributo REV...");
-                            try
+                                // Se não tiver no cache, inicia o processo de descoberta profunda
+                                if (string.IsNullOrEmpty(ldpFileId))
+                                {
+                                    _logger.LogInformation($"📂 [DESCOBERTA] Localizando pasta de Gestão...");
+
+                                    var folderLdpId = await scheduleService.FindFolderByPaths(hubId, formattedProjectId, new[] {
+                                        new[] { "09 - DESENVOLVIMENTO", "09.10 - GESTÃO" },
+                                        new[] { "09 - MODEL DEVELOPING", "09.10 - MANAGEMENT" }
+                                    }, robotToken);
+
+                                    if (!string.IsNullOrEmpty(folderLdpId))
+                                    {
+                                        _logger.LogInformation($"🔎 Pasta encontrada. Varrendo arquivos Excel...");
+
+                                        // 🎯 TENTATIVA: Pegar o primeiro Excel da pasta, independente do nome (LDP, BML, etc)
+                                        var fileInfo = await autodeskApi.GetFirstExcelInFolderAsync(formattedProjectId, folderLdpId, robotToken);
+
+                                        if (!string.IsNullOrEmpty(fileInfo.FileId))
+                                        {
+                                            ldpFileId = fileInfo.FileId;
+                                            ldpRealName = fileInfo.FileName;
+                                            _logger.LogInformation($"✅ LDP Identificada: [{ldpRealName}].");
+                                            
+                                            // Nota: O registro no banco será feito na Etapa 0 junto com o DNA completo
+                                        }
+                                    }
+                                }
+
+                                // VALIDAÇÃO FINAL ANTES DE PROSSEGUIR
+                                if (string.IsNullOrEmpty(ldpFileId))
+                                {
+                                    _logger.LogCritical($"❌ [ERRO] Nenhum arquivo Excel encontrado na pasta de Gestão para o projeto {projName}. Pulando...");
+                                    continue;
+                                }
+
+                                // DOWNLOAD FÍSICO COM O ID DESCOBERTO
+                                using (var dl = await autodeskApi.DownloadFileStreamAsync(formattedProjectId, ldpFileId, robotToken))
+                                using (var fs = new FileStream(ldpPath, FileMode.Create)) await dl.CopyToAsync(fs);
+
+                                // ==============================================================================
+                                // 🧬 ETAPA 0/11: DNA DO PROJETO (METADADOS E CONTEXTO)
+                                // ==============================================================================
+                                _logger.LogInformation($"🔍 [0/11] Validando DNA do Projeto (Padrão, Idioma e Banco de Dados)...");
+
+                                // Analisa o arquivo baixado para descobrir PT/EN e NA/CLIENT
+                                var discovery = await scheduleService.GetOrDiscoverProjectContext(projectId, ldpPath, robotToken);
+
+                                if (discovery == null || string.IsNullOrEmpty(discovery.NamingStandard))
+                                {
+                                    _logger.LogCritical("❌ [ETAPA 0] FALHA CRÍTICA: DNA não identificado. Abortando execução para evitar danos.");
+                                    continue;
+                                }
+                                
+                                // Se o nome veio vazio da descoberta (cache), usa o nome descoberto na varredura
+                                if (string.IsNullOrEmpty(ldpRealName)) ldpRealName = discovery.LdpName ?? "LDP_Desconhecida.xlsx";
+
+                                // 💾 SALVAMENTO DO DNA COMPLETO NO BANCO
+                                _logger.LogInformation($"💾 Gravando DNA completo no Banco de Dados...");
+                                dbService.RegistrarDnaProjeto(projectId, ldpFileId, hubId, ldpRealName, discovery.Language, discovery.NamingStandard);
+
+                                _logger.LogInformation($"   ✅ Etapa 0: Padrão [{discovery.NamingStandard}] | Idioma [{discovery.Language}] | LDP [{ldpRealName}]");
+
+
+                                // ==============================================================================
+                                // ETAPAS DE PROCESSAMENTO - AGORA RECEBEM O ldpFileId DIRETO DO ROBÔ
+                                // ==============================================================================
+/*
+                                // ETAPA 1/11: TIMESHEET
+                                _logger.LogInformation($"🧹 [1/11] Reconstruindo aba TIMESHEET via SQL Bruto...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result0 = await tsDumpService.ResetAndDumpTimesheetAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 1: {result0}");
+
+                                // ETAPA 2/11: HORAS E REVISÃO
+                                _logger.LogInformation($"💾 [2/11] Atualizando LDP: Horas do Banco e Atributo REV...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result1 = await ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 2: {result1.SummaryMessage}");
+
+                                // ETAPA 3/11: OCR
+                                _logger.LogInformation($"📄 [3/11] Extraindo Revisões de PDFs (Selo/OCR)...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result2 = await pdfMetadataService.SyncPdfRevisionsToAccAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 3: {result2}");
+
+                                // ETAPA 4/11: GRDs
+                                _logger.LogInformation($"✉️ [4/11] Rastreando informações de envio (GRDs)...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var resultGrd = await grdSyncService.SyncGrdsToLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 4: {resultGrd}");
+
+                                // ETAPA 5/11: WORKFLOW
+                                _logger.LogInformation($"🌊 [5/11] Atualizando LDP: Etapa do Fluxo (ACC Review)...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result4 = await ldpUpdateService.UpdateWorkflowStatusAsync(
+                                    hubId, 
+                                    formattedProjectId, 
+                                    robotToken, 
+                                    "WDV284PFQTJDQZEG", // Este é o userId (ou contexto do fluxo)
+                                    ldpFileId           // 🎯 O ID do arquivo Excel VAI POR ÚLTIMO
+                                );
+                                _logger.LogInformation($"   ✅ Etapa 5: {result4}");
+
+                                // ETAPA 6/11: CUSTO
+                                _logger.LogInformation($"📊 [6/11] Sincronizando informações da LDP para aba CUSTO...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result5 = await ldpToCustoService.ExecuteFullSyncProcessAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 6: {result5}");
+
+                                await Task.Delay(2000, stoppingToken);
+
+                                // ETAPA 7/11: ATRIBUTOS ACC
+                                _logger.LogInformation($"⚡ [7/11] Sincronizando Atributos no ACC (Metadados)...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result6 = await ldpUpdateService.SyncAccAttributesFromLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 7: {result6}");
+
+                                // ETAPA 8/11: VEREDITOS
+                                _logger.LogInformation($"🏁 [8/11] Sincronizando Vereditos de Aprovação...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                // 🎯 Correct order: User/Workflow ID first, then File ID
+                                var result7 = await ldpUpdateService.RunApprovalVerdictSyncAsync(
+                                    hubId, 
+                                    formattedProjectId, 
+                                    robotToken, 
+                                    "WDV284PFQTJDQZEG", // userId / workflow context
+                                    ldpFileId           // ldpFileId (Item ID)
+                                );
+                                _logger.LogInformation($"   ✅ Etapa 8: {result7}");
+
+                                // ETAPA 9/11: CRONOGRAMA
+                                _logger.LogInformation($"📅 [9/11] Sincronizando dados do Cronograma para LDP...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var resSch = await scheduleService.SyncScheduleToLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 9: {resSch}");
+
+                                // ETAPA 10/11: ESPELHAMENTO
+                                _logger.LogInformation($"🪞 [10/11] Espelhando LDP para pasta pública...");
+                                // 🎯 CORREÇÃO: Passando ldpFileId
+                                var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, formattedProjectId, robotToken, ldpFileId);
+                                _logger.LogInformation($"   ✅ Etapa 10: {result9}");
+*/
+                                // ==============================================================================
+                                // 🏗️ ETAPA 11/11: PERSISTÊNCIA NA LDP UNIFICADA (SQL SERVER)
+                                // ==============================================================================
+                                _logger.LogInformation($"🗄️ [11/11] Sincronizando LDP Unificada para o SQL Server...");
+
+                                if (File.Exists(ldpPath))
+                                {
+                                    using (var package = new OfficeOpenXml.ExcelPackage(new FileInfo(ldpPath)))
+                                    {
+                                        var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) ?? package.Workbook.Worksheets[0];
+                                        int totalRowsSaved = 0;
+
+                                        for (int excelRow = 8; excelRow <= ws.Dimension.End.Row; excelRow++)
+                                        {
+                                            var rowData = new Dictionary<int, object>();
+                                            for (int col = 1; col <= 35; col++)
+                                            {
+                                                rowData[col] = ws.Cells[excelRow, col].Value;
+                                            }
+
+                                            // Só salva se houver código N&A ou Cliente
+                                            if (rowData[4] != null || rowData[2] != null)
+                                            {
+                                                dbService.SalvarDadosLdpUnificada(projectId, rowData);
+                                                totalRowsSaved++;
+                                            }
+                                        }
+                                        _logger.LogInformation($"   ✅ Etapa 11: {totalRowsSaved} linhas persistidas no SQL.");
+                                    }
+                                }
+
+                                _logger.LogInformation($"🏁 Ciclo concluído com sucesso para {projName}.");
+                            }
+                            catch (Exception ex)
                             {
-                                var result1 = await ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 1: {result1.SummaryMessage}");
+                                _logger.LogError($"❌ Erro ao processar projeto {projName}: {ex.Message}");
                             }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 1: {ex.Message}"); }
-
-                            // ==============================================================================
-                            // ETAPA 2/9: OCR DE PDF (REVISÃO DO SELO -> ACC)
-                            // ==============================================================================
-                            _logger.LogInformation($"📄 [2/9] Extraindo Revisões de PDFs (Selo/OCR) para o ACC...");
-                            try
+                            finally
                             {
-                                var result2 = await pdfMetadataService.SyncPdfRevisionsToAccAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 2: {result2}");
+                                if (File.Exists(ldpPath))
+                                {
+                                    File.Delete(ldpPath);
+                                    _logger.LogInformation("🧹 Arquivo temporário removido.");
+                                }
                             }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 2: {ex.Message}"); }
-
-                            // ==============================================================================
-                            // ETAPA 3/9: SINCRONIZAÇÃO DE GRD (CORRESPONDÊNCIA -> LDP)
-                            // ==============================================================================
-                            _logger.LogInformation($"✉️ [3/9] Rastreando informações de envio (GRDs) para LDP...");
-                            try
-                            {
-                                var resultGrd = await grdSyncService.SyncGrdsToLdpAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 3: {resultGrd}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 3: {ex.Message}"); }
-
-                            // ==============================================================================
-                            // ETAPA 4/9: MÓDULO DE REVISÃO (STATUS IN THE FLOW)
-                            // ==============================================================================
-                            _logger.LogInformation($"🌊 [4/9] Atualizando LDP: Etapa do Fluxo (ACC Review Workflow)...");
-                            try
-                            {
-                                var result4 = await ldpUpdateService.UpdateWorkflowStatusAsync(hubId, projectId, robotToken, "WDV284PFQTJDQZEG");
-                                _logger.LogInformation($"   ✅ Etapa 4: {result4}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 4: {ex.Message}"); }
-
-                            // ==============================================================================
-                            // ETAPA 5/9: SINCRONIZAÇÃO INTERNA (LDP -> CUSTO)
-                            // ==============================================================================
-                            _logger.LogInformation($"📊 [5/9] Sincronizando informações da LDP para aba CUSTO...");
-                            try
-                            {
-                                var result5 = await ldpToCustoService.ExecuteFullSyncProcessAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 5: {result5}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 5: {ex.Message}"); }
-
-                            // Pausa técnica para indexação do ACC
-                            await Task.Delay(5000, stoppingToken);
-
-                            // ==============================================================================
-                            // ETAPA 6/9: SINCRONIZAÇÃO DE ATRIBUTOS (LDP -> ACC)
-                            // ==============================================================================
-                            _logger.LogInformation($"⚡ [6/9] Sincronizando Atributos no ACC (Metadados)...");
-                            try
-                            {
-                                var result6 = await ldpUpdateService.SyncAccAttributesFromLdpAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 6: {result6}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 6: {ex.Message}"); }
-
-                            // ==============================================================================
-                            // ETAPA 7/9: VEREDITOS FINAIS
-                            // ==============================================================================
-                            _logger.LogInformation($"🏁 [7/9] Sincronizando Vereditos de Aprovação...");
-                            try
-                            {
-                                var result7 = await ldpUpdateService.RunApprovalVerdictSyncAsync(hubId, projectId, robotToken, "WDV284PFQTJDQZEG");
-                                _logger.LogInformation($"   ✅ Etapa 7: {result7}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 7: {ex.Message}"); }
-
-                            */  
-                            
-                            // ==============================================================================
-                            // ETAPA 8/9: SINCRONIZAÇÃO DE CRONOGRAMA (AVANÇO FÍSICO)
-                            // ==============================================================================
-                            _logger.LogInformation($"📅 [8/9] Sincronizando dados do Cronograma para LDP...");
-                            try
-                            {
-                                var resSch = await scheduleService.SyncScheduleToLdpAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 8: {resSch}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 8: {ex.Message}"); }
-
-                            
-                            /*
-                            // ==============================================================================
-                            // ETAPA 9/9: ESPELHAMENTO (CONTROLE -> PROJETO)
-                            // ==============================================================================
-                            _logger.LogInformation($"🪞 [9/9] Espelhando LDP para pasta pública de Projeto...");
-                            try
-                            {
-                                var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, projectId, robotToken);
-                                _logger.LogInformation($"   ✅ Etapa 9: {result9}");
-                            }
-                            catch (Exception ex) { _logger.LogError($"   ❌ Falha na Etapa 9: {ex.Message}"); }
-
-                            _logger.LogInformation($"🏁 Ciclo concluído para {projName}.");
-                            */
                         }
                     }
-
                     stopwatch.Stop();
-                    TimeSpan ts = stopwatch.Elapsed;
-
                     _logger.LogInformation("----------------------------------------------------------");
-                    _logger.LogInformation($"🏁 RELATÓRIO DE EXECUÇÃO FINALIZADO");
-                    _logger.LogInformation($"⏱️ Tempo Total Decorrido: {ts.Minutes}m {ts.Seconds}s");
-                    _logger.LogInformation($"📊 Telemetria APS: {AutodeskApiService.TotalApiCallsInCurrentCycle} chamadas de API.");
-                    
-                    _logger.LogInformation(AutodeskApiService.TotalApiCallsInCurrentCycle > 200 
-                        ? "⚠️ ALERTA: Volume de tráfego elevado. Risco de Rate Limit." 
-                        : "🟢 Consumo de tráfego dentro dos limites de segurança.");
-
-                    _logger.LogInformation("💤 Robô finalizou tarefas. Dormindo...");
+                    _logger.LogInformation($"🏁 RELATÓRIO DE EXECUÇÃO FINALIZADO em {stopwatch.Elapsed.Minutes}m {stopwatch.Elapsed.Seconds}s");
+                    _logger.LogInformation("💤 Robô dormindo...");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError($"❌ Erro fatal no Loop do Robô: {ex.Message}");
                 }
             }
+        }
+
+        // =========================================================================================
+        // 🛡️ MÉTODO BLINDADO PARA TRATAR DATAS DO EXCEL
+        // =========================================================================================
+        private object TratarData(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return DBNull.Value;
+
+            string v = valor.Trim().ToUpper();
+            // Lista de "sujeiras" comuns no Excel
+            if (v == "-" || v == "N/A" || v == "NA" || v == "TBD" || v == "A DEFINIR" || v == "S/D") return DBNull.Value;
+
+            // 1. Tenta converter formato PT-BR (dd/MM/yyyy)
+            if (DateTime.TryParse(valor, new System.Globalization.CultureInfo("pt-BR"), System.Globalization.DateTimeStyles.None, out DateTime data))
+            {
+                if (data.Year < 1900 || data.Year > 2100) return DBNull.Value; // Data inválida para SQL
+                return data;
+            }
+
+            // 2. Tenta converter número serial do Excel (ex: 45321)
+            if (double.TryParse(valor, out double serial))
+            {
+                try 
+                { 
+                    var dataSerial = DateTime.FromOADate(serial);
+                    if (dataSerial.Year < 1900 || dataSerial.Year > 2100) return DBNull.Value;
+                    return dataSerial;
+                } 
+                catch { }
+            }
+
+            return DBNull.Value; // Se nada funcionar, salva NULL e não trava
         }
     }
 }

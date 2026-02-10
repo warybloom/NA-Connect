@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using AccIntegration.WebApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NA_Connect.Services;
 
 namespace APS.WebApp.Areas.DataManagement.Controllers
 {
@@ -41,7 +42,8 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
         private readonly ApplicationDbContext _context;
         private readonly LdpUpdateService _ldpUpdateService;
         private readonly ILogger<DataController> _logger;
-
+        private readonly DatabaseService _dbService;
+        private readonly AccScheduleSyncService _scheduleService;
         public DataController(
             AutodeskApiService autodeskApi,
             IConfiguration configuration,
@@ -51,7 +53,9 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             NomenclaturaService nomenclaturaService,
             ApplicationDbContext context,
             LdpUpdateService ldpUpdateService,
-            ILogger<DataController> logger)
+            ILogger<DataController> logger,
+            DatabaseService dbService,
+            AccScheduleSyncService scheduleService)
         {
             _autodeskApi = autodeskApi;
             _configuration = configuration;
@@ -62,6 +66,8 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             _context = context;
             _ldpUpdateService = ldpUpdateService;
             _logger = logger;
+            _dbService = dbService;
+            _scheduleService = scheduleService;
         }
 
         // Ficheiro: Areas/DataManagement/Controllers/DataController.cs
@@ -1000,7 +1006,45 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
 
             try
             {
-                var result = await _ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, projectId, accessToken);
+                // 1. TENTA BUSCAR O ID NO BANCO (CACHE DO ROBÔ)
+                string ldpFileId = _dbService.GetLdpFileIdFromCache(projectId);
+
+                // 2. SE NÃO TIVER NO BANCO, TENTA DESCOBRIR NA HORA (MANUAL)
+                if (string.IsNullOrEmpty(ldpFileId))
+                {
+                    _logger.LogWarning($"[Manual Sync] ID da LDP não encontrado no banco para {projectId}. Tentando busca via API...");
+
+                    // Garante formatação com 'b.' para API da Autodesk
+                    string formattedProjectId = projectId.StartsWith("b.") ? projectId : $"b.{projectId}";
+
+                    // Tenta achar a pasta de Gestão (Mesma lógica do Robô)
+                    var folderLdpId = await _scheduleService.FindFolderByPaths(hubId, formattedProjectId, new[] {
+                        new[] { "09 - DESENVOLVIMENTO", "09.10 - GESTÃO" },
+                        new[] { "09 - MODEL DEVELOPING", "09.10 - MANAGEMENT" }
+                    }, accessToken);
+
+                    if (!string.IsNullOrEmpty(folderLdpId))
+                    {
+                        // Pega o primeiro Excel da pasta
+                        var fileInfo = await _autodeskApi.GetFirstExcelInFolderAsync(formattedProjectId, folderLdpId, accessToken);
+                        if (!string.IsNullOrEmpty(fileInfo.FileId))
+                        {
+                            ldpFileId = fileInfo.FileId;
+                            // Opcional: Salvar no banco agora para agilizar a próxima vez
+                            _dbService.RegistrarDnaProjeto(projectId, ldpFileId, hubId, fileInfo.FileName, "EN", "NA"); // Valores default ou descobrir
+                        }
+                    }
+                }
+
+                // 3. VALIDAÇÃO FINAL
+                if (string.IsNullOrEmpty(ldpFileId))
+                {
+                    return BadRequest(new { message = "❌ Erro: LDP não encontrada. O Robô ainda não mapeou este projeto e a busca manual falhou na pasta 09.10." });
+                }
+
+                // 4. CHAMADA CORRIGIDA (AGORA PASSANDO O ldpFileId)
+                var result = await _ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, projectId, accessToken, ldpFileId);
+                
                 return Ok(result);
             }
             catch (Exception ex)

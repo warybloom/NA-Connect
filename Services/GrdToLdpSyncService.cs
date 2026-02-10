@@ -31,53 +31,59 @@ namespace APS.WebApp.Services
             _logger = logger;
         }
 
-        public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, string accessToken)
+        // 🎯 MUDANÇA: Adicionado 'string ldpFileId' na assinatura
+public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, string accessToken, string ldpFileId)
+{
+    _logger.LogInformation($"📂 [GRD SYNC] Iniciando rastreamento de correspondências para o projeto {projectId}...");
+
+    // 1. Localizar Pasta de GRDs (ISSO MANTÉM, pois estamos buscando GRDs, não a LDP)
+    var pathsGrd = new[] {
+        new[] { "02 - CORRESPONDENCE", "02.02 - OUTGOING TRANSMITTALS TO CLIENT" },
+        new[] { "02 - CORRESPONDÊNCIA", "02.02 - GRD ENVIADA AO CLIENTE" }
+    };
+
+    string folderGrdId = null;
+    foreach (var path in pathsGrd)
+    {
+        folderGrdId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, path, accessToken);
+        if (!string.IsNullOrEmpty(folderGrdId)) break;
+    }
+
+    if (string.IsNullOrEmpty(folderGrdId))
+    {
+        return "⚠️ Pasta de GRDs não localizada. Verifique a estrutura de pastas 02/02.02.";
+    }
+
+    // 2. Mapear arquivos de GRD na pasta (Recursivo)
+    var mapaGrdsNoAcc = new List<AccFolderItem>();
+    
+    // Certifique-se que este método 'ListAllExcelsRecursiveAsync' existe na sua classe
+    await ListAllExcelsRecursiveAsync(projectId, folderGrdId, accessToken, mapaGrdsNoAcc);
+    
+    _logger.LogInformation($"🔍 Encontradas {mapaGrdsNoAcc.Count} planilhas de GRD para análise.");
+
+    // 3. Dicionário de Consolidação (Chave: DocNumber, Valor: Dados da GRD mais recente)
+    var consolidadoLdp = new Dictionary<string, GrdInfo>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var grdFile in mapaGrdsNoAcc)
+    {
+        try
         {
-            _logger.LogInformation($"📂 [GRD SYNC] Iniciando rastreamento de correspondências para o projeto {projectId}...");
-
-            // 1. Localizar Pasta de GRDs (Suporte a PT/EN)
-            var pathsGrd = new[] {
-                new[] { "02 - CORRESPONDENCE", "02.02 - OUTGOING TRANSMITTALS TO CLIENT" },
-                new[] { "02 - CORRESPONDÊNCIA", "02.02 - GRD ENVIADA AO CLIENTE" }
-            };
-
-            string folderGrdId = null;
-            foreach (var path in pathsGrd)
-            {
-                folderGrdId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, path, accessToken);
-                if (!string.IsNullOrEmpty(folderGrdId)) break;
-            }
-
-            if (string.IsNullOrEmpty(folderGrdId))
-            {
-                return "⚠️ Pasta de GRDs não localizada. Verifique a estrutura de pastas 02/02.02.";
-            }
-
-            // 2. Mapear arquivos de GRD na pasta (Recursivo)
-            var mapaGrdsNoAcc = new List<AccFolderItem>();
-            await ListAllExcelsRecursiveAsync(projectId, folderGrdId, accessToken, mapaGrdsNoAcc);
-            _logger.LogInformation($"🔍 Encontradas {mapaGrdsNoAcc.Count} planilhas de GRD para análise.");
-
-            // 3. Dicionário de Consolidação (Chave: DocNumber, Valor: Dados da GRD mais recente)
-            var consolidadoLdp = new Dictionary<string, GrdInfo>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var grdFile in mapaGrdsNoAcc)
-            {
-                try
-                {
-                    await ProcessSingleGrdAsync(projectId, grdFile.VersionUrn, accessToken, consolidadoLdp);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning($"⚠️ Falha ao processar GRD {grdFile.Name}: {ex.Message}");
-                }
-            }
-
-            if (consolidadoLdp.Count == 0) return "Nenhuma informação de documento encontrada nas GRDs.";
-
-            // 4. Atualizar a LDP Única Vez
-            return await UpdateLdpWithConsolidatedData(hubId, projectId, accessToken, consolidadoLdp);
+            // Certifique-se que este método 'ProcessSingleGrdAsync' existe na sua classe
+            await ProcessSingleGrdAsync(projectId, grdFile.VersionUrn, accessToken, consolidadoLdp);
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"⚠️ Falha ao processar GRD {grdFile.Name}: {ex.Message}");
+        }
+    }
+
+    if (consolidadoLdp.Count == 0) return "Nenhuma informação de documento encontrada nas GRDs.";
+
+    // 4. Atualizar a LDP (AGORA PASSANDO O ID DIRETO)
+    return await UpdateLdpWithConsolidatedData(hubId, projectId, accessToken, consolidadoLdp, ldpFileId);
+}
+
 
        private async Task ProcessSingleGrdAsync(string projectId, string versionUrn, string accessToken, Dictionary<string, GrdInfo> consolidado)
 {
@@ -167,81 +173,97 @@ namespace APS.WebApp.Services
     }
 }
 
-        private async Task<string> UpdateLdpWithConsolidatedData(string hubId, string projectId, string accessToken, Dictionary<string, GrdInfo> dados)
+
+        // 🎯 MUDANÇA: Adicionado 'string ldpFileId' na assinatura
+private async Task<string> UpdateLdpWithConsolidatedData(string hubId, string projectId, string accessToken, Dictionary<string, GrdInfo> dadosGrd, string ldpFileId)
 {
-    string tempLdpPath = Path.Combine(Path.GetTempPath(), $"LDP_GRD_UPDATE_{Guid.NewGuid()}.xlsx");
-    
-    try
+    _logger.LogInformation("💾 [GRD SYNC] Atualizando LDP com dados consolidados...");
+    string tempPath = Path.Combine(Path.GetTempPath(), $"LDP_GRD_UPD_{Guid.NewGuid()}.xlsx");
+
+    try 
     {
-        // 1. Localiza a LDP de Controle (Pasta 09.10)
-        var folderLdpId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, new[] { "09 - DESENVOLVIMENTO", "09.10 - GESTÃO" }, accessToken);
-        if (string.IsNullOrEmpty(folderLdpId)) 
-            folderLdpId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, new[] { "09 - MODEL DEVELOPING", "09.10 - MANAGEMENT" }, accessToken);
+        // -----------------------------------------------------------------------
+        // 1. VACINA: RECUPERA DETALHES DA LDP
+        // -----------------------------------------------------------------------
+        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
+        if (itemDetails == null) throw new Exception("Detalhes da LDP não encontrados para sync de GRD.");
 
-        string ldpNameSearch = _configuration[$"ProjectSettings:{projectId}:LdpFileName"] ?? "LDP";
-        var (ldpId, actualName) = await _autodeskApi.FindItemIdByNamePartAsync(projectId, folderLdpId, ldpNameSearch, accessToken);
+        string versionUrn = itemDetails.TipVersionUrn;
+        string parentFolderId = itemDetails.ParentFolderId; // 🎯 OBRIGATÓRIO
+        string realFileName = itemDetails.DisplayName;
 
-        // 2. Download da LDP para processamento local
-        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, ldpId, accessToken))
-        using (var fs = new FileStream(tempLdpPath, FileMode.Create)) 
-            await dl.CopyToAsync(fs);
-
-        // Variável de contagem declarada apenas UMA vez no escopo do método
-        int totalUpdates = 0;
-
-        using (var package = new ExcelPackage(new FileInfo(tempLdpPath)))
+        // 2. DOWNLOAD DIRETO DA LDP (Versão Correta)
+        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, versionUrn, accessToken))
+        using (var fs = new FileStream(tempPath, FileMode.Create)) 
         {
-            var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) ?? package.Workbook.Worksheets[0];
-            
-            int colDoc = 4; // Coluna D (N&A DOCUMENT NUMBER)
-            int colGrdNum = -1, colGrdDate = -1, colGrdPurpose = -1;
-
-            // 3. Identificação Dinâmica das Colunas (Linha 7)
-            for (int c = 1; c <= ws.Dimension.End.Column; c++)
-            {
-                string header = ws.Cells[7, c].Text?.ToUpper().Trim();
-                
-                // Mapeamento exato conforme imagem enviada
-                if (header == "EMISSION DATA") colGrdDate = c;
-                if (header == "TRANMISTAL NUMBER") colGrdNum = c; 
-                if (header == "ISSUED POUPURSE") colGrdPurpose = c; 
-            }
-
-            // 4. Preenchimento da LDP (Linha 8 em diante)
-            for (int row = 8; row <= ws.Dimension.End.Row; row++)
-            {
-                string doc = ws.Cells[row, colDoc].Text?.Trim();
-                if (string.IsNullOrEmpty(doc)) continue;
-
-                if (dados.TryGetValue(doc, out var info))
-                {
-                    // Atualiza as colunas se foram localizadas
-                    if (colGrdDate > 0) ws.Cells[row, colGrdDate].Value = info.EmissionDate.ToString("dd/MM/yyyy");
-                    if (colGrdNum > 0) ws.Cells[row, colGrdNum].Value = info.TransmittalNumber;
-                    if (colGrdPurpose > 0) ws.Cells[row, colGrdPurpose].Value = info.IssuedPurpose;
-                    
-                    totalUpdates++;
-                }
-            }
-            package.Save();
+            await dl.CopyToAsync(fs);
         }
 
-        // 5. Upload da nova versão para o ACC
-        using (var ul = new FileStream(tempLdpPath, FileMode.Open))
-            await _autodeskApi.CreateNewVersionAsync(projectId, ldpId, folderLdpId, actualName, ul, accessToken);
+        int atualizados = 0;
 
-        return $"✅ Sucesso! {totalUpdates} documentos atualizados com dados de GRD.";
+        // 3. PROCESSAMENTO (Mantido)
+        using (var package = new OfficeOpenXml.ExcelPackage(new FileInfo(tempPath)))
+        {
+            var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) 
+                     ?? package.Workbook.Worksheets[0];
+            
+            int colKey = -1;
+            int colTransmittal = -1;
+
+            for (int c = 1; c <= ws.Dimension.End.Column; c++)
+            {
+                string h = ws.Cells[7, c].Text?.Trim().ToUpper();
+                if (string.IsNullOrEmpty(h)) continue;
+                if (h.Contains("N&A DOCUMENT NUMBER")) colKey = c;
+                if (h.Contains("TRANSMITTAL") || h.Contains("REMESSA") || h.Contains("GRD")) colTransmittal = c;
+            }
+
+            if (colKey == -1) colKey = 4;
+
+            if (colTransmittal != -1)
+            {
+                for (int r = 8; r <= ws.Dimension.End.Row; r++)
+                {
+                    string doc = ws.Cells[r, colKey].Text?.Trim();
+                    if (string.IsNullOrEmpty(doc)) continue;
+
+                    if (dadosGrd.TryGetValue(doc, out var info))
+                    {
+                        string valorAtual = ws.Cells[r, colTransmittal].Text?.Trim();
+                        if (!string.Equals(valorAtual, info.TransmittalNumber, StringComparison.OrdinalIgnoreCase))
+                        {
+                            ws.Cells[r, colTransmittal].Value = info.TransmittalNumber;
+                            atualizados++;
+                        }
+                    }
+                }
+                if (atualizados > 0) package.Save();
+            }
+        }
+
+        // 4. UPLOAD CORRIGIDO
+        if (atualizados > 0)
+        {
+            using (var ul = new FileStream(tempPath, FileMode.Open))
+                // 🎯 Passa parentFolderId e nome real
+                await _autodeskApi.CreateNewVersionAsync(projectId, ldpFileId, parentFolderId, realFileName, ul, accessToken);
+            
+            return $"✅ Sucesso: {atualizados} documentos atualizados com número de GRD.";
+        }
+        
+        return "Nenhuma atualização de GRD necessária.";
     }
     catch (Exception ex)
     {
-        _logger.LogError($"❌ Erro ao atualizar LDP: {ex.Message}");
+        _logger.LogError($"❌ Erro GRD Sync: {ex.Message}");
         throw;
     }
     finally 
     { 
-        if (File.Exists(tempLdpPath)) File.Delete(tempLdpPath); 
+        if (File.Exists(tempPath)) File.Delete(tempPath); 
     }
 }
+
 
         private async Task ListAllExcelsRecursiveAsync(string projectId, string folderId, string token, List<AccFolderItem> results)
         {

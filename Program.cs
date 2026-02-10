@@ -59,6 +59,7 @@ builder.Services.AddScoped<AccountUsersService>();
 builder.Services.AddScoped<NomenclaturaService>();
 builder.Services.AddScoped<PlaceholderCreationService>();
 builder.Services.AddScoped<AccScheduleSyncService>();
+builder.Services.AddScoped<ProjectAutoDiscoveryService>();
 builder.Services.AddScoped<AccMetadataService>();
 builder.Services.AddScoped<TimesheetDumpService>();
 builder.Services.AddScoped<LdpToCustoSyncService>();
@@ -67,6 +68,8 @@ builder.Services.AddScoped<AccReviewWorkflowService>();
 builder.Services.AddScoped<PdfMetadataService>();
 builder.Services.AddScoped<GrdToLdpSyncService>();
 builder.Services.AddScoped<LdpUpdateService>();
+// No seu arquivo de configuração de serviços:
+builder.Services.AddScoped<ProjectAutoDiscoveryService>();
 
 // Registros para a Automação N&A Connect
 builder.Services.AddScoped<DatabaseService>(); 
