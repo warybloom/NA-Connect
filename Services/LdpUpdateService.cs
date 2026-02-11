@@ -20,6 +20,7 @@ namespace APS.WebApp.Services
         public int DocumentosAtualizados { get; set; }
         public List<string> DocumentosNaoEncontradosNoDb { get; set; } = new List<string>();
         public string NovaVersaoUrn { get; set; } = string.Empty;
+        
         public string SummaryMessage { get; set; } = string.Empty;
         public int RegistrosTimesheetAdicionados { get; set; }
     }
@@ -707,95 +708,104 @@ private string GetLdpFileNameFromConfig(string projectId)
     return fileName;
 }
 
-public async Task<string> MirrorLdpControlToProjectAsync(string hubId, string projectId, string accessToken, string ldpFileId)
-{
-    _logger.LogInformation("🪞 [ETAPA 10] ESPELHAMENTO (CÓPIA PUBLICA)...");
-    
-    var pathsEspelho = new[] { 
+        public async Task<string> MirrorLdpControlToProjectAsync(string hubId, string projectId, string accessToken, string ldpFileId)
+        {
+            _logger.LogInformation("🪞 [ETAPA 10] ESPELHAMENTO (CÓPIA PUBLICA)...");
+
+            var pathsEspelho = new[] {
         new[] { "01 - PLANEJAMENTO E CONTROLE", "01.06 - LISTA DE DOCUMENTOS PROJETO" },
         new[] { "01 - PLANNING & CONTROL", "01.06 - MASTER DOCUMENT LIST" }
     };
 
-    string tempSourcePath = Path.Combine(Path.GetTempPath(), $"SRC_{Guid.NewGuid()}.xlsx");
-    string tempTargetPath = Path.Combine(Path.GetTempPath(), $"TGT_{Guid.NewGuid()}.xlsx");
+            string tempSourcePath = Path.Combine(Path.GetTempPath(), $"SRC_{Guid.NewGuid()}.xlsx");
+            string tempTargetPath = Path.Combine(Path.GetTempPath(), $"TGT_{Guid.NewGuid()}.xlsx");
 
-    try
-    {
-        // -----------------------------------------------------------------------
-        // 1. VACINA: RECUPERA DETALHES DA ORIGEM (Para Download Correto)
-        // -----------------------------------------------------------------------
-        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
-        string sourceVersionUrn = itemDetails?.TipVersionUrn ?? ldpFileId; // Tenta a versão, se falhar usa o ID (risco)
+            try
+            {
+                // 1. RECUPERA DETALHES DA ORIGEM
+                var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
+                if (itemDetails == null) throw new Exception("Não foi possível recuperar os detalhes da LDP.");
 
-        // DOWNLOAD DA ORIGEM (Usando Versão)
-        using (var sourceStream = await _autodeskApi.DownloadFileStreamAsync(projectId, sourceVersionUrn, accessToken))
-        using (var fileStream = new FileStream(tempSourcePath, FileMode.Create, FileAccess.Write))
-        {
-            await sourceStream.CopyToAsync(fileStream);
+                string sourceVersionUrn = itemDetails.TipVersionUrn;
+                string mirrorFileName = itemDetails.DisplayName; // Nome correto garantido
+
+                // DOWNLOAD DA ORIGEM
+                using (var sourceStream = await _autodeskApi.DownloadFileStreamAsync(projectId, sourceVersionUrn, accessToken))
+                using (var fileStream = new FileStream(tempSourcePath, FileMode.Create, FileAccess.Write))
+                {
+                    await sourceStream.CopyToAsync(fileStream);
+                }
+
+                // 2. PROCESSAMENTO (FIX PARA #REF!)
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using (var package = new ExcelPackage(new FileInfo(tempSourcePath)))
+                {
+                    var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP"))
+                             ?? package.Workbook.Worksheets[0];
+
+                    int colNA_Number = 4; // Coluna D conforme seu código anterior
+
+                    // 🎯 SOLUÇÃO PARA O #REF!: Converte fórmulas em valores antes de deletar o resto
+                    for (int r = 8; r <= ws.Dimension.End.Row; r++)
+                    {
+                        var cell = ws.Cells[r, colNA_Number];
+                        if (cell.Formula != null)
+                        {
+                            // Pegamos o texto resultante (Value) e sobrescrevemos a fórmula com ele
+                            string valorCalculado = cell.Text;
+                            cell.Formula = null; // Remove a dependência
+                            cell.Value = valorCalculado; // Fixa o texto
+                        }
+                    }
+
+                    // Agora podemos deletar as outras abas e colunas sem medo de quebrar nada
+                    int lastCol = ws.Dimension?.End.Column ?? 30;
+                    if (lastCol > 15) ws.DeleteColumn(16, lastCol - 15);
+
+                    var extraSheets = package.Workbook.Worksheets.Where(s => !s.Name.Contains("LDP")).ToList();
+                    foreach (var s in extraSheets) package.Workbook.Worksheets.Delete(s);
+
+                    package.SaveAs(new FileInfo(tempTargetPath));
+                }
+
+                // 3. UPLOAD (Mantendo o ID existente se houver)
+                string targetFolderId = null;
+                foreach (var path in pathsEspelho)
+                {
+                    targetFolderId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, path, accessToken);
+                    if (!string.IsNullOrEmpty(targetFolderId)) break;
+                }
+
+                if (string.IsNullOrEmpty(targetFolderId)) return "Erro: Pasta 01.06 não encontrada.";
+
+                var existingMirrorId = await _autodeskApi.FindItemIdByNameExactAsync(projectId, targetFolderId, mirrorFileName, accessToken);
+
+                using (var uploadStream = new FileStream(tempTargetPath, FileMode.Open, FileAccess.Read))
+                {
+                    if (!string.IsNullOrEmpty(existingMirrorId))
+                        await _autodeskApi.CreateNewVersionAsync(projectId, existingMirrorId, targetFolderId, mirrorFileName, uploadStream, accessToken);
+                    else
+                        await _autodeskApi.UploadFileToFolderAsync(projectId, targetFolderId, mirrorFileName, uploadStream, accessToken);
+                }
+
+                return $"LDP Espelhada com sucesso: {mirrorFileName}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ Erro no espelhamento.");
+                throw;
+            }
+            finally
+            {
+                if (File.Exists(tempSourcePath)) File.Delete(tempSourcePath);
+                if (File.Exists(tempTargetPath)) File.Delete(tempTargetPath);
+            }
         }
 
-        // 2. PROCESSAMENTO (Limpeza e Formatação - Lógica Mantida)
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        using (var package = new ExcelPackage(new FileInfo(tempSourcePath)))
-        {
-            var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) 
-                     ?? package.Workbook.Worksheets[0];
-            
-            // ... (Sua lógica de limpeza de colunas Y-AC, concatenação e deleção de abas) ...
-            // (Para economizar espaço aqui, estou assumindo que você manteve o miolo igual ao anterior)
-            // ...
-            
-            // Exemplo de limpeza rápida para ilustrar
-            int lastCol = ws.Dimension?.End.Column ?? 30;
-            if (lastCol > 15) ws.DeleteColumn(16, lastCol - 15);
-            var extraSheets = package.Workbook.Worksheets.Where(s => !s.Name.Contains("LDP")).ToList();
-            foreach (var s in extraSheets) package.Workbook.Worksheets.Delete(s);
-
-            package.SaveAs(new FileInfo(tempTargetPath));
-        }
-
-        // 3. UPLOAD PARA A PASTA DE DESTINO (Isso não muda, pois é uma pasta diferente)
-        string targetFolderId = null;
-        foreach (var path in pathsEspelho)
-        {
-            targetFolderId = await _autodeskApi.FindFolderIdByPathAsync(hubId, projectId, path, accessToken);
-            if (!string.IsNullOrEmpty(targetFolderId)) break;
-        }
-
-        if (string.IsNullOrEmpty(targetFolderId)) return "Erro: Pasta de Espelhamento (01.06) não encontrada.";
-
-        string mirrorFileName = "LDP_Mirror.xlsx"; 
-        
-        // Verifica se já existe lá na pasta pública
-        var existingMirrorId = await _autodeskApi.FindItemIdByNameExactAsync(projectId, targetFolderId, mirrorFileName, accessToken);
-
-        using (var uploadStream = new FileStream(tempTargetPath, FileMode.Open, FileAccess.Read))
-        {
-            if (!string.IsNullOrEmpty(existingMirrorId))
-                // Aqui passamos targetFolderId como 'parentFolderId'
-                await _autodeskApi.CreateNewVersionAsync(projectId, existingMirrorId, targetFolderId, mirrorFileName, uploadStream, accessToken);
-            else
-                await _autodeskApi.UploadFileToFolderAsync(projectId, targetFolderId, mirrorFileName, uploadStream, accessToken);
-        }
-
-        return "LDP Espelhada com sucesso.";
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Erro no espelhamento.");
-        throw;
-    }
-    finally
-    {
-        if (File.Exists(tempSourcePath)) File.Delete(tempSourcePath);
-        if (File.Exists(tempTargetPath)) File.Delete(tempTargetPath);
-    }
-}
-
-/// <summary>
-/// Tenta encontrar uma pasta usando múltiplos caminhos possíveis (ex: PT e EN).
-/// </summary>
-private async Task<string> FindFolderIdByAlternativePathsAsync(string hubId, string projectId, string[][] possiblePaths, string accessToken)
+        /// <summary>
+        /// Tenta encontrar uma pasta usando múltiplos caminhos possíveis (ex: PT e EN).
+        /// </summary>
+        private async Task<string> FindFolderIdByAlternativePathsAsync(string hubId, string projectId, string[][] possiblePaths, string accessToken)
 {
     foreach (var path in possiblePaths)
     {

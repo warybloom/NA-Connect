@@ -29,6 +29,8 @@ namespace APS.WebApp.Services
         public List<AttributeDefinition> Results { get; set; } = new List<AttributeDefinition>();
     }
 
+    
+
     public class AttributeDefinition
     {
         [JsonPropertyName("id")]
@@ -61,6 +63,8 @@ namespace APS.WebApp.Services
 
     public class AutodeskApiService
     {
+        private static int _totalCalls = 0;
+private static string _lastRateLimit = "N/A";       
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AutodeskApiService> _logger;
@@ -75,8 +79,22 @@ namespace APS.WebApp.Services
             _tokenManager = tokenManager;
         }
 
-        #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
 
+        // Método para expor os dados para o log final
+        public (int TotalCalls, string RateLimit) GetApiStats() => (_totalCalls, _lastRateLimit);
+        public void ResetStats() { _totalCalls = 0; }
+        
+        private void TraceApiHeaders(HttpResponseMessage response)
+        {
+            _totalCalls++;
+            if (response.Headers.TryGetValues("X-Ads-RateLimit-Remaining", out var values))
+            {
+                _lastRateLimit = values.FirstOrDefault() ?? "N/A";
+            }
+        }
+        
+        #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
+        
         public async Task<List<AccAccountRole>> GetAccountRolesAsync(string accountId, string accessToken)
         {
             var requestUrl = $"https://developer.api.autodesk.com/construction/admin/v1/accounts/{accountId}/roles";
@@ -2326,11 +2344,18 @@ private void IncrementApiCounter()
 }
 
 // Método para resetar ao fim do ciclo
-public static void ResetCounter() 
-{
-    TotalApiCallsInCurrentCycle = 0;
-}
+public static void ResetCounter() { _totalCalls = 0; _lastRateLimit = "N/A"; }
 
+public static (int Calls, string Limit) GetTelemetry() => (_totalCalls, _lastRateLimit);
+
+private void TraceApiTelemetry(HttpResponseMessage response)
+{
+    _totalCalls++;
+    if (response.Headers.TryGetValues("X-Ads-RateLimit-Remaining", out var values))
+    {
+        _lastRateLimit = values.FirstOrDefault() ?? "N/A";
+    }
+}
 // EXEMPLO de como aplicar: 
 // Procure no seu código onde você faz: await _httpClient.SendAsync(request);
 // E adicione a chamada do contador logo antes:
@@ -2393,6 +2418,7 @@ public async Task<ItemDetails> GetItemDetailsAsync(string projectId, string item
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
 
         var response = await _httpClient.SendAsync(request);
+        TraceApiTelemetry(response);
         if (!response.IsSuccessStatusCode) return null;
 
         var jsonString = await response.Content.ReadAsStringAsync();

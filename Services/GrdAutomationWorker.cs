@@ -52,7 +52,7 @@ namespace APS.WebApp.Services
                         var grdSyncService = scope.ServiceProvider.GetRequiredService<GrdToLdpSyncService>();
                         var ldpToCustoService = scope.ServiceProvider.GetRequiredService<LdpToCustoSyncService>();
                         var scheduleService = scope.ServiceProvider.GetRequiredService<AccScheduleSyncService>();
-
+                        
                         _logger.LogInformation("🔍 Consultando SQL para identificar projetos ativos...");
                         DataTable dtAtivos = dbService.GetProjetosAtivos();
 
@@ -151,7 +151,7 @@ namespace APS.WebApp.Services
                                 // ==============================================================================
                                 // ETAPAS DE PROCESSAMENTO - AGORA RECEBEM O ldpFileId DIRETO DO ROBÔ
                                 // ==============================================================================
-/*
+
                                 // ETAPA 1/11: TIMESHEET
                                 _logger.LogInformation($"🧹 [1/11] Reconstruindo aba TIMESHEET via SQL Bruto...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
@@ -226,7 +226,7 @@ namespace APS.WebApp.Services
                                 // 🎯 CORREÇÃO: Passando ldpFileId
                                 var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 10: {result9}");
-*/
+
                                 // ==============================================================================
                                 // 🏗️ ETAPA 11/11: PERSISTÊNCIA NA LDP UNIFICADA (SQL SERVER)
                                 // ==============================================================================
@@ -259,6 +259,8 @@ namespace APS.WebApp.Services
                                 }
 
                                 _logger.LogInformation($"🏁 Ciclo concluído com sucesso para {projName}.");
+
+                                
                             }
                             catch (Exception ex)
                             {
@@ -272,8 +274,18 @@ namespace APS.WebApp.Services
                                     _logger.LogInformation("🧹 Arquivo temporário removido.");
                                 }
                             }
+                            // ✅ MOVA PARA CÁ (Ainda dentro do foreach):
+                            var telemetry = AutodeskApiService.GetTelemetry();
+                            _logger.LogInformation($@"
+                            📊 [PERFORMANCE - {projName}]
+                            ⏱️ Tempo de Execução: {stopwatch.Elapsed:mm\:ss}
+                            📞 Chamadas à API Autodesk: {telemetry.Calls}
+                            📉 Rate Limit Atual: {telemetry.Limit}
+                            __________________________________________________________");
+                            
                         }
                     }
+                    
                     stopwatch.Stop();
                     _logger.LogInformation("----------------------------------------------------------");
                     _logger.LogInformation($"🏁 RELATÓRIO DE EXECUÇÃO FINALIZADO em {stopwatch.Elapsed.Minutes}m {stopwatch.Elapsed.Seconds}s");
