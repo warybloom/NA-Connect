@@ -20,9 +20,9 @@ namespace APS.WebApp.Services
         private const int LINHA_CABECALHO = 7;
         private const int LINHA_INICIO_DADOS = 8;
         
-        // LIMITADOR: O robô só pode mexer até a coluna N (14). 
-        // As colunas O (15) em diante contém fórmulas e serão preservadas.
-        private const int COLUNA_LIMITE_TECNICO = 14; 
+        // LIMITADOR: O robô só pode mexer até a coluna 7. 
+        // Da coluna 8 em diante contém fórmulas e serão preservadas.
+        private const int COLUNA_LIMITE_TECNICO = 7; 
 
         public LdpToCustoSyncService(
             AutodeskApiService autodeskApi, 
@@ -38,112 +38,125 @@ namespace APS.WebApp.Services
         /// Orquestra o processo de sincronização entre as abas LDP e CUSTO
         /// </summary>
         public async Task<string> ExecuteFullSyncProcessAsync(string hubId, string projectId, string accessToken, string ldpFileId)
-{
-    _logger.LogInformation("📊 [ETAPA 6/11] Sincronizando LDP -> CUSTO (Preservando Estilos e Fórmulas O-AH)...");
-    string tempPath = Path.Combine(Path.GetTempPath(), $"SYNC_CUSTO_{Guid.NewGuid()}.xlsx");
-
-    try
-    {
-        // -----------------------------------------------------------------------
-        // 1. VACINA: RECUPERA DETALHES (Versão para Download e PASTA para Upload)
-        // -----------------------------------------------------------------------
-        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
-        if (itemDetails == null) throw new Exception("Detalhes do arquivo não encontrados (Item/Folder).");
-
-        string versionUrn = itemDetails.TipVersionUrn;
-        string parentFolderId = itemDetails.ParentFolderId; // 🎯 OBRIGATÓRIO PARA O UPLOAD
-        string realFileName = itemDetails.DisplayName;
-
-        // 2. DOWNLOAD DIRETO (Usando a versão correta)
-        using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, versionUrn, accessToken))
-        using (var fs = new FileStream(tempPath, FileMode.Create)) await dl.CopyToAsync(fs);
-
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        using (var package = new ExcelPackage(new FileInfo(tempPath)))
         {
-            var wsLdp = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("LDP", StringComparison.OrdinalIgnoreCase));
-            var wsCusto = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("CUSTO", StringComparison.OrdinalIgnoreCase));
+            _logger.LogInformation("📊 [ETAPA 6/11] Sincronizando LDP -> CUSTO (Preservando Estilos e Fórmulas O-AH)...");
+            string tempPath = Path.Combine(Path.GetTempPath(), $"SYNC_CUSTO_{Guid.NewGuid()}.xlsx");
 
-            if (wsLdp == null || wsCusto == null) throw new Exception("Abas 'LDP' ou 'CUSTO' não encontradas no arquivo!");
-
-            // 3. Mapeamento Dinâmico dos Cabeçalhos
-            var mapLdp = MapearColunas(wsLdp);
-            var mapCusto = MapearColunas(wsCusto);
-
-            string[] colunasParaCopiar = {
-                "ITEM", "DISCIPLINE", "N&A DOCUMENT NUMBER", "CLIENT DOCUMENT NUMBER",
-                "DOCUMENT TITLE", "FORMAT", "DOCUMENT STATUS", "CR", "CR-OS",
-                "AREA CODE", "DISCIPLINE ACTIVITY", "DOC TYPE CODE", "SEQ"
-            };
-
-            // 4. Limpeza Controlada da aba CUSTO
-            int LINHA_CABECALHO = 7;
-            int LINHA_INICIO_DADOS = 8;
-            int COLUNA_LIMITE_TECNICO = 14; // Coluna N
-
-            int ultimaLinhaExistenteCusto = wsCusto.Dimension?.End.Row ?? LINHA_CABECALHO;
-            if (ultimaLinhaExistenteCusto >= LINHA_INICIO_DADOS)
+            try
             {
-                // Limpa conteúdo mantendo formatação
-                wsCusto.Cells[LINHA_INICIO_DADOS, 1, ultimaLinhaExistenteCusto, COLUNA_LIMITE_TECNICO].Value = null;
-            }
+                // -----------------------------------------------------------------------
+                // 1. VACINA: RECUPERA DETALHES (Versão para Download e PASTA para Upload)
+                // -----------------------------------------------------------------------
+                var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, accessToken);
+                if (itemDetails == null) throw new Exception("Detalhes do arquivo não encontrados (Item/Folder).");
 
-            // 5. Loop de Cópia de Dados
-            int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS;
-            int linhaDestino = LINHA_INICIO_DADOS;
-            int colKeyLdp = mapLdp.GetValueOrDefault("N&A DOCUMENT NUMBER", 0);
+                string versionUrn = itemDetails.TipVersionUrn;
+                string parentFolderId = itemDetails.ParentFolderId; // 🎯 OBRIGATÓRIO PARA O UPLOAD
+                string realFileName = itemDetails.DisplayName;
 
-            for (int r = LINHA_INICIO_DADOS; r <= ultimaLinhaLdp; r++)
-            {
-                string docCode = wsLdp.Cells[r, colKeyLdp].Text?.Trim();
-                if (string.IsNullOrWhiteSpace(docCode)) continue;
+                // 2. DOWNLOAD DIRETO (Usando a versão correta)
+                using (var dl = await _autodeskApi.DownloadFileStreamAsync(projectId, versionUrn, accessToken))
+                using (var fs = new FileStream(tempPath, FileMode.Create)) await dl.CopyToAsync(fs);
 
-                // Cópia Direta de Colunas Específicas
-                wsCusto.Cells[linhaDestino, 11].Value = wsLdp.Cells[r, 26].Value; // Area
-                wsCusto.Cells[linhaDestino, 14].Value = wsLdp.Cells[r, 29].Value; // Seq
-
-                // Sincronização Dinâmica
-                foreach (var nomeCol in colunasParaCopiar)
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using (var package = new ExcelPackage(new FileInfo(tempPath)))
                 {
-                    if (nomeCol.Contains("AREA") || nomeCol.Contains("SEQ")) continue;
+                    var wsLdp = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("LDP", StringComparison.OrdinalIgnoreCase));
+                    var wsCusto = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Equals("CUSTO", StringComparison.OrdinalIgnoreCase));
 
-                    if (mapLdp.ContainsKey(nomeCol) && mapCusto.ContainsKey(nomeCol))
+                    if (wsLdp == null || wsCusto == null) throw new Exception("Abas 'LDP' ou 'CUSTO' não encontradas no arquivo!");
+
+                    // 3. Mapeamento Dinâmico dos Cabeçalhos
+                    var mapLdp = MapearColunas(wsLdp);
+                    var mapCusto = MapearColunas(wsCusto);
+
+                    string[] colunasParaCopiar = {
+                        "ITEM", "DISCIPLINE", "N&A DOCUMENT NUMBER", "CLIENT DOCUMENT NUMBER",
+                        "DOCUMENT TITLE", "FORMAT", "DOCUMENT STATUS", "CR", "CR-OS",
+                        "AREA CODE", "DISCIPLINE ACTIVITY", "DOC TYPE CODE", "SEQ"
+                    };
+
+                    // 4. Limpeza Controlada da aba CUSTO
+                    int LINHA_CABECALHO_LOCAL = 7;
+                    int LINHA_INICIO_DADOS_LOCAL = 8;
+                    int COLUNA_LIMITE_TECNICO_LOCAL = 7; // Limite restabelecido para 7
+
+                    int ultimaLinhaExistenteCusto = wsCusto.Dimension?.End.Row ?? LINHA_CABECALHO_LOCAL;
+                    if (ultimaLinhaExistenteCusto >= LINHA_INICIO_DADOS_LOCAL)
                     {
-                        int cOrigem = mapLdp[nomeCol];
-                        int cDestino = mapCusto[nomeCol];
-
-                        if (cDestino <= COLUNA_LIMITE_TECNICO)
-                        {
-                            wsCusto.Cells[linhaDestino, cDestino].Value = wsLdp.Cells[r, cOrigem].Value;
-                        }
+                        // Limpa conteúdo mantendo formatação apenas até a coluna 7
+                        wsCusto.Cells[LINHA_INICIO_DADOS_LOCAL, 1, ultimaLinhaExistenteCusto, COLUNA_LIMITE_TECNICO_LOCAL].Value = null;
                     }
+
+                    // 5. Loop de Cópia de Dados
+                    int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS_LOCAL;
+                    int linhaDestino = LINHA_INICIO_DADOS_LOCAL;
+                    int colKeyLdp = mapLdp.GetValueOrDefault("N&A DOCUMENT NUMBER", 0);
+
+                    for (int r = LINHA_INICIO_DADOS_LOCAL; r <= ultimaLinhaLdp; r++)
+                    {
+                        string docCode = wsLdp.Cells[r, colKeyLdp].Text?.Trim();
+                        if (string.IsNullOrWhiteSpace(docCode)) continue;
+
+                        // Cópia Flexível de Colunas Específicas: Agora só escreve se o mapeamento indicar que a coluna de destino é <= 7
+                        if (mapCusto.ContainsKey("AREA CODE"))
+                        {
+                            int cDestinoArea = mapCusto["AREA CODE"];
+                            if (cDestinoArea <= COLUNA_LIMITE_TECNICO_LOCAL)
+                                wsCusto.Cells[linhaDestino, cDestinoArea].Value = wsLdp.Cells[r, 26].Value;
+                        }
+
+                        if (mapCusto.ContainsKey("SEQ"))
+                        {
+                            int cDestinoSeq = mapCusto["SEQ"];
+                            if (cDestinoSeq <= COLUNA_LIMITE_TECNICO_LOCAL)
+                                wsCusto.Cells[linhaDestino, cDestinoSeq].Value = wsLdp.Cells[r, 29].Value;
+                        }
+
+                        // Sincronização Dinâmica do restante
+                        foreach (var nomeCol in colunasParaCopiar)
+                        {
+                            if (nomeCol.Contains("AREA") || nomeCol.Contains("SEQ")) continue;
+
+                            if (mapLdp.ContainsKey(nomeCol) && mapCusto.ContainsKey(nomeCol))
+                            {
+                                int cOrigem = mapLdp[nomeCol];
+                                int cDestino = mapCusto[nomeCol];
+
+                                // Garantia dupla de que NENHUMA coluna passará do limite 7
+                                if (cDestino <= COLUNA_LIMITE_TECNICO_LOCAL)
+                                {
+                                    wsCusto.Cells[linhaDestino, cDestino].Value = wsLdp.Cells[r, cOrigem].Value;
+                                }
+                            }
+                        }
+                        linhaDestino++;
+                    }
+
+                    _logger.LogInformation($"✅ Sincronização LDP->CUSTO: {linhaDestino - LINHA_INICIO_DADOS_LOCAL} documentos copiados.");
+                    package.Save();
                 }
-                linhaDestino++;
+
+                // 6. UPLOAD CORRIGIDO
+                using (var ul = new FileStream(tempPath, FileMode.Open))
+                {
+                    // 🎯 AQUI: Passamos parentFolderId e o nome real
+                    await _autodeskApi.CreateNewVersionAsync(projectId, ldpFileId, parentFolderId, realFileName, ul, accessToken);
+                }
+
+                return "Sincronização concluída. Formatação e Fórmulas preservadas.";
             }
-
-            _logger.LogInformation($"✅ Sincronização LDP->CUSTO: {linhaDestino - LINHA_INICIO_DADOS} documentos copiados.");
-            package.Save();
+            catch (Exception ex)
+            {
+                _logger.LogError($"❌ Erro na Etapa 6 (Custo): {ex.Message}");
+                throw;
+            }
+            finally 
+            { 
+                if (File.Exists(tempPath)) File.Delete(tempPath); 
+            }
         }
 
-        // 6. UPLOAD CORRIGIDO
-        using (var ul = new FileStream(tempPath, FileMode.Open))
-        {
-            // 🎯 AQUI: Passamos parentFolderId e o nome real
-            await _autodeskApi.CreateNewVersionAsync(projectId, ldpFileId, parentFolderId, realFileName, ul, accessToken);
-        }
-
-        return "Sincronização concluída. Formatação e Fórmulas preservadas.";
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError($"❌ Erro na Etapa 6 (Custo): {ex.Message}");
-        throw;
-    }
-    finally 
-    { 
-        if (File.Exists(tempPath)) File.Delete(tempPath); 
-    }
-}
         // --- MÉTODOS AUXILIARES ---
 
         private Dictionary<string, int> MapearColunas(ExcelWorksheet ws)

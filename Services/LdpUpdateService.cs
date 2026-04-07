@@ -762,8 +762,17 @@ private string GetLdpFileNameFromConfig(string projectId)
                     int lastCol = ws.Dimension?.End.Column ?? 30;
                     if (lastCol > 15) ws.DeleteColumn(16, lastCol - 15);
 
-                    var extraSheets = package.Workbook.Worksheets.Where(s => !s.Name.Contains("LDP")).ToList();
-                    foreach (var s in extraSheets) package.Workbook.Worksheets.Delete(s);
+                    // Definimos quais abas DEVEM ser mantidas
+                    var extraSheets = package.Workbook.Worksheets
+                        .Where(s => !s.Name.ToUpper().Contains("LDP") && 
+                                    !s.Name.ToUpper().Contains("CAPA")) 
+                        .ToList();
+
+                    foreach (var s in extraSheets) 
+                    {
+                        _logger.LogInformation($"🗑️ Removendo aba desnecessária no espelho: {s.Name}");
+                        package.Workbook.Worksheets.Delete(s);
+                    }
 
                     package.SaveAs(new FileInfo(tempTargetPath));
                 }

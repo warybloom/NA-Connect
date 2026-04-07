@@ -123,7 +123,7 @@ namespace APS.WebApp.Services
                                 // DOWNLOAD FÍSICO COM O ID DESCOBERTO
                                 using (var dl = await autodeskApi.DownloadFileStreamAsync(formattedProjectId, ldpFileId, robotToken))
                                 using (var fs = new FileStream(ldpPath, FileMode.Create)) await dl.CopyToAsync(fs);
-
+                                
                                 // ==============================================================================
                                 // 🧬 ETAPA 0/11: DNA DO PROJETO (METADADOS E CONTEXTO)
                                 // ==============================================================================
@@ -151,7 +151,7 @@ namespace APS.WebApp.Services
                                 // ==============================================================================
                                 // ETAPAS DE PROCESSAMENTO - AGORA RECEBEM O ldpFileId DIRETO DO ROBÔ
                                 // ==============================================================================
-
+                            
                                 // ETAPA 1/11: TIMESHEET
                                 _logger.LogInformation($"🧹 [1/11] Reconstruindo aba TIMESHEET via SQL Bruto...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
@@ -163,13 +163,13 @@ namespace APS.WebApp.Services
                                 // 🎯 CORREÇÃO: Passando ldpFileId
                                 var result1 = await ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 2: {result1.SummaryMessage}");
-
+                                    
                                 // ETAPA 3/11: OCR
                                 _logger.LogInformation($"📄 [3/11] Extraindo Revisões de PDFs (Selo/OCR)...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
                                 var result2 = await pdfMetadataService.SyncPdfRevisionsToAccAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 3: {result2}");
-
+                                    
                                 // ETAPA 4/11: GRDs
                                 _logger.LogInformation($"✉️ [4/11] Rastreando informações de envio (GRDs)...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
@@ -195,13 +195,13 @@ namespace APS.WebApp.Services
                                 _logger.LogInformation($"   ✅ Etapa 6: {result5}");
 
                                 await Task.Delay(2000, stoppingToken);
-
+                                
                                 // ETAPA 7/11: ATRIBUTOS ACC
                                 _logger.LogInformation($"⚡ [7/11] Sincronizando Atributos no ACC (Metadados)...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
                                 var result6 = await ldpUpdateService.SyncAccAttributesFromLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 7: {result6}");
-
+                                
                                 // ETAPA 8/11: VEREDITOS
                                 _logger.LogInformation($"🏁 [8/11] Sincronizando Vereditos de Aprovação...");
                                 // 🎯 CORREÇÃO: Passando ldpFileId
@@ -226,7 +226,7 @@ namespace APS.WebApp.Services
                                 // 🎯 CORREÇÃO: Passando ldpFileId
                                 var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 10: {result9}");
-
+                                
                                 // ==============================================================================
                                 // 🏗️ ETAPA 11/11: PERSISTÊNCIA NA LDP UNIFICADA (SQL SERVER)
                                 // ==============================================================================
@@ -274,6 +274,8 @@ namespace APS.WebApp.Services
                                     _logger.LogInformation("🧹 Arquivo temporário removido.");
                                 }
                             }
+
+                            
                             // ✅ MOVA PARA CÁ (Ainda dentro do foreach):
                             var telemetry = AutodeskApiService.GetTelemetry();
                             _logger.LogInformation($@"
