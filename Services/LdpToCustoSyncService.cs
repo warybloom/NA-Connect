@@ -91,14 +91,26 @@ namespace APS.WebApp.Services
                     // 5. Loop de Cópia de Dados
                     int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS_LOCAL;
                     int linhaDestino = LINHA_INICIO_DADOS_LOCAL;
-                    int colKeyLdp = mapLdp.GetValueOrDefault("N&A DOCUMENT NUMBER", 0);
+                    
+                    // 🛡️ BLINDAGEM CONTRA O ERRO DE COLUNA 0 (Inglês, Português e com espaços soltos)
+                    int colKeyLdp = 0;
+                    if (mapLdp.ContainsKey("N&A DOCUMENT NUMBER")) colKeyLdp = mapLdp["N&A DOCUMENT NUMBER"];
+                    else if (mapLdp.ContainsKey("NÚMERO DOCUMENTO N&A")) colKeyLdp = mapLdp["NÚMERO DOCUMENTO N&A"];
+                    else if (mapLdp.ContainsKey("NÚMERO DOCUMENTO N&A ")) colKeyLdp = mapLdp["NÚMERO DOCUMENTO N&A "];
+
+                    // Se não achar o cabeçalho base, o robô para a aba Custo mas NÃO aborta as outras etapas
+                    if (colKeyLdp == 0)
+                    {
+                        _logger.LogWarning("⚠️ Cabeçalho 'N&A DOCUMENT NUMBER' (ou equivalente) não encontrado na LDP. Etapa de Custo abortada por segurança.");
+                        return "Aviso: Falha de cabeçalho. A aba Custo não foi atualizada.";
+                    }
 
                     for (int r = LINHA_INICIO_DADOS_LOCAL; r <= ultimaLinhaLdp; r++)
                     {
                         string docCode = wsLdp.Cells[r, colKeyLdp].Text?.Trim();
                         if (string.IsNullOrWhiteSpace(docCode)) continue;
 
-                        // Cópia Flexível de Colunas Específicas: Agora só escreve se o mapeamento indicar que a coluna de destino é <= 7
+                        // Cópia Flexível de Colunas Específicas
                         if (mapCusto.ContainsKey("AREA CODE"))
                         {
                             int cDestinoArea = mapCusto["AREA CODE"];
