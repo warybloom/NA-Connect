@@ -577,90 +577,136 @@ public async Task<string> UpdateWorkflowStatusAsync(string hubId, string project
 
             return filesNotInLdp;
         }
-public async Task<string> SyncAccAttributesFromLdpAsync(string hubId, string projectId, string token, string ldpFileId)
+// Modulo: APS.WebApp.Services/LdpUpdateService.cs
+
+// Modulo: APS.WebApp.Services/LdpUpdateService.cs
+
+public async Task<string> SyncAccAttributesFromSqlAsync(string hubId, string projectId, string token)
+{
+    _logger.LogInformation("⚡ [ETAPA 7/11] Sincronizando Atributos no ACC (Lendo direto da Ldp_Unificada no SQL)...");
+
+    try
+    {
+        // 1. Busca o padrão de nomenclatura no banco de dados da N&A
+        string padraoNomenclatura = _dbService.ObterContextoProjeto(projectId)?.NamingStandard ?? "NA";
+        _logger.LogInformation($"[Sync] Padrão de Nomenclatura detectado via Banco: '{padraoNomenclatura}'");
+
+        var ldpData = new List<Dictionary<string, string>>();
+
+        // 🎯 CORREÇÃO CRÍTICA: Conexão bruta idêntica ao DatabaseService.cs
+        // Isso garante que o robô acesse o banco exato onde a Ldp_Unificada foi criada.
+        string connectionString = @"Server=NA-1708\SQLEXPRESS;Database=DB_NA_CONNECT;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;";
+
+        using (var conn = new Microsoft.Data.SqlClient.SqlConnection(connectionString))
         {
-            _logger.LogInformation("⚡ [ETAPA 7/11] Sincronizando Atributos no ACC (Lendo Config do SQL)...");
-            string tempFilePath = null;
+            await conn.OpenAsync();
+            using (var cmd = conn.CreateCommand())
+            {
+                // Comando SQL limpo focando apenas no schema dbo
+                // Modulo: APS.WebApp.Services/LdpUpdateService.cs
+// Altere apenas o bloco do comando SQL dentro de SyncAccAttributesFromSqlAsync
 
-            try {
-                // 1. BUSCA A CHAVE NO BANCO DE DADOS (Substitui o AppSettings)
-                string keyColumnConfig = _dbService.ObterColunaChaveProjeto(projectId);
-                _logger.LogInformation($"[Sync] Usando a coluna chave definida no Banco: '{keyColumnConfig}'");
+cmd.CommandText = @"
+    SELECT 
+        [NA_Document_Number],
+        [Client_Document_Number],
+        [Document_Title],
+        [Format],
+        [No_Pages],
+        [Emission_Date],
+        [Revision],
+        [Document_Status],
+        [Discipline],
+        [Transmittal_Number], -- 🔥 COLUNA ADICIONADA AQUI 🔥
+        [CR],
+        [CR_OS]
+    FROM [dbo].[Ldp_Unificada]
+    WHERE [Project_ID_ACC] = @projectId";
 
-                // 2. DOWNLOAD DIRETO
-                // "Vacina" para garantir a versão correta
-                var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, token);
-                string downloadUrn = itemDetails?.TipVersionUrn ?? ldpFileId;
+                var param = cmd.CreateParameter();
+                param.ParameterName = "@projectId";
+                param.Value = projectId;
+                cmd.Parameters.Add(param);
 
-                tempFilePath = Path.Combine(Path.GetTempPath(), $"LDP_SYNC_{Guid.NewGuid()}.xlsx");
-                
-                using (var stream = await _autodeskApi.DownloadFileStreamAsync(projectId, downloadUrn, token))
-                using (var fileStream = new FileStream(tempFilePath, FileMode.Create)) { await stream.CopyToAsync(fileStream); }
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        // 3. Identifica a chave primária
+                        string naCode = reader["NA_Document_Number"]?.ToString()?.Trim();
+                        string clientCode = reader["Client_Document_Number"]?.ToString()?.Trim();
 
-                var ldpData = new List<Dictionary<string, string>>();
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                
-                using (var package = new ExcelPackage(new FileInfo(tempFilePath))) {
-                    var worksheet = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Trim().ToUpper().Contains("LDP")) 
-                                    ?? package.Workbook.Worksheets[0];
-                    
-                    // Tenta calcular fórmulas se necessário (opcional)
-                    // worksheet.Cells.Calculate(); 
+                        string keyValue = padraoNomenclatura.Equals("CLIENT", StringComparison.OrdinalIgnoreCase) 
+                            ? clientCode 
+                            : naCode;
 
-                    int headerRow = 7, groupRow = 6;
-                    // Tenta achar a linha de cabeçalho se não for a 7
-                    for (int r = 1; r <= 20; r++) {
-                        if (GetSafeCellValue(worksheet, r, 1).Equals("ITEM", StringComparison.OrdinalIgnoreCase)) { 
-                            headerRow = r; 
-                            groupRow = r - 1; 
-                            break; 
-                        }
-                    }
-
-                    var headerMap = new Dictionary<string, int>();
-                    int keyIdx = -1;
-
-                    // Mapeia colunas
-                    for (int col = 1; col <= worksheet.Dimension.End.Column; col++) {
-                        string h = GetSafeCellValue(worksheet, headerRow, col);
-                        if (string.IsNullOrEmpty(h)) continue;
-
-                        if (h.Trim().Equals(keyColumnConfig, StringComparison.OrdinalIgnoreCase)) keyIdx = col;
-
-                        string g = groupRow > 0 ? GetSafeCellValue(worksheet, groupRow, col) : "";
-                        string combinedH = (g != "" && (g.ToUpper().Contains("EMISSÃO") || g.ToUpper().Contains("ISSUE"))) 
-                            ? (ColumnMatch(h, "PROPÓSITO", "PURPOSE") ? $"{g} - PROPÓSITO DE EMISSÃO" : $"{g} - {h}") : h;
-                        combinedH = Regex.Replace(combinedH, @"\s+", " ").Trim();
-                        headerMap[combinedH] = col;
-                    }
-
-                    if (keyIdx == -1) return $"Erro: A coluna chave '{keyColumnConfig}' não foi encontrada na planilha (Linha {headerRow}). Verifique o SQL 'Metadados_Projetos'.";
-
-                    // Lê os dados
-                    for (int row = headerRow + 1; row <= worksheet.Dimension.End.Row; row++) {
-                        string keyValue = GetSafeCellValue(worksheet, row, keyIdx);
+                        // Fallback seguro: tenta o NA se o Client estiver vazio, senão ignora a linha
+                        if (string.IsNullOrWhiteSpace(keyValue)) keyValue = naCode;
                         if (string.IsNullOrWhiteSpace(keyValue)) continue;
 
-                        var rowData = new Dictionary<string, string>();
-                        rowData["_DOC_NUMBER_KEY_"] = keyValue;
-                        foreach (var kvp in headerMap) rowData[kvp.Key] = GetSafeCellValue(worksheet, row, kvp.Value);
-                        ldpData.Add(rowData);
+                        // Modulo: APS.WebApp.Services/LdpUpdateService.cs
+// Dentro de SyncAccAttributesFromSqlAsync, substitua APENAS o Bloco 4
+
+// ...
+var rowData = new Dictionary<string, string>();
+rowData["_DOC_NUMBER_KEY_"] = keyValue;
+
+// 4. Mapeamento De/Para Inteligente
+// As chaves aqui são EXATAMENTE a versão limpa (sem espaço/ponto) do que está no print do ACC
+rowData["NADOCUMENTNUMBER"] = reader["NA_Document_Number"]?.ToString();
+rowData["CLIENTDOCUMENTNUMBER"] = reader["Client_Document_Number"]?.ToString();
+rowData["DOCUMENTTITLE"] = reader["Document_Title"]?.ToString();
+
+// Tratamento específico para a Revisão ("REV." no ACC)
+string rev = reader["Revision"]?.ToString();
+rowData["REV"] = rev;
+
+// Status (Baseado no seu padrão de projeto, mesmo não aparecendo na imagem, mantemos flexível)
+string status = reader["Document_Status"]?.ToString();
+rowData["DOCUMENTSTATUS"] = status;
+rowData["STATUS"] = status; 
+
+// Atributos secundários
+rowData["DISCIPLINE"] = reader["Discipline"]?.ToString();
+rowData["FORMAT"] = reader["Format"]?.ToString();
+rowData["NOPAGES"] = reader["No_Pages"]?.ToString();
+
+// Cuidado com a grafia que está configurada no ACC (TRANMISTAL vs TRANSMITTAL)
+rowData["TRANMISTALNUMBER"] = reader["Transmittal_Number"]?.ToString(); // Nome exato limpo do ACC
+rowData["TRANSMITTALNUMBER"] = reader["Transmittal_Number"]?.ToString(); // Duplicado caso você arrume no ACC
+
+// Cuidado com a grafia (EMISSION DATA vs EMISSION DATE)
+if (reader["Emission_Date"] != DBNull.Value)
+{
+    string dateStr = Convert.ToDateTime(reader["Emission_Date"]).ToString("yyyy-MM-dd");
+    rowData["EMISSIONDATA"] = dateStr; // Nome exato limpo do ACC
+    rowData["EMISSIONDATE"] = dateStr; // Duplicado caso você arrume no ACC
+}
+
+ldpData.Add(rowData);
+// ...
                     }
                 }
-
-                if (ldpData.Count == 0) return "Nenhum dado encontrado para sincronizar.";
-
-                // Envia para atualização em lote na API da Autodesk
-                var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, token);
-                return result.SummaryMessage;
             }
-            catch (Exception ex) {
-                _logger.LogError(ex, "Erro na Etapa 7 (Atributos).");
-                return $"Erro: {ex.Message}";
-            }
-            finally { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); }
         }
-// 1. Adicione este método helper na classe
+
+        if (ldpData.Count == 0) return "⚠️ Nenhum dado encontrado na tabela Ldp_Unificada para este projeto.";
+
+        _logger.LogInformation($"[Sync] {ldpData.Count} registros extraídos do SQL Server. Preparando montagem de Payload para o ACC...");
+
+        // 5. Envia o lote de dados para a API da Autodesk processar as atualizações
+        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, token);
+        return result.SummaryMessage;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "❌ Erro Crítico na Etapa 7 (Sincronização via SQL Unificada).");
+        return $"Erro: {ex.Message}";
+    }
+}
+
+
+
 private object TratarData(string valor)
 {
     if (string.IsNullOrWhiteSpace(valor)) return DBNull.Value;

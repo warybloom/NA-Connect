@@ -1,0 +1,25 @@
+==========================================================
+🚀 EXECUÇÃO LOTE INICIADA EM: 09/07/2026 14:00:02
+==========================================================
+🤖 Robô acordou às 14:00:02.
+✅ 1 projetos encontrados.
+
+🏗️ Projeto: BML011.013 - P-0602.1-MODULAR PROJECT (b.c3e20d9d-779e-423c-9381-abec38cf11cb)
+   ✅ Etapa 0: DNA Identificado (CLIENT)
+   ✅ Etapa 1: Dump concluído.
+   ✅ Etapa 2: Sucesso! 296 itens atualizados e nova versão gerada.
+   ✅ Etapa 4: Nenhuma atualização de GRD necessária.
+   ✅ Etapa 5: Nada para atualizar na Etapa 2.
+   ✅ Etapa 6: Sincronização concluída. Formatação e Fórmulas preservadas.
+   ✅ Etapa 7: Sincronização concluída. 4195 atualizações de atributos enviadas. 4590 códigos da LDP não encontrados no ACC.
+   ❌ ERRO CRÍTICO (DETALHADO):
+System.Exception: Detalhes do arquivo não encontrados.
+   at APS.WebApp.Services.LdpUpdateService.RunApprovalVerdictSyncAsync(String hubId, String projectId, String accessToken, String userId, String ldpFileId) in C:\Dev\N-A-Connect\Services\LdpUpdateService.cs:line 345
+   at APS.WebApp.Services.GrdAutomationWorker.ProcessarCicloCompleto(CancellationToken stoppingToken) in C:\Dev\N-A-Connect\Services\GrdAutomationWorker.cs:line 236
+
+==========================================================
+📊 RESUMO FINAL DO LOTE
+⏱️ Tempo Total de Execução: 07:10
+📞 Total Chamadas API: 6
+📉 Rate Limit Final: N/A
+==========================================================

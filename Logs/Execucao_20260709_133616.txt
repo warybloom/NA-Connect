@@ -1,0 +1,55 @@
+==========================================================
+🚀 EXECUÇÃO LOTE INICIADA EM: 09/07/2026 12:00:00
+==========================================================
+🤖 Robô acordou às 12:00:00.
+✅ 11 projetos encontrados.
+
+🏗️ Projeto: BML011.013 - P-0602.1-MODULAR PROJECT (b.c3e20d9d-779e-423c-9381-abec38cf11cb)
+   ✅ Etapa 0: DNA Identificado (CLIENT)
+   ✅ Etapa 1: Dump concluído.
+   ✅ Etapa 2: Sucesso! 296 itens atualizados e nova versão gerada.
+   ✅ Etapa 4: Nenhuma atualização de GRD necessária.
+   ✅ Etapa 5: Nada para atualizar na Etapa 2.
+   ✅ Etapa 6: Sincronização concluída. Formatação e Fórmulas preservadas.
+   ✅ Etapa 7: Sincronização concluída. 1680 atualizações de atributos enviadas. 4590 códigos da LDP não encontrados no ACC.
+   ❌ ERRO CRÍTICO (DETALHADO):
+System.Exception: Detalhes do arquivo não encontrados.
+   at APS.WebApp.Services.LdpUpdateService.RunApprovalVerdictSyncAsync(String hubId, String projectId, String accessToken, String userId, String ldpFileId) in C:\Dev\N-A-Connect\Services\LdpUpdateService.cs:line 345
+   at APS.WebApp.Services.GrdAutomationWorker.ProcessarCicloCompleto(CancellationToken stoppingToken) in C:\Dev\N-A-Connect\Services\GrdAutomationWorker.cs:line 248
+
+🏗️ Projeto: BML011.014 - P-0101.1-SCP-PROJECT GULF OF AMERICA (b.92c9d539-6092-4a08-a812-72801dc15fe7)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.015 - P-0201.1 - REFRACTORY METALS PLANT (b.b3f4ea51-6325-441a-9586-eb9ecb56f0c8)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.017 - ELETROCENTER (b.ec04bee8-48ba-4640-9242-04a4df90d732)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.016 - COOLING TOWER (b.9907135f-ff67-43bb-887b-20c3a7f75807)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.018- RETOMADA BOSTON METAL (b.2e69f6f7-20cc-4264-8075-92231ffa98cd)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.018 - ADEQUAÇÕES CIVIS (b.0f2b49b8-a53d-44a0-9dc0-dc5374985e70)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.021 - INGOT MODEL FABRICATION DRAWINGS (b.cc0b4393-8d70-4a09-885e-31c6af1b21de)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.22 - BASIC AND DETAILED DESIGN FOR OFF GAS ADEQUATION FOR MOE (b.94baf6fe-b8ce-4a05-bf23-fc358cd63fa1)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: BML011.023 - LAUNDER ADEQUATION (b.4ae8a50f-ff66-4e13-a38c-325726bc3245)
+   ❌ Erro: LDP não encontrada.
+
+🏗️ Projeto: KR TEST1 (b.482084fb-29b7-4254-8191-f2fc5c8d3ddf)
+   ❌ Erro: LDP não encontrada.
+
+==========================================================
+📊 RESUMO FINAL DO LOTE
+⏱️ Tempo Total de Execução: 36:16
+📞 Total Chamadas API: 6
+📉 Rate Limit Final: N/A
+==========================================================

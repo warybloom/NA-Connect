@@ -62,7 +62,12 @@ namespace APS.WebApp.Services
                             matchClient++;
                     }
 
-                    result.NamingStandard = matchClient > matchNA ? "CLIENT" : "NA";
+                    // MODO TESTE: Forçando o padrão independente do match das colunas
+// Depois do teste, volte para: result.NamingStandard = matchClient > matchNA ? "CLIENT" : "NA";
+
+result.NamingStandard = "CLIENT"; 
+
+_logger.LogWarning("⚠️ [TESTE] NAMING_STANDARD FORÇADO PARA 'CLIENT' VIA CÓDIGO.");
                 }
             }
             catch (Exception ex)

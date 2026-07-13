@@ -1019,8 +1019,8 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
 
                     // Tenta achar a pasta de Gestão (Mesma lógica do Robô)
                     var folderLdpId = await _scheduleService.FindFolderByPaths(hubId, formattedProjectId, new[] {
-                        new[] { "09 - DESENVOLVIMENTO", "09.10 - GESTÃO" },
-                        new[] { "09 - MODEL DEVELOPING", "09.10 - MANAGEMENT" }
+                        new[] { "09 - DESENVOLVIMENTO", "09.14 - GESTÃO" },
+                        new[] { "09 - DEVELOPING", "09.14 - MANAGEMENT" }
                     }, accessToken);
 
                     if (!string.IsNullOrEmpty(folderLdpId))

@@ -15,6 +15,8 @@ public partial class ApplicationDbContext : DbContext
     {
     }
 
+    public DbSet<TimesheetEntry> Timesheets { get; set; }
+
     public virtual DbSet<TbComercial> TbComercials { get; set; }
 
     public virtual DbSet<TbContasAnalitica> TbContasAnaliticas { get; set; }

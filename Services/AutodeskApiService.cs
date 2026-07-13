@@ -1186,6 +1186,8 @@ public async Task<Dictionary<string, List<string>>> GetAllProjectFilesAsync(stri
         }
 
         // 3. Substitua o método SyncLdpAttributesAsync (Aqui está a lógica de SMART MATCH)
+// Modulo: Services/AutodeskApiService.cs
+
 public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projectId, List<Dictionary<string, string>> ldpData, string accessToken)
 {
     string keyColumnName = GetProjectSettingValue(projectId, "KeyColumn");
@@ -1204,10 +1206,9 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
     
     var result = new SyncResult { TotalLdpFiles = ldpData.Count };
 
-    // 3. Itera sobre a LDP
+    // 3. Itera sobre a LDP (Dados do Banco)
     foreach (var row in ldpData)
     {
-        // Pega o código do documento da linha do Excel (ex: "BML-ARQ-01")
         if (row.TryGetValue("_DOC_NUMBER_KEY_", out var docCode) || 
             row.TryGetValue(keyColumnName, out docCode))
         {
@@ -1216,20 +1217,15 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
             result.AllLdpFiles.Add(docCode); 
             var codeToSearch = docCode.Trim();
 
-            // === LÓGICA DE BUSCA INTELIGENTE (SMART MATCH) ===
+            // === LÓGICA DE BUSCA DE ARQUIVOS (SMART MATCH) ===
             List<string> targetUrns = new List<string>();
 
-            // Tentativa A: Match Exato (Sem Extensão)
-            // Ex: Excel "DOC-01" == ACC "DOC-01.pdf"
             if (fileMap.TryGetValue(codeToSearch, out var exactMatches))
             {
                 targetUrns.AddRange(exactMatches);
             }
             else
             {
-                // Tentativa B: Match Parcial (StartsWith)
-                // Ex: Excel "DOC-01" encontra ACC "DOC-01_R00.pdf"
-                // Isso é um pouco mais lento, mas resolve o problema de sufixos.
                 var partialMatches = fileMap.Keys
                     .Where(k => k.StartsWith(codeToSearch, StringComparison.OrdinalIgnoreCase))
                     .ToList();
@@ -1245,21 +1241,45 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
             {
                 _logger.LogInformation($"✅ ENCONTRADO: '{docCode}' corresponde a {targetUrns.Count} arquivo(s) no ACC.");
                 
-                // Prepara os atributos para envio
                 var customAttributesForFile = new List<object>(); 
+                
                 foreach (var attribute in row)
                 {
-                    // Ignora chaves internas
-                    if (attribute.Key == "_DOC_NUMBER_KEY_") continue;
+                    // Ignora chaves de controle internas
+                    if (attribute.Key == "_DOC_NUMBER_KEY_" || attribute.Key == keyColumnName) continue;
+                    if (string.IsNullOrWhiteSpace(attribute.Value)) continue;
 
-                    if (dynamicAttributeMap.TryGetValue(attribute.Key, out var attributeId))
+                    // Mapeamento agressivo para ignorar espaços, pontos e traços
+                    string attributeKeyLimpa = System.Text.RegularExpressions.Regex.Replace(attribute.Key, @"[^A-Z0-9]", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).ToUpperInvariant();
+                    string matchedAttributeId = null;
+
+                    foreach (var accAttr in dynamicAttributeMap)
                     {
-                        customAttributesForFile.Add(new { id = int.Parse(attributeId), value = attribute.Value });
+                        string accAttrLimpa = System.Text.RegularExpressions.Regex.Replace(accAttr.Key, @"[^A-Z0-9]", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).ToUpperInvariant();
+                        
+                        if (accAttrLimpa == attributeKeyLimpa || 
+                           (attributeKeyLimpa == "REV" && accAttrLimpa.Contains("REV")) ||
+                           (attributeKeyLimpa == "STATUS" && accAttrLimpa.Contains("STATUS")))
+                        {
+                            matchedAttributeId = accAttr.Value;
+                            break;
+                        }
+                    }
+
+                    if (matchedAttributeId != null)
+                    {
+                        customAttributesForFile.Add(new { 
+                            id = int.Parse(matchedAttributeId), 
+                            value = attribute.Value.Trim() 
+                        });
                     }
                 }
 
                 if (customAttributesForFile.Any())
                 {
+                    string payloadDebug = JsonSerializer.Serialize(customAttributesForFile);
+                    _logger.LogInformation($"[DEBUG] Payload Atributos para {docCode}: {payloadDebug}");
+
                     foreach (var versionUrn in targetUrns.Distinct())
                     {
                         try {
@@ -1270,11 +1290,13 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
                         }
                     }
                 }
+                else
+                {
+                    _logger.LogWarning($"⚠️ As colunas mapeadas para '{docCode}' não encontraram atributos correspondentes no ACC.");
+                }
             }
             else 
             {
-                // Loga apenas um aviso para não poluir, mas conta como não encontrado
-                // _logger.LogWarning($"❌ NÃO ENCONTRADO: '{docCode}' não tem correspondência no ACC.");
                 result.FilesNotFound.Add(docCode); 
             }
         }
@@ -1282,7 +1304,6 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
 
     result.SummaryMessage = $"Sincronização concluída. {result.FilesUpdated} atualizações de atributos enviadas. {result.FilesNotFound.Count} códigos da LDP não encontrados no ACC.";
     
-    // Log de amostra dos não encontrados para ajudar no debug
     if (result.FilesNotFound.Any())
     {
         _logger.LogWarning("Exemplos de arquivos NÃO encontrados (Verifique se o nome no ACC bate com estes códigos):");
@@ -1291,7 +1312,6 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
 
     return result; 
 }
-
 
         public async Task CreateWebhookAsync(string folderUrn, string callbackUrl, string accessToken)
         {
@@ -2176,47 +2196,50 @@ private string GetLdpFileNameFromConfig(string projectId)
         /// Este token tem permissões de superusuário.
         /// </summary>
         public async Task<string> Get2LeggedTokenAsync()
+{
+    // Define o escopo: O Robô precisa de poderes para ler, escrever e criar arquivos/pastas
+    var scope = "data:read data:write data:create data:search bucket:read account:read";
+
+    var clientId = _configuration["APS:ClientId"];
+    var clientSecret = _configuration["APS:ClientSecret"];
+
+    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+    {
+        throw new Exception("As configurações APS:ClientId e APS:ClientSecret não foram encontradas no appsettings.json.");
+    }
+
+    using (var client = new HttpClient())
+    {
+        // 🎯 A GRANDE MUDANÇA DA V2: As chaves vão no Cabeçalho (Header) codificadas em Base64
+        var authString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+
+        // 🎯 O corpo da requisição agora leva apenas a permissão e o escopo
+        var body = new Dictionary<string, string>
         {
-            // Define o escopo: O Robô precisa de poderes para ler, escrever e criar arquivos/pastas
-            var scope = "data:read data:write data:create data:search bucket:read account:read";
+            { "grant_type", "client_credentials" },
+            { "scope", scope }
+        };
 
-            var clientId = _configuration["APS:ClientId"];
-            var clientSecret = _configuration["APS:ClientSecret"];
+        var content = new FormUrlEncodedContent(body);
+        
+        // Chama o endpoint de autenticação V2
+        var response = await client.PostAsync("https://developer.api.autodesk.com/authentication/v2/token", content);
 
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-            {
-                throw new Exception("As configurações APS:ClientId e APS:ClientSecret não foram encontradas no appsettings.json.");
-            }
-
-            using (var client = new HttpClient())
-            {
-                var body = new Dictionary<string, string>
-                {
-                    { "client_id", clientId },
-                    { "client_secret", clientSecret },
-                    { "grant_type", "client_credentials" },
-                    { "scope", scope }
-                };
-
-                var content = new FormUrlEncodedContent(body);
-                
-                // Chama o endpoint de autenticação
-                var response = await client.PostAsync("https://developer.api.autodesk.com/authentication/v2/token", content);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    _logger.LogError($"[AutodeskApiService] Falha ao obter Token do Robô: {response.StatusCode} - {error}");
-                    throw new Exception($"Não foi possível autenticar o Robô no Autodesk APS. Erro: {error}");
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                using (var doc = JsonDocument.Parse(json))
-                {
-                    return doc.RootElement.GetProperty("access_token").GetString();
-                }
-            }
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            _logger.LogError($"[AutodeskApiService] Falha ao obter Token do Robô: {response.StatusCode} - {error}");
+            throw new Exception($"Não foi possível autenticar o Robô no Autodesk APS. Erro: {error}");
         }
+
+        var json = await response.Content.ReadAsStringAsync();
+        using (var doc = JsonDocument.Parse(json))
+        {
+            return doc.RootElement.GetProperty("access_token").GetString();
+        }
+    }
+}
 
     // --- ARQUIVO: AutodeskApiService.cs ---
 // Adicione ou atualize este método
