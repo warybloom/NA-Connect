@@ -1,0 +1,242 @@
+/* Caminho: ClientApp/src/index.css */
+
+/* Diretivas base do Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================================
+  1. DEFINIÇÃO DO SISTEMA DE DESIGN (DESIGN SYSTEM)
+================================================================================
+*/
+@layer base {
+  :root {
+    /* Tema Padrão (Azul Escuro) */
+    --background: 220 25% 12%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 16%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 16%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 210 100% 65%;
+    --primary-foreground: 220 25% 12%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 210 100% 65%;
+    --accent-foreground: 220 25% 12%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 15% 25%;
+    --input: 220 15% 20%;
+    --ring: 210 100% 65%;
+
+    --radius: 0.75rem;
+
+    /* Tokens de Design Personalizados */
+    --gradient-primary: linear-gradient(135deg, hsl(220, 30%, 8%) 0%, hsl(210, 40%, 20%) 50%, hsl(220, 25%, 12%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(220, 20%, 18%) 0%, hsl(220, 15%, 14%) 100%);
+    --shadow-elegant: 0 20px 40px -12px hsl(220, 30%, 5% / 0.6);
+    --shadow-glow: 0 0 60px hsl(210, 100%, 65% / 0.15);
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Variáveis para Animação de Fundo */
+    --light-color: hsl(210, 100%, 65% / 0.3);
+    --light-glow: hsl(210, 100%, 65% / 0.1);
+
+    /* Variáveis para a Barra Lateral (Sidebar) */
+    --sidebar-background: 220 20% 16%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 210 100% 65%;
+    --sidebar-primary-foreground: 220 25% 12%;
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 25%;
+    --sidebar-ring: 210 100% 65%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+  }
+}
+
+/* ================================================================================
+  2. ESTILOS GLOBAIS
+================================================================================
+*/
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: var(--gradient-primary);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  /* ✅ ESTILOS ATUALIZADOS PARA A TABELA REDIMENSIONÁVEL ✅ */
+  .resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    background: hsl(var(--primary));
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+    opacity: 0; /* Começa invisível */
+    transition: opacity 0.2s;
+  }
+
+  /* O resizer aparece quando o rato está sobre o cabeçalho (th.group) */
+  th.group:hover .resizer {
+    opacity: 1;
+  }
+  
+  /* Opcional: muda de cor enquanto está a ser arrastado */
+  .resizer.isResizing {
+    opacity: 1;
+    background: hsl(var(--ring));
+  }
+
+  /* O cabeçalho da tabela precisa de ser relativo para o .resizer funcionar */
+  th {
+    position: relative;
+  }
+}
+
+/* ================================================================================
+  3. COMPONENTES PERSONALIZADOS
+================================================================================
+*/
+@layer components {
+  
+  .bg-animated {
+    @apply relative overflow-hidden;
+  }
+  
+  .bg-animated::before,
+  .bg-animated::after {
+    content: '';
+    @apply absolute w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none z-0;
+    background: radial-gradient(circle, var(--light-color) 0%, transparent 70%);
+  }
+  
+  .bg-animated::before {
+    @apply top-1/4 left-[-100px];
+    animation: float-left 8s ease-in-out infinite;
+  }
+  
+  .bg-animated::after {
+    @apply bottom-1/4 right-[-100px];
+    animation: float-right 8s ease-in-out infinite reverse;
+  }
+
+  /* Estilo "Glassmorphism" para os cartões */
+  .glass-card {
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-elegant), var(--shadow-glow);
+    backdrop-filter: blur(20px);
+    @apply relative z-10;
+  }
+
+  /* Estilos e animações para o botão "Elegant" */
+  .btn-elegant {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    @apply border-none relative overflow-hidden opacity-0;
+    transition: var(--transition-smooth);
+    transform: translateY(10px);
+    animation: fade-in-up 0.6s ease-out 0.3s forwards;
+  }
+
+  .btn-elegant:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px hsl(var(--primary) / 0.4);
+  }
+
+  .btn-elegant::before {
+    content: '';
+    @apply absolute top-0 w-full h-full;
+    left: -100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary-foreground) / 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .btn-elegant:hover::before {
+    left: 100%;
+  }
+
+  /* Efeito de "levantar" ao passar o rato por cima */
+  .hover-lift {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-elegant), 0 0 80px hsl(var(--primary) / 0.2);
+  }
+
+  /* Estilos para a tabela */
+  .elegant-table {
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    @apply overflow-hidden;
+  }
+
+  .elegant-table th {
+    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--muted)) 100%);
+    @apply border-b border-border;
+  }
+
+  .elegant-table tr:hover {
+    background: hsl(var(--accent) / 0.1);
+  }
+}
+
+/* ================================================================================
+  4. ANIMAÇÕES (KEYFRAMES)
+================================================================================
+*/
+@layer utilities {
+  @keyframes float-left {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    25% { transform: translateX(100px) translateY(-50px); }
+    50% { transform: translateX(200px) translateY(0); }
+    75% { transform: translateX(100px) translateY(50px); }
+  }
+
+  @keyframes float-right {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    25% { transform: translateX(-100px) translateY(50px); }
+    50% { transform: translateX(-200px) translateY(0); }
+    75% { transform: translateX(-100px) translateY(-50px); }
+  }
+
+  @keyframes fade-in-up {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.3); }
+    50% { box-shadow: 0 0 40px hsl(var(--primary) / 0.6); }
+  }
+}

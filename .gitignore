@@ -1,0 +1,18 @@
+# Configurações privadas
+appsettings.json
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+
+# Logs
+Logs/
+*.log
+
+# Build e arquivos locais
+bin/
+obj/
+.vs/
+node_modules/
+*.user

@@ -1,0 +1,136 @@
+﻿@model List<APS.WebApp.Models.ProjectViewModel>
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Meus Projetos";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // FORÇA O USO DO LAYOUT CORRETO
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Hubs", "Data", new { area = "DataManagement" })">Minhas Contas</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Projetos</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Projetos</h2>
+        <a class="btn btn-outline-secondary" href="@Url.Action("Logout", "OAuth", new { area = "Authentication" })">Sair</a>
+    </div>
+    <hr />
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="form-group my-4">
+        <input type="text" class="form-control form-control-lg" id="searchInput" placeholder="🔎 Buscar projeto por nome...">
+    </div>
+
+    <div>
+        <h4 class="mb-3">Projetos Encontrados (@Model.Count())</h4>
+        <div class="row" id="projectsContainer">
+        </div>
+        <nav id="paginationControlsContainer" class="d-flex justify-content-center mt-4"></nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // --- DADOS E CONFIGURAÇÃO ---
+        const allProjects = @Html.Raw(JsonSerializer.Serialize(Model, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        
+        // Linha de debug para o console
+        console.log("Dados dos Projetos recebidos pelo JavaScript:", allProjects);
+
+        let filtered = [...allProjects];
+        let currentPage = 1;
+        const itemsPerPage = 9;
+
+        const detailsUrlTemplate = '@Url.Action("Detalhes", "Data", new { area = "DataManagement", id = "PROJECT_ID_PLACEHOLDER", hubId = "HUB_ID_PLACEHOLDER" })';
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        function renderProjects() {
+            const container = document.getElementById('projectsContainer');
+            container.innerHTML = ""; 
+
+            if (!filtered || filtered.length === 0) {
+                container.innerHTML = "<div class='col'><p class='text-center text-muted mt-3'>Nenhum projeto encontrado com o filtro atual.</p></div>";
+                renderPaginationControls(0);
+                return;
+            }
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            const pageItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+            pageItems.forEach(p => {
+                const name = p.name ?? "[Projeto sem nome]";
+                const id = p.id ?? "";
+                const hubId = p.hubId ?? "";
+
+                const projectUrl = (id && hubId)
+                    ? detailsUrlTemplate.replace("PROJECT_ID_PLACEHOLDER", id).replace("HUB_ID_PLACEHOLDER", hubId)
+                    : "#";
+
+                const col = document.createElement('div');
+                col.className = "col-lg-4 col-md-6 mb-4";
+                col.innerHTML = `
+                    <div class="card h-100 shadow-sm project-card">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title" title="${name}">${name}</h5>
+                            <p class="card-text text-muted small flex-grow-1">ID do Hub: ${hubId}</p>
+                        </div>
+                        <div class="card-footer bg-white border-0 text-center pb-3">
+                            <a href="${projectUrl}" class="btn btn-sm btn-primary" ${!id || !hubId ? "disabled" : ""}>
+                                Ver Pastas
+                            </a>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+
+            renderPaginationControls(totalPages);
+        }
+
+        function renderPaginationControls(totalPages) {
+            const nav = document.getElementById('paginationControlsContainer');
+            nav.innerHTML = "";
+            if (totalPages <= 1) return;
+
+            const ul = document.createElement('ul');
+            ul.className = 'pagination';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = i;
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    renderProjects();
+                    window.scrollTo(0, 0);
+                };
+                li.appendChild(a);
+                ul.appendChild(li);
+            }
+            nav.appendChild(ul);
+        }
+
+        // --- EVENTOS ---
+        document.getElementById("searchInput").addEventListener("input", function () {
+            const term = this.value.toLowerCase();
+            filtered = allProjects.filter(p => (p.name ?? "").toLowerCase().includes(term));
+            currentPage = 1;
+            renderProjects();
+        });
+
+        // --- CHAMADA INICIAL ---
+        renderProjects();
+    </script>
+}
