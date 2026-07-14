@@ -595,7 +595,7 @@ public async Task<string> SyncAccAttributesFromSqlAsync(string hubId, string pro
 
         // 🎯 CORREÇÃO CRÍTICA: Conexão bruta idêntica ao DatabaseService.cs
         // Isso garante que o robô acesse o banco exato onde a Ldp_Unificada foi criada.
-        string connectionString = @"Server=NA-1708\SQLEXPRESS;Database=DB_NA_CONNECT;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;";
+        string connectionString = @"Server=.\SQLEXPRESS;Database=DB_NA_CONNECT;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;";
 
         using (var conn = new Microsoft.Data.SqlClient.SqlConnection(connectionString))
         {
