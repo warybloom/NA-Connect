@@ -64,11 +64,12 @@ namespace APS.WebApp.Services
     public class AutodeskApiService
     {
         private static int _totalCalls = 0;
-private static string _lastRateLimit = "N/A";       
+        private static string _lastRateLimit = "N/A";       
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AutodeskApiService> _logger;
         private readonly TokenManager _tokenManager;
+        private readonly SemaphoreSlim _throttleGate = new SemaphoreSlim(5);
         
 
         public AutodeskApiService(HttpClient httpClient, TokenManager tokenManager, IConfiguration configuration, ILogger<AutodeskApiService> logger) // <-- ADICIONE ', ILogger<AutodeskApiService> logger' AQUI
@@ -92,15 +93,60 @@ private static string _lastRateLimit = "N/A";
                 _lastRateLimit = values.FirstOrDefault() ?? "N/A";
             }
         }
+
+
+private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> requestFactory, int maxRetries = 5)
+{
+    await _throttleGate.WaitAsync();
+    try
+    {
+        int attempt = 0;
+        while (true)
+        {
+            attempt++;
+            using var request = requestFactory();
+            var response = await _httpClient.SendAsync(request);
+            TraceApiHeaders(response);
+            if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests)
+            {
+                if (int.TryParse(_lastRateLimit, out int remaining) && remaining < 5)
+                {
+                    await Task.Delay(500);
+                }
+                return response;
+            }
+            if (attempt > maxRetries)
+            {
+                _logger.LogError("🚫 429 persistente após {Attempts} tentativas.", attempt);
+                return response;
+            }
+            TimeSpan delay = response.Headers.RetryAfter?.Delta
+                ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+            await Task.Delay(delay);
+        }
+    }
+    finally
+    {
+        _throttleGate.Release();
+    }
+}
+
+        #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
+        // ... resto do arquivo continua igual
+
+
         
         #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
         
         public async Task<List<AccAccountRole>> GetAccountRolesAsync(string accountId, string accessToken)
         {
             var requestUrl = $"https://developer.api.autodesk.com/construction/admin/v1/accounts/{accountId}/roles";
+            var response = await SendWithRetryAsync(() =>
+            {
             var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var response = await _httpClient.SendAsync(request);
+             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            return request;
+            });
             response.EnsureSuccessStatusCode();
             var responseStream = await response.Content.ReadAsStreamAsync();
             var rolesResponse = await JsonSerializer.DeserializeAsync<JsonElement>(responseStream);
@@ -2467,3 +2513,4 @@ public async Task<ItemDetails> GetItemDetailsAsync(string projectId, string item
 
     }
 }
+#endregion
