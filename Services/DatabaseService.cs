@@ -10,8 +10,13 @@ namespace NA_Connect.Services
 {
     public class DatabaseService
     {
-        private readonly string _connectionString = @"Server=NA-1708\SQLEXPRESS;Database=DB_NA_CONNECT;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;";
+        private readonly string _connectionString;
 
+        public DatabaseService(Microsoft.Extensions.Configuration.IConfiguration configuration)
+        {
+            // Agora ele busca especificamente o seu banco local
+            _connectionString = configuration.GetConnectionString("LocalConnection");
+        }
         #region 🏗️ Módulo 01: Hubs e Projetos Base
 
         public DataTable GetHubs()

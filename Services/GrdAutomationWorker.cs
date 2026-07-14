@@ -154,11 +154,16 @@ namespace APS.WebApp.Services
                             string ldpPath = Path.Combine(Path.GetTempPath(), $"LDP_{projectId}_{Guid.NewGuid()}.xlsx");
 
                             string formattedProjectId = projectId.StartsWith("b.") ? projectId : $"b.{projectId}";
+                            string etapaAtual = "INICIALIZAÇÃO DO PROJETO";
 
                             _logger.LogInformation($"--- 🏗️ Processando Projeto: {projName} ---");
+                            RegistrarLogHistorico(projName, etapaAtual, "INICIADO", $"Project_ID_ACC: {projectId}");
 
                             try
                             {
+                                etapaAtual = "DESCOBERTA E DOWNLOAD DA LDP";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
+
                                 string ldpFileId = dbService.GetLdpFileIdFromCache(projectId);
                                 string ldpRealName = "";
 
@@ -188,18 +193,24 @@ namespace APS.WebApp.Services
                                 if (string.IsNullOrEmpty(ldpFileId))
                                 {
                                     _logger.LogCritical($"❌ [ERRO] Nenhum arquivo Excel encontrado na pasta de Gestão para o projeto {projName}. Pulando...");
+                                    RegistrarLogHistorico(projName, etapaAtual, "ERRO", "Nenhum arquivo Excel encontrado na pasta de Gestão.");
                                     continue;
                                 }
 
                                 using (var dl = await autodeskApi.DownloadFileStreamAsync(formattedProjectId, ldpFileId, robotToken))
                                 using (var fs = new FileStream(ldpPath, FileMode.Create)) await dl.CopyToAsync(fs);
-                                
+
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", $"LDP: {ldpRealName} | File_ID: {ldpFileId}");
+
+                                etapaAtual = "ETAPA 0/11 - DNA DO PROJETO";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🔍 [0/11] Validando DNA do Projeto (Padrão, Idioma e Banco de Dados)...");
                                 var discovery = await scheduleService.GetOrDiscoverProjectContext(projectId, ldpPath, robotToken);
 
                                 if (discovery == null || string.IsNullOrEmpty(discovery.NamingStandard))
                                 {
                                     _logger.LogCritical("❌ [ETAPA 0] FALHA CRÍTICA: DNA não identificado. Abortando execução para evitar danos.");
+                                    RegistrarLogHistorico(projName, etapaAtual, "ERRO", "DNA não identificado. Execução abortada para evitar danos.");
                                     continue;
                                 }
                                 
@@ -208,63 +219,93 @@ namespace APS.WebApp.Services
                                 _logger.LogInformation($"💾 Gravando DNA completo no Banco de Dados...");
                                 dbService.RegistrarDnaProjeto(projectId, ldpFileId, hubId, ldpRealName, discovery.Language, discovery.NamingStandard);
                                 _logger.LogInformation($"   ✅ Etapa 0: Padrão [{discovery.NamingStandard}] | Idioma [{discovery.Language}] | LDP [{ldpRealName}]");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", $"Padrão: {discovery.NamingStandard} | Idioma: {discovery.Language} | LDP: {ldpRealName}");
 
                                 // ETAPA 1/11: TIMESHEET
+                                etapaAtual = "ETAPA 1/11 - TIMESHEET";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🧹 [1/11] Reconstruindo aba TIMESHEET via SQL Bruto...");
                                 var result0 = await tsDumpService.ResetAndDumpTimesheetAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 1: {result0}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result0?.ToString() ?? "Sem mensagem de retorno.");
 
                                 // ETAPA 2/11: HORAS E REVISÃO
+                                etapaAtual = "ETAPA 2/11 - HORAS E REVISÃO";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"💾 [2/11] Atualizando LDP: Horas do Banco e Atributo REV...");
                                 var result1 = await ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 2: {result1.SummaryMessage}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result1.SummaryMessage);
                                 
                                 // ETAPA 4/11: GRDs
+                                etapaAtual = "ETAPA 4/11 - GRDs";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"✉️ [4/11] Rastreando informações de envio (GRDs)...");
                                 var resultGrd = await grdSyncService.SyncGrdsToLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 4: {resultGrd}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", resultGrd?.ToString() ?? "Sem mensagem de retorno.");
 
                                 // ETAPA 5/11: WORKFLOW
+                                etapaAtual = "ETAPA 5/11 - WORKFLOW";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🌊 [5/11] Atualizando LDP: Etapa do Fluxo (ACC Review)...");
                                 var result4 = await ldpUpdateService.UpdateWorkflowStatusAsync(hubId, formattedProjectId, robotToken, "WDV284PFQTJDQZEG", ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 5: {result4}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result4?.ToString() ?? "Sem mensagem de retorno.");
 
                                 // ETAPA 6/11: CUSTO
+                                etapaAtual = "ETAPA 6/11 - CUSTO";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"📊 [6/11] Sincronizando informações da LDP para aba CUSTO...");
                                 var result5 = await ldpToCustoService.ExecuteFullSyncProcessAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 6: {result5}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result5?.ToString() ?? "Sem mensagem de retorno.");
 
                                 await Task.Delay(2000, stoppingToken);
                             
                                 // ETAPA 7/11: ATRIBUTOS ACC
+                                etapaAtual = "ETAPA 7/11 - ATRIBUTOS ACC";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"⚡ [7/11] Sincronizando Atributos no ACC (Metadados via SQL)...");
                                 var result6 = await ldpUpdateService.SyncAccAttributesFromSqlAsync(hubId, formattedProjectId, robotToken);
                                 _logger.LogInformation($"   ✅ Etapa 7: {result6}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result6?.ToString() ?? "Sem mensagem de retorno.");
                                     
                                 // 🛡️ VACINA 1: RENOVA O TOKEN ANTES DA ETAPA 8
                                 _logger.LogInformation("🔄 Renovando token de acesso da Autodesk após carga da Etapa 7...");
                                 robotToken = await autodeskApi.Get2LeggedTokenAsync();
 
                                 // ETAPA 8/11: VEREDITOS
+                                etapaAtual = "ETAPA 8/11 - VEREDITOS";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🏁 [8/11] Sincronizando Vereditos de Aprovação...");
                                 var result7 = await ldpUpdateService.RunApprovalVerdictSyncAsync(hubId, formattedProjectId, robotToken, "WDV284PFQTJDQZEG", ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 8: {result7}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result7?.ToString() ?? "Sem mensagem de retorno.");
 
                                 // 🛡️ VACINA 2: RENOVA O TOKEN ANTES DO CRONOGRAMA
                                 _logger.LogInformation("🔄 Renovando token para o módulo de Cronograma...");
                                 robotToken = await autodeskApi.Get2LeggedTokenAsync();
 
                                 // ETAPA 9/11: CRONOGRAMA
+                                etapaAtual = "ETAPA 9/11 - CRONOGRAMA";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"📅 [9/11] Sincronizando dados do Cronograma para LDP...");
                                 var resSch = await scheduleService.SyncScheduleToLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 9: {resSch}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", resSch?.ToString() ?? "Sem mensagem de retorno.");
 
                                 // ETAPA 10/11: ESPELHAMENTO
+                                etapaAtual = "ETAPA 10/11 - ESPELHAMENTO";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🪞 [10/11] Espelhando LDP para pasta pública...");
                                 var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 10: {result9}");
+                                RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", result9?.ToString() ?? "Sem mensagem de retorno.");
                                 
                                 // ETAPA 11/11: PERSISTÊNCIA NA LDP UNIFICADA (SQL SERVER BLINDADA)
+                                etapaAtual = "ETAPA 11/11 - PERSISTÊNCIA NA LDP UNIFICADA";
+                                RegistrarLogHistorico(projName, etapaAtual, "INICIADO");
                                 _logger.LogInformation($"🗄️ [11/11] Sincronizando LDP Unificada para o SQL Server...");
                                 if (File.Exists(ldpPath))
                                 {
@@ -304,14 +345,21 @@ namespace APS.WebApp.Services
                                             }
                                         }
                                         _logger.LogInformation($"   ✅ Etapa 11: {totalRowsSaved} linhas persistidas no SQL.");
+                                        RegistrarLogHistorico(projName, etapaAtual, "CONCLUIDO", $"{totalRowsSaved} linhas persistidas no SQL.");
                                     }
+                                }
+                                else
+                                {
+                                    RegistrarLogHistorico(projName, etapaAtual, "ERRO", $"Arquivo temporário da LDP não encontrado: {ldpPath}");
                                 }
 
                                 _logger.LogInformation($"🏁 Ciclo concluído com sucesso para {projName}.");
+                                RegistrarLogHistorico(projName, "PROJETO", "CONCLUIDO COM SUCESSO");
                             }
                             catch (Exception ex)
                             {
                                 _logger.LogError($"❌ Erro ao processar projeto {projName}:\n{ex.ToString()}");
+                                RegistrarLogHistorico(projName, etapaAtual, "ERRO", ex.ToString());
                             }
                             finally
                             {
@@ -353,6 +401,32 @@ namespace APS.WebApp.Services
             {
                 // 🎯 RESTAURA O CONSOLE ORIGINAL PARA EVITAR VAZAMENTO DE MEMÓRIA
                 Console.SetOut(originalConsole);
+            }
+        }
+
+        // =========================================================================================
+        // 📝 LOG HISTÓRICO POR PROJETO, ETAPA E HORÁRIO
+        // =========================================================================================
+        private void RegistrarLogHistorico(string projeto, string etapa, string status, string mensagem = "")
+        {
+            string path = @"C:\Robo_NA_Connect\Logs_Historico";
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+
+            string dataHora = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string arquivoHistorico = Path.Combine(path, $"Historico_{DateTime.Now:yyyyMMdd}.txt");
+            string logLine = $"{dataHora} | Projeto: {projeto} | Etapa: {etapa} | Status: {status}";
+
+            if (!string.IsNullOrWhiteSpace(mensagem))
+            {
+                logLine += $" | {mensagem}";
+            }
+
+            File.AppendAllText(arquivoHistorico, logLine + Environment.NewLine);
+
+            if (status.Equals("ERRO", StringComparison.OrdinalIgnoreCase))
+            {
+                string arquivoErro = Path.Combine(path, $"Erros_{DateTime.Now:yyyyMMdd}.txt");
+                File.AppendAllText(arquivoErro, logLine + Environment.NewLine);
             }
         }
 

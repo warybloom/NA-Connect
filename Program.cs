@@ -8,9 +8,27 @@ using Microsoft.EntityFrameworkCore;
 using AccIntegration.WebApp.Data;
 using System.Data; 
 using NA_Connect.Services; 
+using System.IO;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-var builder = WebApplication.CreateBuilder(args);
+
+// ===================================================================
+// 🎯 PREPARAÇÃO PARA RODAR COMO SERVIÇO DO WINDOWS (BACKGROUND)
+// ===================================================================
+var options = new WebApplicationOptions
+{
+    Args = args,
+    // Garante que o robô encontre o appsettings.json e as pastas corretas quando rodar invisível
+    ContentRootPath = AppContext.BaseDirectory 
+};
+
+var builder = WebApplication.CreateBuilder(options);
+
+// Transforma oficialmente a aplicação num Serviço do Windows
+builder.Host.UseWindowsService(windowsOptions =>
+{
+    windowsOptions.ServiceName = "NA_Connect_Robo";
+});
 
 // ===================================================================
 // ✅ LOG DE INICIALIZAÇÃO
@@ -21,14 +39,14 @@ Console.WriteLine($"\n\n--- APLICAÇÃO INICIADA COM O CÓDIGO MAIS RECENTE --- 
 // ✅ CONFIGURAÇÃO DE SERVIÇOS (DI Container)
 // ===================================================================
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>(dbOptions =>
+    dbOptions.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-builder.Services.AddCors(options =>
+builder.Services.AddCors(corsOptions =>
 {
-    options.AddPolicy(name: MyAllowSpecificOrigins,
+    corsOptions.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
                           policy.WithOrigins("http://localhost:5173") 
@@ -43,11 +61,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddHttpClient();
 
-builder.Services.AddSession(options =>
+builder.Services.AddSession(sessionOptions =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(60);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
+    sessionOptions.IdleTimeout = TimeSpan.FromMinutes(60);
+    sessionOptions.Cookie.HttpOnly = true;
+    sessionOptions.Cookie.IsEssential = true;
 });
 
 // -------------------------------------------------------------------
@@ -68,13 +86,12 @@ builder.Services.AddScoped<AccReviewWorkflowService>();
 builder.Services.AddScoped<PdfMetadataService>();
 builder.Services.AddScoped<GrdToLdpSyncService>();
 builder.Services.AddScoped<LdpUpdateService>();
-// No seu arquivo de configuração de serviços:
-builder.Services.AddScoped<ProjectAutoDiscoveryService>();
 
 // Registros para a Automação N&A Connect
 builder.Services.AddScoped<DatabaseService>(); 
-builder.Services.AddScoped<AccProjectSyncService>(); // ✅ Registrado aqui
+builder.Services.AddScoped<AccProjectSyncService>(); 
 
+// O MOTOR PRINCIPAL (ROBÔ)
 builder.Services.AddHostedService<GrdAutomationWorker>();
 
 var app = builder.Build();
@@ -115,7 +132,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbService = scope.ServiceProvider.GetRequiredService<DatabaseService>();
-    var syncService = scope.ServiceProvider.GetRequiredService<AccProjectSyncService>(); // ✅ Captura o serviço
+    var syncService = scope.ServiceProvider.GetRequiredService<AccProjectSyncService>(); 
     
     Console.WriteLine("--------------------------------------------------");
     Console.WriteLine(">>> SQL TEST: Verificando Hubs no banco local...");
@@ -130,7 +147,6 @@ using (var scope = app.Services.CreateScope())
                 Console.WriteLine($">>> [SUCESSO] Hub Ativo: {row["Nome_Hub"]}");
             }
 
-            // ✅ ADICIONADO AQUI: Inicia a sincronização real com o ACC
             Console.WriteLine(">>> [INFO] Iniciando Sincronização ACC -> SQL...");
             await syncService.SincronizarProjetosDosHubs(); 
             Console.WriteLine(">>> [SUCESSO] Sincronização finalizada.");
@@ -147,14 +163,12 @@ using (var scope = app.Services.CreateScope())
     Console.WriteLine("--------------------------------------------------\n");
 }
 
+using (var scopeTeste = app.Services.CreateScope())
+{
+    var db = scopeTeste.ServiceProvider.GetRequiredService<DatabaseService>();
+    db.SalvarMetadado("b.90621daf-972c-4291-af87-04843e717ec9", "UNP001", "Projeto Unipar - Gestão N&A");
+    Console.WriteLine(">>> TESTE DE METADADO CONCLUÍDO!");
+}
 
-var db = new DatabaseService();
-
-// Vamos dar uma identidade N&A para o projeto da UNIPAR
-// O ID 'b.90621daf...' eu peguei do seu log anterior
-db.SalvarMetadado("b.90621daf-972c-4291-af87-04843e717ec9", "UNP001", "Projeto Unipar - Gestão N&A");
-
-Console.WriteLine(">>> TESTE DE METADADO CONCLUÍDO!");
 // ===================================================================
-
 app.Run();
