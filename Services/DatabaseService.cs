@@ -554,6 +554,161 @@ namespace NA_Connect.Services
 
             return DBNull.Value;
         }
+        public void SalvarDadosHoldControl(string projectId, Dictionary<int, object> rowData)
+{
+    using (var conn = new SqlConnection(_connectionString))
+    {
+        conn.Open();
+        
+        // Correção: Removida a vírgula do início e adicionados os parâmetros correspondentes no VALUES
+        string sql = @"
+            INSERT INTO [dbo].[tb_HoldControl] (
+                [Project_ID_ACC],
+                [Data_Sincronizacao],
+                [ITEM],
+                [N_HOLD],
+                [N_NA_DOCUMENTO],
+                [DISCIPLINA],
+                [TITULO_DOCUMENTO],
+                [REV],
+                [MOTIVO_HOLD],
+                [STATUS],
+                [RESPONSAVEL]
+            ) VALUES (
+                @Project_ID_ACC, 
+                GETDATE(), -- Insere a data e hora atual do servidor SQL de forma automática
+                @Item, 
+                @NumeroHold, 
+                @DocumentoNeA, 
+                @Disciplina, 
+                @TituloDocumento, 
+                @Rev, 
+                @MotivoHold, 
+                @Status, 
+                @Responsavel
+            )";
+
+        using (var cmd = new SqlCommand(sql, conn))
+        {
+            // Vinculando os parâmetros corretamente
+            cmd.Parameters.AddWithValue("@Project_ID_ACC", projectId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Item", GetString(rowData, 1) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@NumeroHold", GetString(rowData, 2) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@DocumentoNeA", GetString(rowData, 3) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Disciplina", GetString(rowData, 4) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@TituloDocumento", GetString(rowData, 5) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Rev", GetString(rowData, 6) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@MotivoHold", GetString(rowData, 7) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Status", GetString(rowData, 8) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Responsavel", GetString(rowData, 9) ?? (object)DBNull.Value);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+}
+public void SalvarDadosQuality(string projectId, Dictionary<int, object> rowData)
+{
+    using (var conn = new SqlConnection(_connectionString))
+    {
+        conn.Open();
+        
+        string sql = @"
+            INSERT INTO [dbo].[NCR NONCONFORMITY REPORT] (
+                [Cliente], [GRD], [CodigoNA], [CodigoCliente], [Descricao],
+                [Disciplina], [Revisao], [NumeroVias], [Mes], [DataEnvio],
+                [Emitente], [DataCriacao], [DataAtualizacao], [CR]
+            ) VALUES (
+                @Cliente, @GRD, @CodigoNA, @CodigoCliente, @Descricao,
+                @Disciplina, @Revisao, @NumeroVias, @Mes, @DataEnvio,
+                @Emitente, GETDATE(), GETDATE(), @CR
+            )";
+
+        using (var cmd = new SqlCommand(sql, conn))
+        {
+            cmd.Parameters.AddWithValue("@Cliente", GetLimitedString(rowData, 1, 255));
+            cmd.Parameters.AddWithValue("@CR", GetLimitedString(rowData, 2, 100));
+            cmd.Parameters.AddWithValue("@GRD", GetLimitedString(rowData, 3, 100));
+            cmd.Parameters.AddWithValue("@CodigoNA", GetLimitedString(rowData, 4, 100));
+            cmd.Parameters.AddWithValue("@CodigoCliente", GetLimitedString(rowData, 5, 100));
+            cmd.Parameters.AddWithValue("@Descricao", GetLimitedString(rowData, 6, 2000));
+            cmd.Parameters.AddWithValue("@Disciplina", GetLimitedString(rowData, 7, 255));
+            cmd.Parameters.AddWithValue("@Revisao", GetLimitedString(rowData, 8, 50));
+            
+            // Tratamento preventivo para NumeroVias (caso seja INT)
+            string nViaTexto = GetLimitedString(rowData, 9, 50)?.ToString();
+            if (int.TryParse(nViaTexto, out int nViasInt)) {
+                cmd.Parameters.AddWithValue("@NumeroVias", nViasInt);
+            } else {
+                cmd.Parameters.AddWithValue("@NumeroVias", nViaTexto ?? (object)DBNull.Value);
+            }
+
+            // 🌟 CORREÇÃO AQUI: Converte "MAIO" ou "JAN" para número (tinyint)
+            string mesTexto = GetLimitedString(rowData, 10, 50)?.ToString();
+            byte? mesNumero = ConverterMesParaByte(mesTexto);
+            cmd.Parameters.AddWithValue("@Mes", mesNumero.HasValue ? (object)mesNumero.Value : DBNull.Value);
+
+            cmd.Parameters.AddWithValue("@DataEnvio", GetLimitedString(rowData, 11, 100));  
+            cmd.Parameters.AddWithValue("@Emitente", GetLimitedString(rowData, 12, 255));
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+}
+
+// 🧭 Função auxiliar para converter o nome do mês em número (tinyint / byte)
+private byte? ConverterMesParaByte(string mesTexto)
+{
+    if (string.IsNullOrWhiteSpace(mesTexto)) return null;
+
+    string mesProcurado = mesTexto.Trim().ToUpper();
+
+    // Se já for um número na planilha (ex: "5" ou "05"), apenas converte direto
+    if (byte.TryParse(mesProcurado, out byte resultadoNumero))
+    {
+        return resultadoNumero;
+    }
+
+    // Se for texto por extenso ou abreviado, faz o de/para:
+    if (mesProcurado.StartsWith("JAN")) return 1;
+    if (mesProcurado.StartsWith("FEV") || mesProcurado.StartsWith("FEB")) return 2;
+    if (mesProcurado.StartsWith("MAR")) return 3;
+    if (mesProcurado.StartsWith("ABR") || mesProcurado.StartsWith("APR")) return 4;
+    if (mesProcurado.StartsWith("MAI")) return 5; // Trata "MAIO" ou "MAI"
+    if (mesProcurado.StartsWith("JUN")) return 6;
+    if (mesProcurado.StartsWith("JUL")) return 7;
+    if (mesProcurado.StartsWith("AGO") || mesProcurado.StartsWith("AUG")) return 8;
+    if (mesProcurado.StartsWith("SET") || mesProcurado.StartsWith("SEP")) return 9;
+    if (mesProcurado.StartsWith("OUT") || mesProcurado.StartsWith("OCT")) return 10;
+    if (mesProcurado.StartsWith("NOV")) return 11;
+    if (mesProcurado.StartsWith("DEZ") || mesProcurado.StartsWith("DEC")) return 12;
+
+    return null; // Caso venha algum texto inválido
+}
+
+private object GetLimitedString(Dictionary<int, object> rowData, int index, int maxLength)
+{
+    if (rowData != null && rowData.TryGetValue(index, out var value) && value != null)
+    {
+        string text = value.ToString().Trim();
+        if (text.Length > maxLength)
+        {
+            return text.Substring(0, maxLength);
+        }
+        return text;
+    }
+    return null;
+}
+
+
+
+
+        
+
+
+
+
+
+
 
         #endregion
     }

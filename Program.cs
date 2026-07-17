@@ -60,6 +60,10 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<HoldControlSyncService>();
+builder.Services.AddScoped<DatabaseService>();
+
+
 
 builder.Services.AddSession(sessionOptions =>
 {
@@ -86,6 +90,8 @@ builder.Services.AddScoped<AccReviewWorkflowService>();
 builder.Services.AddScoped<PdfMetadataService>();
 builder.Services.AddScoped<GrdToLdpSyncService>();
 builder.Services.AddScoped<LdpUpdateService>();
+builder.Services.AddScoped<HoldControlSyncService>();
+builder.Services.AddScoped<QualitySyncService>();
 
 // Registros para a Automação N&A Connect
 builder.Services.AddScoped<DatabaseService>(); 

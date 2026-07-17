@@ -13,6 +13,7 @@ using System.Text;
 using APS.WebApp.Services;
 using NA_Connect.Services;
 using NA_Connect.Models;
+using java.net;
 
 namespace APS.WebApp.Services
 {
@@ -132,6 +133,9 @@ namespace APS.WebApp.Services
                     var grdSyncService = scope.ServiceProvider.GetRequiredService<GrdToLdpSyncService>();
                     var ldpToCustoService = scope.ServiceProvider.GetRequiredService<LdpToCustoSyncService>();
                     var scheduleService = scope.ServiceProvider.GetRequiredService<AccScheduleSyncService>();
+                    var HoldControlService = scope.ServiceProvider.GetRequiredService<HoldControlSyncService>();
+                    var QualitySyncService = scope.ServiceProvider.GetRequiredService<QualitySyncService>();
+                    
                     
                     _logger.LogInformation("🔍 Consultando SQL para identificar projetos ativos...");
                     DataTable dtAtivos = dbService.GetProjetosAtivos();
@@ -208,7 +212,7 @@ namespace APS.WebApp.Services
                                 _logger.LogInformation($"💾 Gravando DNA completo no Banco de Dados...");
                                 dbService.RegistrarDnaProjeto(projectId, ldpFileId, hubId, ldpRealName, discovery.Language, discovery.NamingStandard);
                                 _logger.LogInformation($"   ✅ Etapa 0: Padrão [{discovery.NamingStandard}] | Idioma [{discovery.Language}] | LDP [{ldpRealName}]");
-
+/*
                                 // ETAPA 1/11: TIMESHEET
                                 _logger.LogInformation($"🧹 [1/11] Reconstruindo aba TIMESHEET via SQL Bruto...");
                                 var result0 = await tsDumpService.ResetAndDumpTimesheetAsync(hubId, formattedProjectId, robotToken, ldpFileId);
@@ -218,7 +222,47 @@ namespace APS.WebApp.Services
                                 _logger.LogInformation($"💾 [2/11] Atualizando LDP: Horas do Banco e Atributo REV...");
                                 var result1 = await ldpUpdateService.UpdateLdpFromDatabaseAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 2: {result1.SummaryMessage}");
-                                
+
+                                */
+                                // ETAPA 3/11: HOLD CONTROL (DESVIO DE ESCOPO)
+                               // =========================================================================================
+                                // ETAPA 3/11: QUALITY CONTROL (QUALIDADE ACC)
+                                // =========================================================================================
+                                _logger.LogInformation($"🛑 [3/11] Sincronizando dados de qualidade...");
+                                try
+                                {
+                                    // Forçamos o uso da variável injetada no escopo superior
+                                    var resultqualidade = await QualitySyncService.SyncQualitySyncToDbAsync(hubId, formattedProjectId, robotToken);
+                                    
+                                    if (resultqualidade == null)
+                                    {
+                                        _logger.LogWarning($"   ⚠️ Etapa 3 retornou um resultado nulo (vazio).");
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation($"   ✅ Etapa 3 (Qualidade Concluída): {resultqualidade}");
+                                    }
+                                }
+                                catch (Exception exqualidade)
+                                {
+                                    // Mudado para LogError + exqualidade.ToString() para expor a falha exata na tela preta
+                                    _logger.LogError($"   ❌ ERRO CRÍTICO na Etapa 3 (Qualidade):\n{exqualidade.ToString()}");
+                                }
+
+                                // Etapa 4 (Hold Control) removida conforme solicitado.
+                               // try
+                                //{
+                                    // Chama o método principal do seu serviço de Hold Control
+                                    //var resultHold = await HoldControlService.SyncHoldControlToDbAsync(hubId, formattedProjectId, robotToken);
+                                    //_logger.LogInformation($"   ✅ Etapa 3: {resultHold}");
+                                    
+                                //}
+                                //catch (Exception exHold)
+                               // {
+                                    //_logger.LogWarning($"   ⚠️ Etapa 3 (Hold Control) falhou ou não encontrou arquivos: {exHold.Message}");
+                                //}
+
+                                /*
                                 // ETAPA 4/11: GRDs
                                 _logger.LogInformation($"✉️ [4/11] Rastreando informações de envio (GRDs)...");
                                 var resultGrd = await grdSyncService.SyncGrdsToLdpAsync(hubId, formattedProjectId, robotToken, ldpFileId);
@@ -263,7 +307,7 @@ namespace APS.WebApp.Services
                                 _logger.LogInformation($"🪞 [10/11] Espelhando LDP para pasta pública...");
                                 var result9 = await ldpUpdateService.MirrorLdpControlToProjectAsync(hubId, formattedProjectId, robotToken, ldpFileId);
                                 _logger.LogInformation($"   ✅ Etapa 10: {result9}");
-                                
+                                */
                                 // ETAPA 11/11: PERSISTÊNCIA NA LDP UNIFICADA (SQL SERVER BLINDADA)
                                 _logger.LogInformation($"🗄️ [11/11] Sincronizando LDP Unificada para o SQL Server...");
                                 if (File.Exists(ldpPath))
