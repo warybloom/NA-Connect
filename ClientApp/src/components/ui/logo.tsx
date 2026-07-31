@@ -14,7 +14,7 @@ export function Logo({ className }: LogoProps) {
         src="/logo-na-30anos.png"
         alt="N&A Consultores 30 Anos"
         // 👇👇 AJUSTE ESTA ALTURA CONFORME NECESSÁRIO 👇👇
-        className="h-16 w-auto object-contain" // h-12 = 3rem. Tente h-10, h-14, etc.
+        className="h-20 w-auto object-contain invert dark:invert-0 transition-all mt-5" // h-12 = 3rem. Tente h-10, h-14, etc.
       />
     </div>
   );

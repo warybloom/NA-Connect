@@ -372,8 +372,8 @@ export default function Files() {
                         )}
                     </div>
                     <nav className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-foreground hover:text-primary" onClick={() => navigate('/dashboard')}>Contas</Button>
-                        <Button variant="ghost" size="sm" className="text-foreground hover:text-primary" onClick={() => hubId && navigate(`/projects/${hubId}`)}>Projetos</Button>
+                        
+                        <Button  size="sm" className="" onClick={() => hubId && navigate(`/projects/${hubId}`)}>Voltar</Button>
                         <a href="/Authentication/OAuth/Logout" className="text-xs text-muted-foreground hover:text-primary px-2">Sair</a>
                     </nav>
                 </header>

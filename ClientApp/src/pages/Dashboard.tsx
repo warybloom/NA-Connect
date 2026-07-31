@@ -5,6 +5,7 @@ import { Logo } from "@/components/ui/logo";
 import { ElegantCard } from "@/components/ui/elegant-card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 
 interface Hub {
   id: string;
@@ -37,15 +38,16 @@ export default function Dashboard() {
   }, []);
 
   return (
+    
     <AnimatedBackground>
       <div className="min-h-screen p-6">
         <header className="flex items-center justify-between mb-8">
           <Logo />
           <nav className="flex items-center gap-4">
-             <Button variant="ghost" className="text-primary">Contas</Button>
              <a href="/Authentication/OAuth/Logout" className="text-sm text-muted-foreground hover:text-primary">Sair</a>
           </nav>
         </header>
+        
 
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">

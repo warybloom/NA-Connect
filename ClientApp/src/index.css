@@ -6,12 +6,66 @@
 @tailwind utilities;
 
 /* ================================================================================
-  1. DEFINIÇÃO DO SISTEMA DE DESIGN (DESIGN SYSTEM)
+  1. DEFINIÇÃO DO SISTEMA DE DESIGN (DESIGN SYSTEM)
 ================================================================================
 */
 @layer base {
-  :root {
-    /* Tema Padrão (Azul Escuro) */
+  /* ☀️ TEMA CLARO (LIGHT) - Aplica por padrão e via classe .light */
+  :root, .light {
+    --background: 0 0% 100%;             /* Branco Puro */
+    --foreground: 222.2 84% 4.9%;        /* Texto Escuro Nítido */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.75rem;
+
+    /* Tokens de Gradiente e Sombras para o Modo Claro */
+    --gradient-primary: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(210, 40%, 98%) 50%, hsl(214, 32%, 95%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(210, 40%, 98%) 100%);
+    --shadow-elegant: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.12);
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Variáveis para Animação de Fundo */
+    --light-color: hsl(217, 91%, 60% / 0.15);
+    --light-glow: hsl(217, 91%, 60% / 0.05);
+
+    /* 🎨 Variáveis da Barra Lateral (Sidebar) - Modo Claro */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* 🌙 TEMA ESCURO (DARK) */
+  .dark {
     --background: 220 25% 12%;
     --foreground: 0 0% 98%;
 
@@ -40,38 +94,29 @@
     --input: 220 15% 20%;
     --ring: 210 100% 65%;
 
-    --radius: 0.75rem;
-
-    /* Tokens de Design Personalizados */
+    /* Tokens de Gradiente e Sombras para o Modo Escuro */
     --gradient-primary: linear-gradient(135deg, hsl(220, 30%, 8%) 0%, hsl(210, 40%, 20%) 50%, hsl(220, 25%, 12%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(220, 20%, 18%) 0%, hsl(220, 15%, 14%) 100%);
     --shadow-elegant: 0 20px 40px -12px hsl(220, 30%, 5% / 0.6);
     --shadow-glow: 0 0 60px hsl(210, 100%, 65% / 0.15);
-    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    
-    /* Variáveis para Animação de Fundo */
+
     --light-color: hsl(210, 100%, 65% / 0.3);
     --light-glow: hsl(210, 100%, 65% / 0.1);
 
-    /* Variáveis para a Barra Lateral (Sidebar) */
-    --sidebar-background: 220 20% 16%;
-    --sidebar-foreground: 0 0% 90%;
+    /* 🎨 Sidebar no Modo Escuro (Dark) */
+    --sidebar-background: 220 25% 12%;
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 210 100% 65%;
     --sidebar-primary-foreground: 220 25% 12%;
-    --sidebar-accent: 220 15% 20%;
-    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 220 15% 25%;
     --sidebar-ring: 210 100% 65%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
   }
 }
 
 /* ================================================================================
-  2. ESTILOS GLOBAIS
+  2. ESTILOS GLOBAIS
 ================================================================================
 */
 @layer base {
@@ -84,9 +129,10 @@
     background: var(--gradient-primary);
     background-attachment: fixed;
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* ✅ ESTILOS ATUALIZADOS PARA A TABELA REDIMENSIONÁVEL ✅ */
+  /* ✅ ESTILOS PARA A TABELA REDIMENSIONÁVEL ✅ */
   .resizer {
     position: absolute;
     right: 0;
@@ -97,33 +143,29 @@
     cursor: col-resize;
     user-select: none;
     touch-action: none;
-    opacity: 0; /* Começa invisível */
+    opacity: 0;
     transition: opacity 0.2s;
   }
 
-  /* O resizer aparece quando o rato está sobre o cabeçalho (th.group) */
   th.group:hover .resizer {
     opacity: 1;
   }
-  
-  /* Opcional: muda de cor enquanto está a ser arrastado */
+
   .resizer.isResizing {
     opacity: 1;
     background: hsl(var(--ring));
   }
 
-  /* O cabeçalho da tabela precisa de ser relativo para o .resizer funcionar */
   th {
     position: relative;
   }
 }
 
 /* ================================================================================
-  3. COMPONENTES PERSONALIZADOS
+  3. COMPONENTES PERSONALIZADOS
 ================================================================================
 */
 @layer components {
-  
   .bg-animated {
     @apply relative overflow-hidden;
   }
@@ -210,7 +252,7 @@
 }
 
 /* ================================================================================
-  4. ANIMAÇÕES (KEYFRAMES)
+  4. ANIMAÇÕES (KEYFRAMES)
 ================================================================================
 */
 @layer utilities {

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
+const TARGET_HUB_NAME = "N&A Consultores LTDA";
+
 // Define a estrutura (o "tipo") de um Hub para o TypeScript
 interface Hub {
     id: string;
