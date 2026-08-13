@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo} from "react";
 import { motion } from "framer-motion";
 import { LayoutList, RefreshCw, Loader2, Calendar, TrendingUp, AlertOctagon, UploadCloud, FileSpreadsheet, CheckCircle2, ArrowRight, MousePointerClick, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 import { Info } from "lucide-react";
+import { Norma } from "@/types/control-painel";
+
 
 type ProjectOption = { projectId: string; projectName: string; };
 
@@ -19,6 +21,16 @@ export default function Tab4D() {
   const [availableProjects, setAvailableProjects] = useState<ProjectOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+   const [projects, setProjects] = useState<any[]>([]);
+    const [normas, setNormas] = useState<Norma[]>([]);
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [activeTab, setActiveTab] = useState("projetos");
+    const [loading, setLoading] = useState(true);
+    const [isNewOCRDocOpen, setIsNewOCRDocOpen] = useState(false);
+    const [newOCRName, setNewOCRName] = useState("");
+     const [pacotesOCR, setPacotesOCR] = useState<any[]>([]);
+     const [savedConfigsLDP, setSavedConfigsLDP] = useState<any[]>([]);
 
   // 🎯 ESTADOS DO GRÁFICO E AGRUPAMENTO DE TEMPO
   const [timeGrouping, setTimeGrouping] = useState<"dia" | "semana" | "mes">("mes");
@@ -63,6 +75,120 @@ export default function Tab4D() {
       }
     }
   }, [selectedProjectId]);
+
+    const fetchNormas = async () => {
+      try {
+        const resN = await fetch('/api/admin/normas');
+        if (resN.ok) setNormas(await resN.json());
+      } catch (error) {
+        console.error("Erro ao buscar normas:", error);
+      }
+    };
+  
+    const carregarDadosReais = async () => {
+      setLoading(true);
+      try {
+        // 1. Recupera o HubID do LocalStorage ou endpoint
+        let hubId = localStorage.getItem("hubId");
+        if (hubId === null) {
+          try {
+            const resHubs = await fetch('/DataManagement/Data/Hubs');
+            if (resHubs.ok) {
+              const hubsData = await resHubs.json();
+              const hubs = Array.isArray(hubsData) ? hubsData : (hubsData.data || []);
+              if (hubs.length > 0) {
+                hubId = hubs[0].id;
+                if (hubId !== null) localStorage.setItem("hubId", hubId);
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao buscar hubs:", e);
+          }
+        }
+  
+        // 2. Chamadas paralelas
+        const [resP, resN, resT, resOCR, resLDP, resACC] = await Promise.all([
+          fetch('/api/admin/projetos'),
+          fetch('/api/admin/normas'),
+          fetch('/api/admin/templates'),
+          fetch('/api/admin/ocr/pacotes'),
+          fetch('/api/admin/projeto/listar-configuracoes-ldp'),
+          hubId ? fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`) : Promise.resolve(null)
+        ]);
+  
+        let projetosBanco: any[] = [];
+        if (resP.ok) {
+          const dadosVindosDoBanco = await resP.json();
+          projetosBanco = dadosVindosDoBanco.map((p: any) => ({
+            ...p,
+            is_Ativo: Boolean(p.is_Ativo)
+          }));
+        }
+  
+        let projetosACC: any[] = [];
+        if (resACC && resACC.ok) {
+          const text = await resACC.text();
+          if (text && text.trim().length > 0) {
+            const jsonACC = JSON.parse(text);
+            projetosACC = Array.isArray(jsonACC) ? jsonACC : (jsonACC.data || []);
+          }
+        }
+  
+        // 3. Mesclagem entre ACC e Banco Local
+        if (projetosACC.length > 0) {
+          const projetosUnificados = projetosACC.map((accProj: any) => {
+            const accId = accProj.id;
+            const accName = accProj.attributes?.name || accProj.name || "Sem Nome";
+  
+            const matchBanco = projetosBanco.find(
+              (p: any) => p.project_ID_ACC === accId || String(p.projetoId) === String(accId)
+            );
+  
+            if (matchBanco) return matchBanco;
+  
+            return {
+              projetoId: null,
+              nome_Projeto: accName,
+              project_ID_ACC: accId,
+              is_Ativo: false,
+              NormaID: null,
+              PacoteOCRID: null,
+              configId: "none"
+            };
+          });
+  
+          projetosBanco.forEach((pBanco: any) => {
+            const jaExiste = projetosUnificados.some(
+              (u: any) => u.project_ID_ACC === pBanco.project_ID_ACC || u.projetoId === pBanco.projetoId
+            );
+            if (!jaExiste) projetosUnificados.push(pBanco);
+          });
+  
+          setProjects(projetosUnificados);
+        } else {
+          setProjects(projetosBanco);
+        }
+  
+        if (resN && resN.ok) setNormas(await resN.json());
+        if (resT && resT.ok) setTemplates(await resT.json());
+        if (resOCR && resOCR.ok) setPacotesOCR(await resOCR.json());
+        if (resLDP && resLDP.ok) setSavedConfigsLDP(await resLDP.json());
+  
+      } catch (error) {
+        toast.error("Erro ao conectar com o servidor.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      carregarDadosReais();
+    }, []);
+  
+    const filteredProjects = useMemo(
+      () => projects.filter((p) => p.nome_Projeto?.toLowerCase().includes(searchTerm.toLowerCase())),
+      [projects, searchTerm]
+    );
 
   const handleRefresh = () => {
     if (!selectedProjectId) return;
@@ -214,6 +340,7 @@ export default function Tab4D() {
       setTimeGrouping(newGrouping);
     }
   };
+  
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -227,7 +354,11 @@ export default function Tab4D() {
             <label htmlFor="projectSelector4D" className="text-sm font-medium text-muted-foreground flex items-center gap-2"><LayoutList className="w-4 h-4" /> Selecionar Projeto:</label>
             <select id="projectSelector4D" title="Selecione o Projeto" value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary outline-none min-w-[300px]">
               <option value="">-- Escolha um Projeto --</option>
-              {availableProjects.map(p => (<option key={p.projectId} value={p.projectId}>{p.projectName}</option>))}
+              {projects.map((proj) => (
+                <option key={proj.project_ID_ACC ?? proj.projectId} value={proj.project_ID_ACC ?? proj.projectId}>
+                  {proj.nome_Projeto}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -264,7 +395,7 @@ export default function Tab4D() {
               {/* O XAxis agora lê a propriedade "data" que vem do C# (pode ser Dia 1, Semana 1, etc) */}
               <XAxis dataKey="data" stroke="#94a3b8" tick={{fontSize: 12}} />
               <YAxis stroke="#94a3b8" tick={{fontSize: 12}} unit="%" domain={[0, 100]} />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }} itemStyle={{ fontWeight: 'bold' }} formatter={(value: number) => [`${value}%`, '']} />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }} itemStyle={{ fontWeight: 'bold' }} formatter={(value: any) => [`${value}%`, '']} />
               <Legend verticalAlign="top" height={36} />
               <Area type="monotone" dataKey="planejado" name="Avanço Planejado" stroke="#60a5fa" fillOpacity={1} fill="url(#colorPlanejado)" />
               <Line type="monotone" dataKey="realizado" name="Avanço Realizado" stroke="#34d399" strokeWidth={3} dot={{ r: 5, fill: '#34d399', strokeWidth: 2, stroke: '#0f172a' }} activeDot={{ r: 8 }} />

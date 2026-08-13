@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { UploadCloud, FileText, Settings, CheckCircle2, AlertCircle, X, Link as LinkIcon, Code2, Loader2, ListChecks, TriangleAlert, Save } from "lucide-react";
 import toast from 'react-hot-toast'; // Importando o toast para as notificações
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ModeToggle } from "@/components/alternar-modo";
+import { useGlobalFileDrop } from "@/components/hooks/useGlobalFileDrop";
 
 export default function AdminTemplates() {
   const [moduloAtivo, setModuloAtivo] = useState("desvios");
@@ -12,9 +13,48 @@ export default function AdminTemplates() {
   const [scanResult, setScanResult] = useState<boolean>(false);
   const [tagsEncontradas, setTagsEncontradas] = useState<string[]>([]);
   const [scanningError, setScanningError] = useState<string | null>(null);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
   // Controle de salvamento no banco
-  const [isSaving, setIsSaving] = useState(false);
+const processarArquivo = useCallback(async (file: File) => {
+  setTemplateAtual(file.name);
+  setIsScanning(true);
+  setScanResult(false);
+  setScanningError(null);
+  setTagsEncontradas([]);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("modulo", moduloAtivo);
+
+    const response = await fetch('/api/Templates/scanner', {
+      method: 'POST',
+      body: formData,
+    });
+
+    let json;
+    try {
+      json = await response.json();
+    } catch (err) {
+      throw new Error(`O servidor não retornou um JSON válido. Status: ${response.status}`);
+    }
+
+    if (!response.ok || !json.sucesso) {
+      setScanningError(json.mensagem || `Erro no processamento. Código ${response.status}`);
+      return;
+    }
+
+    setScanResult(true);
+    setTagsEncontradas(json.tagsFound.map((t: string) => t.toUpperCase()));
+
+  } catch (error: any) {
+    console.error("Erro no escaneamento:", error);
+    setScanningError(error.message || "Falha na comunicação com o servidor. O Backend C# está rodando?");
+  } finally {
+    setIsScanning(false);
+  }
+}, [moduloAtivo]);
 
   const camposDisponiveis: Record<string, string[]> = {
     desvios: ["ProjetoCodigo", "Num_Desvio", "Tipo_Desvio", "Categoria_Motivo", "Impacto", "Descricao", "Disciplina", "Data_Registro", "Quant_HH", "Valor_CO", "Status", "Desvio_Interno", "Change_Order"],
@@ -25,45 +65,16 @@ export default function AdminTemplates() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      setTemplateAtual(file.name);
-      setIsScanning(true);
-      setScanResult(false);
-      setScanningError(null);
-      setTagsEncontradas([]);
-
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("modulo", moduloAtivo);
-
-        const response = await fetch('/api/Templates/scanner', {
-          method: 'POST',
-          body: formData,
-        });
-
-        let json;
-        try {
-          json = await response.json();
-        } catch (err) {
-          throw new Error(`O servidor não retornou um JSON válido. Status: ${response.status}`);
-        }
-
-        if (!response.ok || !json.sucesso) {
-          setScanningError(json.mensagem || `Erro no processamento. Código ${response.status}`);
-          return;
-        }
-
-        setScanResult(true);
-        setTagsEncontradas(json.tagsFound.map((t: string) => t.toUpperCase()));
-
-      } catch (error: any) {
-        console.error("Erro no escaneamento:", error);
-        setScanningError(error.message || "Falha na comunicação com o servidor. O Backend C# está rodando?");
-      } finally {
-        setIsScanning(false);
-      }
+      processarArquivo(e.target.files[0]);
     }
   };
+
+useEffect(() => {
+  if (droppedFile) {
+    processarArquivo(droppedFile);
+    setDroppedFile(null); // limpa para permitir soltar o mesmo arquivo de novo depois
+  }
+}, [droppedFile, processarArquivo]);
 
   // =========================================================================
   // NOVA FUNÇÃO: SALVAR NO BANCO SQL FORGESYNC
@@ -71,7 +82,7 @@ export default function AdminTemplates() {
   const handleSaveTemplate = async () => {
     if (!templateAtual || tagsEncontradas.length === 0) return;
 
-    setIsSaving(true);
+    setIsScanning(true);
     const loadToast = toast.loading("Gravando configurações no banco de dados...");
 
     try {
@@ -101,7 +112,7 @@ export default function AdminTemplates() {
     } catch (error: any) {
       toast.error(`Erro: ${error.message}`, { id: loadToast });
     } finally {
-      setIsSaving(false);
+      setIsScanning(false);
     }
   };
 
@@ -292,11 +303,11 @@ export default function AdminTemplates() {
                     <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-end shrink-0">
                       <button
                         onClick={handleSaveTemplate}
-                        disabled={isSaving}
+                        disabled={isScanning}
                         className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-bold py-2.5 px-8 rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2"
                       >
-                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                        {isSaving ? "Gravando no Banco..." : "Salvar Template Verdadeiro"}
+                        {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        {isScanning ? "Gravando no Banco..." : "Salvar Template Verdadeiro"}
                       </button>
                     </div>
                   </div>

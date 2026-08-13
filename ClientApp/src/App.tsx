@@ -22,6 +22,7 @@ import { OCRManager } from "./pages/OCRManager";
 import TabSettings from "./components/plant3d/TabSettings";
 import AndamentoRobo from "./pages/AndamentoRobo";
 
+
 const Plant3DAuditHubWrapper = () => {
   const { projectId } = useParams<{ projectId: string }>();
   return <Plant3DAuditHub projectId={projectId || ""} />;

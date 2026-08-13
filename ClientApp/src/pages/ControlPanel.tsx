@@ -222,7 +222,7 @@ export default function ControlPanel() {
         fetch('/api/admin/templates'),
         fetch('/api/admin/ocr/pacotes'),
         fetch('/api/admin/projeto/listar-configuracoes-ldp'),
-        hubId ? fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`) : Promise.resolve(null)
+        hubId ? fetch(`/DataManagement/Projetos?hubId=${hubId}`) : Promise.resolve(null)
       ]);
 
       let projetosBanco: any[] = [];
@@ -517,18 +517,24 @@ const handleNormaChange = useCallback(async (project: any, val: string) => {
     const { id, type } = itemToDelete;
     let endpoint = "";
     if (type === 'norma') endpoint = `/api/admin/norma/${id}`;
-    if (type === 'template') endpoint = `/api/admin/template/${id}`;
+    if (type === 'template') endpoint = `/api/admin/normas/deletar-template/${id}`;
     const tid = toast.loading(`ELIMINANDO ${type.toUpperCase()}...`);
     try {
-      const res = await fetch(endpoint, { method: 'DELETE' });
+const res = await fetch(endpoint, {
+  method: "DELETE",
+  credentials: "include",
+});
       if (res.ok) {
         toast.success(`${type.toUpperCase()} REMOVIDO COM SUCESSO`, { id: tid });
         setIsConfirmDeleteOpen(false);
         if (type === 'norma') { setEditingNorma(null); fetchNormas(); }
         carregarDadosReais(); 
-      } else throw new Error();
+      } else {
+          throw new Error();
+      }
     } catch (error) {
       toast.error("FALHA NA EXCLUSÃO CRÍTICA", { id: tid });
+      console.error(error);
     }
   };
 
@@ -583,18 +589,26 @@ const handleNormaChange = useCallback(async (project: any, val: string) => {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleSaveNorma = async (normaParaSalvar: Norma) => {
-    const tid = toast.loading("Salvando norma...");
-    try {
-      const res = await fetch('/api/admin/salvar-norma', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(normaParaSalvar)
-      });
-      if (res.ok) { toast.success("Salva!", { id: tid }); fetchNormas(); }
-      else throw new Error();
-    } catch { toast.error("Erro ao salvar.", { id: tid }); }
-  };
+const handleSaveNorma = async (normaParaSalvar: Norma) => {
+  const tid = toast.loading("Salvando norma...");
+  try {
+    const res = await fetch('/api/admin/salvar-norma', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(normaParaSalvar)
+    });
+    if (res.ok) {
+      toast.success("Salva!", { id: tid });
+      fetchNormas();
+    } else {
+      const errText = await res.text();
+      throw new Error(errText || `Erro ${res.status}`);
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error(err instanceof Error ? err.message : "Erro ao salvar.", { id: tid });
+  }
+};
 
   const handleMappingEdit = (index: number, field: keyof Mapping, value: string) => {
     if (!editingNorma) return;
@@ -670,8 +684,8 @@ const handleNormaChange = useCallback(async (project: any, val: string) => {
         <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col gap-8 animate-enter m-4">
-          <div className="flex items-center gap-9 mb-2">
+        <div className="flex flex-col gap-1 animate-enter m-4">
+          <div className="flex items-center gap-7">
             <SidebarTrigger className="-m-5"/>
             <ModeToggle/>
                             <a href="/Authentication/OAuth/Logout" className="text-sm text-muted-foreground hover:text-primary">
@@ -938,7 +952,7 @@ const handleNormaChange = useCallback(async (project: any, val: string) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {normas.map((norma) => (
                   <div key={norma.normaId} onClick={() => setEditingNorma(norma)} className="group cursor-pointer glass-card p-6 rounded-xl border border-border/50 hover:border-primary/50 transition-all shadow-2xl relative">
-                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); triggerDeleteDialog(norma.normaId, 'norma'); }} className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 border border-white/5 bg-white/5 hover:bg-destructive/20 hover:text-destructive transition-all rounded-lg backdrop-blur-md"><Trash2 className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); triggerDeleteDialog(norma.normaId || norma.normaId, 'norma'); }} className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 border border-white/5 bg-white/5 hover:bg-destructive/20 hover:text-destructive transition-all rounded-lg backdrop-blur-md"><Trash2 className="w-3.5 h-3.5" /></Button>
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><FileSpreadsheet className="w-6 h-6 text-primary" /></div>
                     <h3 className="font-bold text-foreground text-lg uppercase italic pr-8">{norma.nome_Norma}</h3>
                     <div className="mt-4 flex items-center justify-between text-[10px] text-muted-foreground uppercase font-black"><span>{norma.mappings.length} REGRAS</span><span className="opacity-0 group-hover:opacity-100 transition-opacity text-primary italic">CONFIGURAR →</span></div>
@@ -1024,8 +1038,8 @@ const handleNormaChange = useCallback(async (project: any, val: string) => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {group.templates.map((tpl) => (
-                      <div key={tpl.templateId || tpl.TemplateID || `tpl-${tpl.sigla_Doc}`} className="group glass-card relative p-4 rounded-xl border border-border/50">
-                        <Button variant="ghost" size="sm" onClick={() => triggerDeleteDialog(tpl.templateId || tpl.TemplateID, 'template')} className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all rounded-md"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <div key={tpl.templateID  || `tpl-${tpl.sigla_Doc}`} className="group glass-card relative p-4 rounded-xl border border-border/50">
+                        <Button variant="ghost" size="sm" onClick={() => triggerDeleteDialog(tpl.templateID, 'template')} className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all rounded-md"><Trash2 className="w-3.5 h-3.5" /></Button>
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded bg-secondary/50 flex items-center justify-center"><FileCode className="w-4 h-4 text-muted-foreground" /></div>
                           <div className="overflow-hidden">

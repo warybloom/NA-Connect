@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import toast from 'react-hot-toast';
-import { ZoomIn, ZoomOut, Maximize, Hand } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Hand, UploadCloud } from 'lucide-react';
+import { useGlobalFileDrop } from '@/components/hooks/useGlobalFileDrop';
 
 // Estilos obrigatórios
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -44,17 +45,20 @@ export const OCRCalibrator: React.FC<Props> = ({ pacoteId, tipoFolha, onBack }) 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
+    processarPdf(uploadedFile);
+    e.target.value = ""; // permite selecionar o mesmo arquivo de novo depois
+  };
+    
 
-    if (uploadedFile.type !== "application/pdf") {
-      toast.error("Formato Inválido! Suba um arquivo PDF técnico.");
-      e.target.value = "";
+  const processarPdf = useCallback ((uploadFile: File)=>{
+    if (uploadFile.type !== "application/pdf"){
+      toast.error("Formato Inválido! Suba um documento PDF técnico.");
       return;
     }
-    
-    const safeUrl = URL.createObjectURL(uploadedFile);
+    const safeUrl = URL.createObjectURL(uploadFile);
     setFileUrl(safeUrl);
-    setZoom(1); 
-  };
+    setZoom(1);
+  } ,[]);
 
   // -------------------------------------------------------------
   // 🖱️ LÓGICA DA "MÃOZINHA" (PANNING - BOTÃO DIREITO)
@@ -164,6 +168,12 @@ export const OCRCalibrator: React.FC<Props> = ({ pacoteId, tipoFolha, onBack }) 
     }
   };
 
+    const handleFileDropped = useCallback((file: File) => {
+    processarPdf(file);
+  }, [processarPdf]);
+
+  const isDraggingOverPage = useGlobalFileDrop(handleFileDropped);
+
   const saveAllZones = async () => {
     if (Object.keys(zones).length === 0) {
       toast.error("Desenhe ao menos uma área no carimbo.");
@@ -209,10 +219,10 @@ export const OCRCalibrator: React.FC<Props> = ({ pacoteId, tipoFolha, onBack }) 
   };
 
   return (
-    <div className="flex h-[calc(100vh-160px)] w-full bg-background rounded-3xl overflow-hidden border border-border shadow-sm animate-enter relative">
+    <div className="flex h-screen w-screen bg-background rounded-3xl overflow-hidden border border-border shadow-sm animate-enter relative">
       
       {/* Sidebar Esquerda */}
-      <div className="w-80 bg-card border-r border-border p-6 flex flex-col gap-6 z-20 shadow-xl">
+      <div className="w-max bg-card border-r border-border p-8 flex flex-col gap-4 z-auto shadow-xl">
         <div className="border-b border-border pb-4">
           <h3 className="font-black text-foreground text-xl tracking-tight uppercase italic">Setup de Visão</h3>
           <p className="text-[10px] font-bold text-primary uppercase mt-1 tracking-widest">

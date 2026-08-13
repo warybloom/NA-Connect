@@ -69,9 +69,8 @@ function extrairHora(texto: string): string | undefined {
 function extrairTitulo(texto: string, fallback: string): string {
   // Limpa emojis e colchetes iniciais de log para achar o nome da etapa
   let limpo = texto
-    .replace(/[❌⚠️✅🏗️🏁]/g, '')
-    .replace(/^\[.*?\]/g, '')
-    .replace(/^\[.*?\]/g, '')
+     .replace(/[❌⚠️✅🏗️🏁]/g, '')
+    .replace(/\[.*?\]/g, '')   // remove TODOS os [colchetes], não só o do início
     .replace(/\b\d{2}:\d{2}(:\d{2})?\b/g, '')
     .replace(/^(INFO|ERROR|WARN|DEBUG|TRACE):?/i, '')
     .trim();
@@ -93,13 +92,11 @@ function extrairTitulo(texto: string, fallback: string): string {
 // Helper: Garante que a MENSAGEM COMPLETA seja retornada
 function extrairMensagemCompleta(texto: string): string {
   return texto
-    .replace(/[❌⚠️✅🏗️🏁]/g, '')                     // Remove emojis de marcação
-    .replace(/^\[.*?\]/g, '')                         // Remove timestamps/tags [ex: 14:32]
-    .replace(/^\[.*?\]/g, '') 
-    .replace(/^(INFO|ERROR|WARN|DEBUG|TRACE):?/i, '')  // Remove prefixos de nível de log
+    .replace(/[❌⚠️✅🏗️🏁]/g, '')
+    .replace(/\[.*?\]/g, '')   // idem: global, sem ^
+    .replace(/^(INFO|ERROR|WARN|DEBUG|TRACE):?/i, '')
     .trim();
 }
-
 // ================================================================
 // 🎨 COMPONENTE PRINCIPAL
 // ================================================================
@@ -151,25 +148,23 @@ export function VisualizadorLogResumido({ conteudoLog }: Props) {
           </div>
 
           {/* Conteúdo da Etapa */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground whitespace-normal break-words">
-                {etapa.titulo}
-              </h4>
-              {etapa.timestamp && (
-                <span className="text-[10px] font-mono text-muted-foreground shrink-0">
-                  {etapa.timestamp}
-                </span>
-              )}
-            </div>
-            
-            {/* Exibe a mensagem completa se for diferente do título */}
-            {etapa.mensagem !== etapa.titulo && (
-              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap break-all">
-                {etapa.mensagem}
-              </p>
-            )}
-          </div>
+<div className="flex-1 min-w-0">
+  <div className="flex items-baseline gap-2 flex-wrap">
+    {etapa.timestamp && (
+      <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+        {etapa.timestamp}
+      </span>
+    )}
+    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground shrink-0">
+      {etapa.titulo}
+    </h4>
+    {etapa.mensagem !== etapa.titulo && (
+      <span className="text-xs text-muted-foreground break-words min-w-0 basis-full">
+        {etapa.mensagem}
+      </span>
+    )}
+  </div>
+</div>
         </div>
       ))}
     </div>

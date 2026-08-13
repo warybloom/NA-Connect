@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Save, Database, Loader2, Plus, Trash2, RefreshCw, AlertCircle, LayoutList, Key, ListTree } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ModeToggle } from "@/components/alternar-modo";
+import { Norma } from "@/types/control-painel";
 
 type AttributeMap = { id: string; name: string; pidCol: string; pipingCol: string; isTagPart?: boolean; isFixedTag?: boolean };
 type CategoryMapping = {
@@ -235,13 +236,13 @@ export default function TabSettings() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex-1">
             <h2 className="text-xl font-bold flex items-center gap-2 text-primary">
-              <Database className="w-6 h-6" /> Mapeamento DE/PARA
+              <Database className="w-6 h-6" /> Mapeamento DE/PAR
             </h2>
             <div className="mt-4 flex items-center gap-3">
               <label htmlFor="projectSelect" className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <LayoutList className="w-4 h-4" /> Selecionar Projeto:
               </label>
-              <select 
+  <select 
                 id="projectSelect"
                 aria-label="Selecionar Projeto"
                 title="Selecionar Projeto"

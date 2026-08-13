@@ -33,23 +33,25 @@ export default function TabTimesheet() {
     fetchProjetos();
   }, []);
 
+  console.log("abaAtiva atual:", abaAtiva);
+
   return (
 
         <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col gap-8 animate-enter m-4">
-          <div className="flex items-center gap-9 mb-2">
+        <div className="flex flex-col gap-1 animate-enter m-4">
+          <div className="flex items-center gap-7">
             <SidebarTrigger className="-m-5"/>
             <ModeToggle/>
                             <a href="/Authentication/OAuth/Logout" className="text-sm text-muted-foreground hover:text-primary">
                             </a>
           </div>
           
-    <div className="w-full h-full flex flex-col gap-6 animate-enter m-4">
+    <div className="w-full h-full flex flex-col gap-4 animate-enter m-4">
       
       {/* BARRA GLOBAL SUPERIOR COM O FILTRO DE PROJETOS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700 pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-1 border-b border-slate-700 pb-4">
         
         {/* Título do Módulo */}
         <div className="flex items-center gap-3">
@@ -91,9 +93,12 @@ export default function TabTimesheet() {
       {/* NAVEGAÇÃO INTERNA DO MÓDULO */}
       <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
         <button
-          onClick={() => setAbaAtiva("gestao")}
+            onClick={() => {
+    console.log("cliquei em gestao");
+    setAbaAtiva("gestao");
+  }}
           className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-            abaAtiva === "gestao" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+            abaAtiva ===  "gestao" ? "bg-primary text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
           }`}
         >
           <LayoutDashboard className="w-4 h-4" /> Gestão à Vista

@@ -14,7 +14,8 @@ import {
   Clock,
   ChevronRight,
   AlertTriangle,
-  X
+  X,
+  Check
 } from "lucide-react";
 import toast from 'react-hot-toast';
 import { AppSidebar } from "@/components/app-sidebar";
@@ -201,7 +202,7 @@ export default function AndamentoRobo() {
   // ================================================================
   const verificarStatusRobo = useCallback(async () => {
     try {
-      const response = await fetch('/DataManagement/Data/StatusRobo');
+      const response = await fetch('/DataManagement/StatusRobo');
       if (!response.ok) return;
       const data = await response.json();
       setExecutando(data.executando);
@@ -218,7 +219,7 @@ export default function AndamentoRobo() {
   const carregarLogs = useCallback(async (forcarMaisRecente = false) => {
     setCarregandoLogs(true);
     try {
-      const response = await fetch('/DataManagement/Data/Logs');
+      const response = await fetch('/DataManagement/Logs');
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -245,7 +246,7 @@ export default function AndamentoRobo() {
     if (!emBackground) setCarregandoConteudoLog(true);
     
     try {
-      const response = await fetch(`/DataManagement/Data/Logs/${encodeURIComponent(nomeArquivo)}`);
+      const response = await fetch(`/DataManagement/Logs/${encodeURIComponent(nomeArquivo)}`);
       if (!response.ok) throw new Error(`Erro ${response.status}`);
       const data = await response.json();
       setConteudoLog(data.conteudo || "");
@@ -268,7 +269,7 @@ export default function AndamentoRobo() {
       setLogSelecionado(null);
       setConteudoLog("🚀 Disparando lote... Aguardando criação do arquivo de log no servidor.");
 
-      const response = await fetch('/DataManagement/Data/IniciarRobo', { method: 'POST' });
+      const response = await fetch('/DataManagement/IniciarRobo', { method: 'POST' });
 
       if (response.status === 409) {
         toast.error("O robô já está em execução no momento.");
@@ -286,7 +287,7 @@ export default function AndamentoRobo() {
 
       setTimeout(() => {
         carregarLogs(true);
-      }, 1200);
+      }, 2000);
 
     } catch (error: any) {
       toast.error(`Falha ao iniciar robô: ${error.message}`);
@@ -308,7 +309,7 @@ export default function AndamentoRobo() {
     if (executando) {
       pollingRef.current = setInterval(async () => {
         try {
-          const response = await fetch('/DataManagement/Data/StatusRobo');
+          const response = await fetch('/DataManagement/StatusRobo');
           if (!response.ok) return;
           const data = await response.json();
           setExecutando(data.executando);
@@ -419,6 +420,10 @@ export default function AndamentoRobo() {
                     <ScrollText className="w-3.5 h-3.5" />
                     Logs de Execução
                   </TabsTrigger>
+                  <TabsTrigger value="validador" className="font-black text-[10px] tracking-[0.2em] uppercase data-[state=active]:bg-primary px-4 sm:px-6 py-2.5 flex items-center gap-2 whitespace-nowrap">
+                    <Check className="w-3.5 h-3.5" />
+                    Validador
+                  </TabsTrigger>
                 </TabsList>
                 
                 {/* ======================= ABA: PROJETOS ======================= */}
@@ -506,6 +511,7 @@ export default function AndamentoRobo() {
                     </div>
                   </div>
                 </TabsContent>
+                
 
                 {/* ======================= ABA: LOGS ======================= */}
                 <TabsContent value="logs" className="flex-1 min-h-0 m-0 overflow-hidden">
@@ -575,12 +581,7 @@ export default function AndamentoRobo() {
                         <>
                           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border/50">
                             <span className="text-xs font-mono text-foreground truncate">{logSelecionado}</span>
-                            <button
-                              onClick={() => setLogSelecionado(null)}
-                              className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                           
                           </div>
                           <div className="flex-1 min-h-0 overflow-y-auto p-5">
                             {carregandoConteudoLog ? (
@@ -595,9 +596,26 @@ export default function AndamentoRobo() {
                       )}
                     </div>
                   </div>
+
+                  
+                </TabsContent>
+
+                  <TabsContent value="validador" className="flex-1 min-h-0 m-0 overflow-hidden">
+                  <div className="h-full w-full border border-border/50 bg-card/30 flex flex-col lg:flex-row overflow-hidden rounded-lg">
+
+   
+
+
+                    {/* Conteúdo do validador */}
+                    
+                  </div>
+
+                  
                 </TabsContent>
                 
               </Tabs>
+
+              
             </div>
 
           </div>

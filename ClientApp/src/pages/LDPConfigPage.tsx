@@ -116,12 +116,22 @@ export const LDPConfigPage: React.FC = () => {
         setMapping(prev => ({ ...prev, [dbField]: excelCol }));
     };
 
-    const fetchTemplatesLDP = useCallback(async () => {
-        try {
-            const res = await fetch('/api/projeto/listar-configuracoes-ldp');
-            if (res.ok) setTemplatesLDP(await res.json());
-        } catch (error) { console.error("Erro ao buscar templates LDP", error); }
-    }, []);
+const fetchTemplatesLDP = useCallback(async () => {
+    try {
+        const res = await fetch('/api/admin/projeto/listar-configuracoes-ldp');
+        console.log('[LDP] status:', res.status, res.ok);
+        if (!res.ok) {
+            toast.error(`Erro ao buscar templates: ${res.status}`);
+            return;
+        }
+        const data = await res.json();
+        console.log('[LDP] payload recebido:', data);
+        setTemplatesLDP(data);
+    } catch (error) {
+        console.error("Erro ao buscar templates LDP", error);
+        toast.error("Falha de rede ao buscar templates.");
+    }
+}, []);
 
     useEffect(() => { fetchTemplatesLDP(); }, [fetchTemplatesLDP]);
 
@@ -137,7 +147,7 @@ export const LDPConfigPage: React.FC = () => {
 
         setIsLoadingDetails(true);
         try {
-            const res = await fetch(`/api/projeto/configuracao-ldp/${templateId}`);
+            const res = await fetch(`/api/admin/projeto/configuracao-ldp/${templateId}`);
             if (res.ok) {
                 const data = await res.json();
                 

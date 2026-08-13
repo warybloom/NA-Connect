@@ -1,5 +1,5 @@
 // Caminho: ClientApp/src/pages/Files.tsx
-// VERSÃO FINAL COMPLETA - Inclui interface atualizada e passo de depuração
+// VERSÃO CORRIGIDA - Drag & Drop integrado, Sidebar + ModeToggle adicionados
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -13,13 +13,25 @@ import { SyncResultModal } from "@/components/SyncResultModal";
 import { CreatePlaceholdersModal } from "@/components/CreatePlaceholdersModal";
 import { PlaceholderResultModal } from "@/components/PlaceholderResultModal";
 import { MissingDocsDbModal } from "@/components/MissingDocsDbModal";
-// 👇 IMPORT NOVO: Modal e Interface de Auditoria
 import { AuditResultModal, AuditResult } from "@/components/AuditResultModal";
-
-import { FilePlus2, SearchCheck } from "lucide-react"; // 👇 Adicionei SearchCheck
+import { UploadDocumentModal } from "@/components/UploadDocumentoModal";
+import { useGlobalFileDrop } from "@/components/hooks/useGlobalFileDrop";
+import { ModeToggle } from "@/components/alternar-modo";
+import { FilePlus2, SearchCheck, Upload } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { useCurrentUser } from "@/components/hooks/use-current-user";
 
-// --- Interfaces de Dados ---
+
 interface ApiDataItem {
     id: string; type: 'folders' | 'items';
     attributes: { displayName: string; lastModifiedTime: string; lastModifiedUserName: string; };
@@ -33,7 +45,6 @@ interface ApiVersionItem {
 interface Breadcrumb { id: string; name: string; }
 interface SyncResult { totalLdpFiles: number; filesUpdated: number; filesNotFound: string[]; filesUpdatedSuccess: string[]; allLdpFiles: string[]; summaryMessage: string; }
 
-// --- Interface PlaceholderResult ATUALIZADA ---
 interface PlaceholderResult {
     totalRowsInLdp: number;
     rowsProcessed: number;
@@ -46,7 +57,6 @@ interface PlaceholderResult {
     errors: string[];
     summaryMessage: string;
 }
-// --- FIM Interface PlaceholderResult ---
 
 export default function Files() {
     const navigate = useNavigate();
@@ -54,7 +64,6 @@ export default function Files() {
     const [searchParams] = useSearchParams();
     const hubId = searchParams.get('hubId');
     const location = useLocation();
-    // console.log("Location State:", location.state);
     const projectName = location.state?.projectName || "Projeto";
 
     // --- Estados do Componente ---
@@ -63,6 +72,10 @@ export default function Files() {
     const [loading, setLoading] = useState(true);
     const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<{ id: string, name: string } | null>(null);
+    
+    // Estado único para Upload (via Botão ou Drag and Drop)
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [droppedFile, setDroppedFile] = useState<File | null>(null);
     
     // States Sync
     const [isSyncing, setIsSyncing] = useState(false);
@@ -79,17 +92,49 @@ export default function Files() {
     const [missingDocsFromDb, setMissingDocsFromDb] = useState<string[]>([]);
     const [isMissingDocsModalOpen, setIsMissingDocsModalOpen] = useState(false);
 
-    // 👇 NOVOS STATES PARA AUDITORIA
+    // States Auditoria
     const [isAuditing, setIsAuditing] = useState(false);
     const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [isRoboRunning, setIsRoboRunning] = useState(false); 
+
+    const handleExecutarRoboClick = async () => {
+        if (!hubId || !projectId){
+            toast.error("Não foi possivel identificar o hub ou o projeto");
+            return;
+        }
+        setIsRoboRunning (true);
+        const loadingToast = toast.loading("Iniciando execução do robo para este projeto");
+        try {
+            const response = await fetch(
+    `/DataManagement/ExecutarRoboProjeto?hubId=${hubId}&projectId=${projectId}`, 
+    { method: 'POST' }
+);
+        const result = await response.json();
+        if(!response.ok){
+            throw new Error(result.message || "Erro ao iniciar o robô");
+        }
+        toast.success(result.message, {id:loadingToast, duration:6000});
+        } catch (error:any){
+            toast.error(`Erro: ${error.message}`, { id: loadingToast });
+        } finally{
+            setIsRoboRunning(false)
+        }
+    };
+
+    // --- Drag and Drop Hook ---
+    const handleFileDropped = useCallback((file: File) => {
+        setDroppedFile(file);
+        setIsUploadModalOpen(true);
+    }, []);
+
+    const isDraggingOverPage = useGlobalFileDrop(handleFileDropped, !isUploadModalOpen);
 
     // --- Busca de Dados ---
     const fetchData = useCallback(async () => {
         if (!projectId || !folderId) return;
         setLoading(true);
         setFolderPath([]); 
-        // console.log("fetchData called"); 
         try {
             const [contentResponse, pathResponse] = await Promise.all([
                 fetch(`/DataManagement/Data/ConteudoPasta?projectId=${projectId}&folderId=${folderId}`),
@@ -106,7 +151,8 @@ export default function Files() {
                 const itemsAndFolders: ApiDataItem[] = apiResponse.data || [];
                 const versions: ApiVersionItem[] = apiResponse.included || [];
                 const formattedData: TableRowData[] = itemsAndFolders.map((item) => {
-                    let storageUrn: string | undefined = undefined; let customAttributes: Record<string, any> = {};
+                    let storageUrn: string | undefined = undefined; 
+                    let customAttributes: Record<string, any> = {};
                     if (item.type === 'items') {
                         const tipVersionId = item.relationships?.tip?.data?.id;
                         if (tipVersionId) {
@@ -144,7 +190,6 @@ export default function Files() {
     }, [fetchData]);
 
     // --- Handlers ---
-
     const handlePlaceholdersCreated = (result: PlaceholderResult) => {
         setPlaceholderResult(result);
         setIsPlaceholderResultModalOpen(true);
@@ -157,9 +202,7 @@ export default function Files() {
         setIsSyncing(true);
         const loadingToast = toast.loading("A iniciar sincronização...");
         try {
-            // AQUI ESTÁ A CHAMADA PARA O SEU BACKEND
             const response = await fetch(`/DataManagement/Data/SyncFromProjectLdp?hubId=${hubId}&projectId=${projectId}`, { method: 'POST' });
-            
             const result = await response.json();
             if (!response.ok) { throw new Error(result.details || result.message || "Erro desconhecido na sincronização."); }
             toast.success(result.summaryMessage, { id: loadingToast, duration: 6000 });
@@ -223,7 +266,6 @@ export default function Files() {
         }
     };
 
-    // 👇 NOVO HANDLER DE AUDITORIA
     const handleAuditClick = async () => {
         if (!hubId || !projectId) {
             toast.error("Hub ou Projeto não identificado.");
@@ -244,11 +286,9 @@ export default function Files() {
                 throw new Error(data.message || "Erro desconhecido na auditoria.");
             }
 
-            // Define o resultado e abre o modal
             setAuditResult(data);
             setIsAuditModalOpen(true);
             
-            // Mensagem simples no toast, o detalhe vai no modal
             if (data.count === 0) {
                 toast.success("Auditoria Concluída: Tudo OK!", { id: loadingToast });
             } else {
@@ -287,15 +327,14 @@ export default function Files() {
                 toast.dismiss(loadingToast);
                 window.open(data.downloadUrl, '_blank');
             } else {
-                 const errorData = await response.text();
+                const errorData = await response.text();
                 throw new Error(errorData || "Falha ao obter o link de download.");
             }
         } catch(error: any) {
-             toast.error(`Erro no download: ${error.message}`, { id: loadingToast });
+            toast.error(`Erro no download: ${error.message}`, { id: loadingToast });
         }
     };
 
-    // --- Preparação para Renderização ---
     const displayPath = useMemo(() => {
         if (folderPath.length > 0) {
             const firstItem = folderPath[0];
@@ -310,132 +349,167 @@ export default function Files() {
 
     const currentFolderName = displayPath.length > 0 ? displayPath[displayPath.length - 1].name : (loading ? "A carregar..." : "Ficheiros");
 
-    // --- JSX ---
     return (
-        <AnimatedBackground>
-            {/* ========================================================= */}
-            {/* === Modais Renderizados Condicionalmente === */}
-            {/* ========================================================= */}
-            {isVersionModalOpen && selectedItem && projectId && (
-                <VersionHistoryModal
-                    projectId={projectId}
-                    itemId={selectedItem.id}
-                    itemName={selectedItem.name}
-                    onClose={() => setIsVersionModalOpen(false)}
-                />
-            )}
-
-            <SyncResultModal
-                isOpen={isSyncResultModalOpen}
-                onClose={() => setIsSyncResultModalOpen(false)}
-                result={syncResult}
-            />
-
-            <CreatePlaceholdersModal
-                isOpen={isPlaceholderModalOpen}
-                onClose={() => setIsPlaceholderModalOpen(false)}
-                onPlaceholdersCreated={handlePlaceholdersCreated}
-                projectId={projectId}
-                hubId={hubId ?? undefined}
-            />
-
-            <PlaceholderResultModal
-                isOpen={isPlaceholderResultModalOpen}
-                onClose={() => setIsPlaceholderResultModalOpen(false)}
-                result={placeholderResult}
-            />
-
-            <MissingDocsDbModal
-                isOpen={isMissingDocsModalOpen}
-                onClose={() => setIsMissingDocsModalOpen(false)}
-                documents={missingDocsFromDb}
-            />
-
-            {/* 👇 NOVO MODAL DE AUDITORIA */}
-            <AuditResultModal 
-                isOpen={isAuditModalOpen} 
-                onClose={() => setIsAuditModalOpen(false)} 
-                result={auditResult} 
-            />
-            {/* ========================================================= */}
-            {/* === Fim dos Modais === */}
-            {/* ========================================================= */}
-
-            <div className="min-h-screen p-6">
-                <header className="flex items-start justify-between mb-8">
-                    <Logo />
-                    <div className="flex-1 text-center px-4">
-                        {projectName && (
-                            <h2 className="text-lg font-semibold text-foreground truncate leading-tight">
-                                {projectName}
-                            </h2>
-                        )}
-                    </div>
-                    <nav className="flex items-center gap-2">
-                        
-                        <Button  size="sm" className="" onClick={() => hubId && navigate(`/projects/${hubId}`)}>Voltar</Button>
-                        <a href="/Authentication/OAuth/Logout" className="text-xs text-muted-foreground hover:text-primary px-2">Sair</a>
-                    </nav>
-                </header>
-
-                <div className="w-full max-w-screen-2xl mx-auto px-6">
-                    <Breadcrumbs
-                        path={[
-                            { id: 'dashboard', name: 'Contas' },
-                            { id: hubId ? `projects/${hubId}` : 'projects', name: 'Projetos' },
-                            ...displayPath
-                        ]}
-                        onPathClick={(itemId, index) => {
-                            if (index === 0) navigate('/dashboard');
-                            else if (index === 1 && hubId) navigate(`/projects/${hubId}`);
-                            else if (index > 1 && projectId && hubId) navigate(`/projetos/${projectId}/conteudo/${itemId}?hubId=${hubId}`, { state: { projectName: projectName } });
-                        }}
-                        className="mb-6"
-                    />
-
-                    <div className="flex items-center justify-between mb-8">
-                        <h1 className="text-3xl font-bold text-foreground">{currentFolderName}</h1>
-                        <div className="flex gap-2 flex-wrap justify-end">
-                            <Button onClick={() => setIsPlaceholderModalOpen(true)} variant="outline">
-                                <FilePlus2 className="mr-2 h-4 w-4" /> Criar Placeholders
-                            </Button>
-
-                            {/* 👇 NOVO BOTÃO DE AUDITORIA */}
-                            <Button 
-                                onClick={handleAuditClick} 
-                                disabled={isAuditing} 
-                                variant="secondary" 
-                                className="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600/30 border border-yellow-600/50"
-                            >
-                                <SearchCheck className="mr-2 h-4 w-4" /> 
-                                {isAuditing ? "Auditando..." : "Auditar (ACC vs LDP)"}
-                            </Button>
-                            
-                            <Button onClick={handleSyncClick} disabled={isSyncing}>
-                                {isSyncing ? "Sincronizando..." : "Sincronizar LDP"}
-                            </Button>
-                            <Button onClick={handleUpdateFromDbClick} disabled={isUpdatingFromDb} variant="secondary">
-                                {isUpdatingFromDb ? "Atualizando..." : "Atualizar LDP do Banco"}
-                            </Button>
-                            <Button onClick={handleInstallWebhook} variant="outline" size="icon" title="Instalar Webhook">
-                                <span className="sr-only">Webhook</span>
-                                ⚙️
-                            </Button>
+        <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+                {isDraggingOverPage && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm pointer-events-none">
+                        <div className="rounded-lg border-2 border-dashed border-primary bg-background p-8 text-center">
+                            <p className="text-lg font-medium">Solte o arquivo para enviar</p>
                         </div>
                     </div>
+                )}
 
-                    {loading ? (
-                        <p className="text-muted-foreground text-center py-10">A carregar conteúdo...</p>
-                    ) : (
-                        <ElegantTable
-                            data={content}
-                            onFolderClick={handleFolderClick}
-                            onDownloadClick={handleDownloadClick}
-                            onVersionsClick={handleVersionsClick}
+                <AnimatedBackground>
+                    {/* --- Modais --- */}
+                    {isVersionModalOpen && selectedItem && projectId && (
+                        <VersionHistoryModal
+                            projectId={projectId}
+                            itemId={selectedItem.id}
+                            itemName={selectedItem.name}
+                            onClose={() => setIsVersionModalOpen(false)}
                         />
                     )}
-                </div>
-            </div>
-        </AnimatedBackground>
+
+                    <SyncResultModal
+                        isOpen={isSyncResultModalOpen}
+                        onClose={() => setIsSyncResultModalOpen(false)}
+                        result={syncResult}
+                    />
+
+                    <CreatePlaceholdersModal
+                        isOpen={isPlaceholderModalOpen}
+                        onClose={() => setIsPlaceholderModalOpen(false)}
+                        onPlaceholdersCreated={handlePlaceholdersCreated}
+                        projectId={projectId}
+                        hubId={hubId ?? undefined}
+                    />
+
+                    <PlaceholderResultModal
+                        isOpen={isPlaceholderResultModalOpen}
+                        onClose={() => setIsPlaceholderResultModalOpen(false)}
+                        result={placeholderResult}
+                    />
+
+                    <MissingDocsDbModal
+                        isOpen={isMissingDocsModalOpen}
+                        onClose={() => setIsMissingDocsModalOpen(false)}
+                        documents={missingDocsFromDb}
+                    />
+
+                    <AuditResultModal 
+                        isOpen={isAuditModalOpen} 
+                        onClose={() => setIsAuditModalOpen(false)} 
+                        result={auditResult} 
+                    />
+
+                    {projectId && folderId && hubId && (
+                        <UploadDocumentModal
+                            isOpen={isUploadModalOpen}
+                            onClose={() => {
+                                setIsUploadModalOpen(false);
+                                setDroppedFile(null);
+                            }}
+                            projectId={projectId}
+                            folderId={folderId}
+                            projectName={projectName}
+                            hubId={hubId}
+                            initialFile={droppedFile}
+                            onSuccess={fetchData}
+                        />
+                    )}
+
+                    <div className="min-h-screen p-6">
+                        <header className="flex items-start justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <SidebarTrigger className="-ml-8" />
+                                
+                                <ModeToggle />
+                            </div>
+                            <div className="flex-1 text-center px-5">
+                                {projectName && (
+                                    <h2 className="text-lg font-semibold text-foreground truncate leading-tight">
+                                        {projectName}
+                                    </h2>
+                                )}
+                            </div>
+                            <nav className="flex items-center gap-2">
+                                
+                                
+                            </nav>
+                        </header>
+
+                        <div className="w-full max-w-screen-2xl mx-auto px-6">
+                            <Breadcrumbs
+                                path={[
+                                    
+                                    
+                                    
+                                    
+                                ]}
+                                onPathClick={(itemId, index) => {
+                                    if (index === 0) navigate('/dashboard');
+                                    else if (index === 1 && hubId) navigate(`/projects/${hubId}`);
+                                    else if (index > 1 && projectId && hubId) navigate(`/projetos/${projectId}/conteudo/${itemId}?hubId=${hubId}`, { state: { projectName: projectName } });
+                                }}
+                                className="mb-6"
+                            />
+
+                            <div className="flex items-center justify-between mb-8">
+                                <h1 className="text-3xl font-bold text-foreground">{currentFolderName}</h1>
+                                <div className="flex gap-2 flex-wrap justify-end">
+                                    
+                                    
+
+                                    <Button 
+                                        onClick={handleAuditClick} 
+                                        disabled={isAuditing} 
+                                        variant="secondary" 
+                                        className="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600/30 border border-yellow-600/50"
+                                    >
+                                        <SearchCheck className="mr-2 h-4 w-4" /> 
+                                        {isAuditing ? "Auditando..." : "Auditar (ACC vs LDP)"}
+                                    </Button>
+                                    <Button
+                                     onClick={handleExecutarRoboClick}
+                                     disabled={isRoboRunning}
+                                     variant="default"
+                                     className="rounded-sm"
+                                     
+
+                                    >
+                                        {isRoboRunning ? "Execurando robô...": "Executar Robô"}
+
+                                    </Button>
+                                    
+                                    <Button onClick={handleSyncClick} disabled={isSyncing}>
+                                        {isSyncing ? "Sincronizando..." : "Sincronizar LDP"}
+                                    </Button>
+                                    <Button onClick={handleUpdateFromDbClick} disabled={isUpdatingFromDb} variant="secondary">
+                                        {isUpdatingFromDb ? "Atualizando..." : "Atualizar LDP do Banco"}
+                                    </Button>
+                                    <Button onClick={handleInstallWebhook} variant="outline" size="icon" title="Instalar Webhook">
+                                        <span className="sr-only">Webhook</span>
+                                        ⚙️
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {loading ? (
+                                <p className="text-muted-foreground text-center py-10">A carregar conteúdo...</p>
+                            ) : (
+                                <ElegantTable
+                                    data={content}
+                                    onFolderClick={handleFolderClick}
+                                    onDownloadClick={handleDownloadClick}
+                                    onVersionsClick={handleVersionsClick}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </AnimatedBackground>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

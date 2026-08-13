@@ -46,6 +46,8 @@ export default function Plant3DAuditHub({ projectId }: { projectId: string }) {
     const [isExecuting, setIsExecuting] = useState(false);
     const [auditResults, setAuditResults] = useState<any[]>([]);
 
+    
+
     /**
      * ✅ LÓGICA: DISPARAR O MOTOR DE CRUZAMENTO (C#)
      */

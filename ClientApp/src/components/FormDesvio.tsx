@@ -1,11 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Save, AlertCircle, CheckCircle2, Edit, X, Trash2 } from "lucide-react";
+import { Norma } from "@/types/control-painel";
+import { useParams } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 export default function FormDesvio() {
   const [projetos, setProjetos] = useState<any[]>([]);
   const [listaDesvios, setListaDesvios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro', texto: string } | null>(null);
+    const { projectId: urlProjectId } = useParams();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
+  
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(urlProjectId || "");
+  const [isLoading, setIsLoading] = useState(false);
+     const [projects, setProjects] = useState<any[]>([]);
+      const [normas, setNormas] = useState<Norma[]>([]);
+      const [templates, setTemplates] = useState<any[]>([]);
+      const [searchTerm, setSearchTerm] = useState("");
+      const [activeTab, setActiveTab] = useState("projetos");
+      
+      const [isNewOCRDocOpen, setIsNewOCRDocOpen] = useState(false);
+      const [newOCRName, setNewOCRName] = useState("");
+       const [pacotesOCR, setPacotesOCR] = useState<any[]>([]);
+       const [savedConfigsLDP, setSavedConfigsLDP] = useState<any[]>([]);
   
   const [isEditing, setIsEditing] = useState(false);
 
@@ -26,17 +45,140 @@ export default function FormDesvio() {
     Impacto: ""
   });
 
-  const carregarDados = () => {
-    fetch("http://localhost:5277/api/TimesheetReport/projetos-lista")
-      .then(res => res.json())
-      .then(json => { if (json.sucesso) setProjetos(json.dados); });
+  const carregarDesvios = async (projetoCodigo?: string) => {
+    try
+    {
+      const filtro = projetoCodigo && projetoCodigo.trim() !== "" ? projetoCodigo : "TODOS";
+      const res = await fetch(`http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=${encodeURIComponent(filtro)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.sucesso){
+          setListaDesvios(json.dados?.desvios?.tabela || []);
+        }
+      }
+    }
+    catch (error)
+    {
+      console.error("Erro ao buscar desvios:", error);
+    }
 
-    fetch("http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=TODOS")
-      .then(res => res.json())
-      .then(json => { if (json.sucesso) setListaDesvios(json.dados.desvios.tabela); });
-  };
+  }
 
-  useEffect(() => { carregarDados(); }, []);
+  
+   const fetchNormas = async () => {
+      try {
+        const resN = await fetch('/api/admin/normas');
+        if (resN.ok) setNormas(await resN.json());
+      } catch (error) {
+        console.error("Erro ao buscar normas:", error);
+      }
+    };
+  
+    const carregarDadosReais = async () => {
+      setLoading(true);
+      try {
+        // 1. Recupera o HubID do LocalStorage ou endpoint
+        let hubId = localStorage.getItem("hubId");
+        if (hubId === null) {
+          try {
+            const resHubs = await fetch('/DataManagement/Hubs');
+            if (resHubs.ok) {
+              const hubsData = await resHubs.json();
+              const hubs = Array.isArray(hubsData) ? hubsData : (hubsData.data || []);
+              if (hubs.length > 0) {
+                hubId = hubs[0].id;
+                if (hubId !== null) localStorage.setItem("hubId", hubId);
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao buscar hubs:", e);
+          }
+        }
+  
+        // 2. Chamadas paralelas
+        const [resP, resN, resT, resOCR, resLDP, resACC] = await Promise.all([
+          fetch('/api/admin/projetos'),
+          fetch('/api/admin/normas'),
+          fetch('/api/admin/templates'),
+          fetch('/api/admin/ocr/pacotes'),
+          fetch('/api/admin/projeto/listar-configuracoes-ldp'),
+          hubId ? fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`) : Promise.resolve(null)
+        ]);
+  
+        let projetosBanco: any[] = [];
+        if (resP.ok) {
+          const dadosVindosDoBanco = await resP.json();
+          projetosBanco = dadosVindosDoBanco.map((p: any) => ({
+            ...p,
+            is_Ativo: Boolean(p.is_Ativo)
+          }));
+        }
+  
+        let projetosACC: any[] = [];
+        if (resACC && resACC.ok) {
+          const text = await resACC.text();
+          if (text && text.trim().length > 0) {
+            const jsonACC = JSON.parse(text);
+            projetosACC = Array.isArray(jsonACC) ? jsonACC : (jsonACC.data || []);
+          }
+        }
+  
+        // 3. Mesclagem entre ACC e Banco Local
+        if (projetosACC.length > 0) {
+          const projetosUnificados = projetosACC.map((accProj: any) => {
+            const accId = accProj.id;
+            const accName = accProj.attributes?.name || accProj.name || "Sem Nome";
+  
+            const matchBanco = projetosBanco.find(
+              (p: any) => p.project_ID_ACC === accId || String(p.projetoId) === String(accId)
+            );
+  
+            if (matchBanco) return matchBanco;
+  
+            return {
+              projetoId: null,
+              nome_Projeto: accName,
+              project_ID_ACC: accId,
+              is_Ativo: false,
+              NormaID: null,
+              PacoteOCRID: null,
+              configId: "none"
+            };
+          });
+  
+          projetosBanco.forEach((pBanco: any) => {
+            const jaExiste = projetosUnificados.some(
+              (u: any) => u.project_ID_ACC === pBanco.project_ID_ACC || u.projetoId === pBanco.projetoId
+            );
+            if (!jaExiste) projetosUnificados.push(pBanco);
+          });
+  
+          setProjects(projetosUnificados);
+        } else {
+          setProjects(projetosBanco);
+        }
+  
+        if (resN && resN.ok) setNormas(await resN.json());
+        if (resT && resT.ok) setTemplates(await resT.json());
+        if (resOCR && resOCR.ok) setPacotesOCR(await resOCR.json());
+        if (resLDP && resLDP.ok) setSavedConfigsLDP(await resLDP.json());
+  
+      } catch (error) {
+        toast.error("Erro ao conectar com o servidor.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      carregarDadosReais();
+      carregarDesvios();
+    }, []);
+  
+    const filteredProjects = useMemo(
+      () => projects.filter((p) => p.nome_Projeto?.toLowerCase().includes(searchTerm.toLowerCase())),
+      [projects, searchTerm]
+    );
 
   const handleChange = (e: any) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -66,7 +208,9 @@ export default function FormDesvio() {
       const json = await res.json();
       if (json.sucesso) {
         setMensagem({ tipo: 'sucesso', texto: json.mensagem });
-        carregarDados();
+        carregarDadosReais(); 
+        carregarDesvios(formData.ProjetoCodigo);
+
         if (formData.ID === id) handleCancelarEdicao(); 
       } else { setMensagem({ tipo: 'erro', texto: json.mensagem }); }
     } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão ao tentar excluir.' }); }
@@ -91,7 +235,7 @@ export default function FormDesvio() {
       const result = await response.json();
       if (result.sucesso) {
         setMensagem({ tipo: 'sucesso', texto: result.mensagem });
-        handleCancelarEdicao(); carregarDados(); 
+        handleCancelarEdicao(); carregarDadosReais();carregarDesvios(formData.ProjetoCodigo);
       } else { setMensagem({ tipo: 'erro', texto: result.mensagem }); }
     } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão.' }); } finally { setLoading(false); }
   };
@@ -114,9 +258,13 @@ export default function FormDesvio() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="lg:col-span-2">
             <label htmlFor="ProjetoCodigo" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Projeto Vinculado *</label>
-            <select id="ProjetoCodigo" name="ProjetoCodigo" title="Selecione o Projeto" aria-label="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 text-foreground text-sm focus:outline-none focus:border-amber-500 transition-colors">
-              <option value="">Selecione...</option>
-              {projetos.map((p, i) => <option key={i} value={p.Codigo}>{p.Codigo}</option>)}
+                        <select id="projectSelector4D"  name="ProjetoCodigo" title="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} className="  block  font-bold text-muted-foreground uppercase w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-amber-500 transition-colors">
+              <option value="">-- Escolha um Projeto --</option>
+              {projects.map((proj) => (
+                <option key={proj.project_ID_ACC ?? proj.projectId} value={proj.project_ID_ACC ?? proj.projectId}>
+                  {proj.nome_Projeto}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -219,7 +367,7 @@ export default function FormDesvio() {
           {isEditing && (
             <button type="button" onClick={handleCancelarEdicao} className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-bold py-2.5 px-4 rounded-md transition-colors"><X className="w-5 h-5" /> Cancelar</button>
           )}
-          <button type="submit" disabled={loading} className={`flex items-center gap-2 text-white font-bold py-2.5 px-8 rounded-md shadow-lg transition-colors disabled:opacity-50 ${isEditing ? 'bg-sky-600 hover:bg-sky-500' : 'bg-amber-500 hover:bg-amber-600'}`}>
+          <button type="submit" disabled={loading} className={`flex items-center gap-2 text-white font-bold py-2.5 px-8 rounded-md shadow-lg transition-colors disabled:opacity-50 ${isEditing ? 'bg-sky-600 hover:bg-sky-500' : 'bg-sky-500 hover:bg-sky-400'}`}>
             {loading ? <span className="animate-spin text-xl">↻</span> : <Save className="w-5 h-5" />}
             {loading ? 'Processando...' : (isEditing ? 'Atualizar Desvio' : 'Salvar Novo Desvio')}
           </button>

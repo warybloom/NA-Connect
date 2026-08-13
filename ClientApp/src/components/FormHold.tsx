@@ -1,28 +1,152 @@
-import { useState, useEffect } from "react";
-import { Save, AlertCircle, CheckCircle2, Edit, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Save, AlertCircle, CheckCircle2, Edit, X , Trash2} from "lucide-react";
+import { Norma } from "@/types/control-painel";
+import { useParams } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 export default function FormHold() {
   const [projetos, setProjetos] = useState<any[]>([]);
   const [listaHolds, setListaHolds] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro', texto: string } | null>(null);
-  
+  const { projectId: urlProjectId } = useParams();
+  const [projects, setProjects] = useState<any[]>([]);
+  const [normas, setNormas] = useState<Norma[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [pacotesOCR, setPacotesOCR] = useState<any[]>([]);
+  const [savedConfigsLDP, setSavedConfigsLDP] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+
 
   const [formData, setFormData] = useState({
     ID: null, ProjetoCodigo: "", Num_Hold: "", Status: "PENDENTE", Num_NA_Documento: "",
     Titulo_Documento: "", Revisao: "", Disciplina: "", Responsavel: "", Motivo_Hold: ""
   });
+   
+  const carregarDesvios = async (projetoCodigo?: string) =>{
+    try
+    {
+      const filtro = projetoCodigo && projetoCodigo.trim() !== "" ? projetoCodigo : "TODOS"
+      const res = await fetch(`http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=${encodeURIComponent(filtro)}`);
+      if (res.ok)
+      {
+        const json = await res.json();
+        if (json.sucesso)
+        {
+          setListaHolds(json.dados?.holds?.tabela || []);
+        }
+      }
 
-  const carregarDados = () => {
-    fetch("http://localhost:5277/api/TimesheetReport/projetos-lista")
-      .then(res => res.json()).then(json => { if (json.sucesso) setProjetos(json.dados); });
+    }
+    catch (erros)
+    {
+      console.error("Erro ao buscar holds")
+    }
+  }
 
-    fetch("http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=TODOS")
-      .then(res => res.json()).then(json => { if (json.sucesso) setListaHolds(json.dados.holds.tabela); });
-  };
 
-  useEffect(() => { carregarDados(); }, []);
+
+    const carregarDadosReais = async () => {
+      setLoading(true);
+      try {
+        // 1. Recupera o HubID do LocalStorage ou endpoint
+        let hubId = localStorage.getItem("hubId");
+        if (hubId === null) {
+          try {
+            const resHubs = await fetch('/DataManagement/Hubs');
+            if (resHubs.ok) {
+              const hubsData = await resHubs.json();
+              const hubs = Array.isArray(hubsData) ? hubsData : (hubsData.data || []);
+              if (hubs.length > 0) {
+                hubId = hubs[0].id;
+                if (hubId !== null) localStorage.setItem("hubId", hubId);
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao buscar hubs:", e);
+          }
+        }
+  
+        // 2. Chamadas paralelas
+        const [resP, resN, resT, resOCR, resLDP, resACC] = await Promise.all([
+          fetch('/api/admin/projetos'),
+          fetch('/api/admin/normas'),
+          fetch('/api/admin/templates'),
+          fetch('/api/admin/ocr/pacotes'),
+          fetch('/api/admin/projeto/listar-configuracoes-ldp'),
+          hubId ? fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`) : Promise.resolve(null)
+        ]);
+  
+        let projetosBanco: any[] = [];
+        if (resP.ok) {
+          const dadosVindosDoBanco = await resP.json();
+          projetosBanco = dadosVindosDoBanco.map((p: any) => ({
+            ...p,
+            is_Ativo: Boolean(p.is_Ativo)
+          }));
+        }
+  
+        let projetosACC: any[] = [];
+        if (resACC && resACC.ok) {
+          const text = await resACC.text();
+          if (text && text.trim().length > 0) {
+            const jsonACC = JSON.parse(text);
+            projetosACC = Array.isArray(jsonACC) ? jsonACC : (jsonACC.data || []);
+          }
+        }
+  
+        // 3. Mesclagem entre ACC e Banco Local
+        if (projetosACC.length > 0) {
+          const projetosUnificados = projetosACC.map((accProj: any) => {
+            const accId = accProj.id;
+            const accName = accProj.attributes?.name || accProj.name || "Sem Nome";
+  
+            const matchBanco = projetosBanco.find(
+              (p: any) => p.project_ID_ACC === accId || String(p.projetoId) === String(accId)
+            );
+  
+            if (matchBanco) return matchBanco;
+  
+            return {
+              projetoId: null,
+              nome_Projeto: accName,
+              project_ID_ACC: accId,
+              is_Ativo: false,
+              NormaID: null,
+              PacoteOCRID: null,
+              configId: "none"
+            };
+          });
+  
+          projetosBanco.forEach((pBanco: any) => {
+            const jaExiste = projetosUnificados.some(
+              (u: any) => u.project_ID_ACC === pBanco.project_ID_ACC || u.projetoId === pBanco.projetoId
+            );
+            if (!jaExiste) projetosUnificados.push(pBanco);
+          });
+  
+          setProjects(projetosUnificados);
+        } else {
+          setProjects(projetosBanco);
+        }
+  
+        if (resN && resN.ok) setNormas(await resN.json());
+        if (resT && resT.ok) setTemplates(await resT.json());
+        if (resOCR && resOCR.ok) setPacotesOCR(await resOCR.json());
+        if (resLDP && resLDP.ok) setSavedConfigsLDP(await resLDP.json());
+  
+      } catch (error) {
+        toast.error("Erro ao conectar com o servidor.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+  useEffect(() => { 
+  carregarDadosReais(); 
+  carregarDesvios(); 
+}, []);
 
   const handleChange = (e: any) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -33,6 +157,22 @@ export default function FormHold() {
       Revisao: item.Revisao, Disciplina: item.Disciplina, Responsavel: item.Responsavel, Motivo_Hold: item.Motivo_Hold
     });
     setIsEditing(true); window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+    const handleExcluir = async (id: number, numDesvio: string) => {
+    if (!window.confirm(`ATENÇÃO! Tem certeza que deseja EXCLUIR o desvio ${numDesvio}?`)) return;
+    setMensagem(null);
+    try {
+      const res = await fetch(`http://localhost:5277/api/TimesheetReport/deletar-hold/${id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (json.sucesso) {
+        setMensagem({ tipo: 'sucesso', texto: json.mensagem });
+        carregarDadosReais(); 
+        carregarDesvios(formData.ProjetoCodigo);
+
+        if (formData.ID === id) handleCancelarEdicao(); 
+      } else { setMensagem({ tipo: 'erro', texto: json.mensagem }); }
+    } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão ao tentar excluir.' }); }
   };
 
   const handleCancelarEdicao = () => {
@@ -51,7 +191,7 @@ export default function FormHold() {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData)
       });
       const result = await response.json();
-      if (result.sucesso) { setMensagem({ tipo: 'sucesso', texto: result.mensagem }); handleCancelarEdicao(); carregarDados(); } 
+      if (result.sucesso) { setMensagem({ tipo: 'sucesso', texto: result.mensagem }); handleCancelarEdicao(); carregarDadosReais(); carregarDesvios(formData.ProjetoCodigo) } 
       else { setMensagem({ tipo: 'erro', texto: result.mensagem }); }
     } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão com o servidor.' }); } 
     finally { setLoading(false); }
@@ -75,10 +215,14 @@ export default function FormHold() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="lg:col-span-2">
-            <label htmlFor="ProjetoCodigoHold" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Projeto Vinculado *</label>
-            <select id="ProjetoCodigoHold" name="ProjetoCodigo" title="Selecione o Projeto" aria-label="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 text-foreground text-sm focus:outline-none focus:border-sky-500 transition-colors">
-              <option value="">Selecione o Projeto...</option>
-              {projetos.map((p, i) => <option key={i} value={p.Codigo}>{p.Codigo}</option>)}
+            <label htmlFor="ProjetoCodigo" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Projeto Vinculado *</label>
+                        <select id="projectSelector4D"  name="ProjetoCodigo" title="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} className="  block  font-bold text-muted-foreground uppercase w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-amber-500 transition-colors">
+              <option value="">-- Escolha um Projeto --</option>
+              {projects.map((proj) => (
+                <option key={proj.project_ID_ACC ?? proj.projectId} value={proj.project_ID_ACC ?? proj.projectId}>
+                  {proj.nome_Projeto}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -172,6 +316,7 @@ export default function FormHold() {
                     <button onClick={() => handleEditItem(h)} className="p-1.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded hover:bg-sky-500 hover:text-white transition-colors" title="Editar este Hold">
                       <Edit className="w-4 h-4" />
                     </button>
+                    <button onClick={() => handleExcluir(h.ID, h.Num_Hold)} className="p-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded hover:bg-rose-500 hover:text-white transition-colors" title="Excluir" aria-label="Excluir"><Trash2 className="w-4 h-4" /></button>
                   </td>
                   <td className="px-4 py-2 font-bold text-sky-600 dark:text-sky-500">{h.Num_Hold}</td>
                   <td className="px-4 py-2">

@@ -15,14 +15,14 @@ export default function TabLancamentos() {
         <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col gap-8 animate-enter m-4">
-          <div className="flex items-center gap-9 mb-2">
+        <div className="flex flex-col gap-1 animate-enter m-4">
+          <div className="flex items-center gap-7">
             <SidebarTrigger className="-m-5"/>
             <ModeToggle/>
                             <a href="/Authentication/OAuth/Logout" className="text-sm text-muted-foreground hover:text-primary">
                             </a>
           </div>
-    <div className=" flex flex-col gap-6 animate-enter m-6">
+    <div className=" w-full h-full flex flex-col gap-4 animate-enter m-4">
       
       {/* CABEÇALHO DO MÓDULO */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-4">

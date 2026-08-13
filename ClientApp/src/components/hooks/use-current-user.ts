@@ -10,16 +10,22 @@ export function useCurrentUser(){
     const[user, setUser] = useState<CurrentUser | null>(null)
     const[loading, setLoading] = useState(true)
     
+
+
+
+
 useEffect(() => {
-    fetch("/Authentication/OAuth/GetProfile", { credentials: "include" })
+    fetch("/Authentication/OAuth/GetLoggedInUserName", {
+        credentials: "include"
+    })
         .then((res) => {
-        if (!res.ok) throw new Error("Não autenticado")
-        return res.json()
+            if (!res.ok) throw new Error("Não autenticado");
+            return res.json();
         })
-        .then((data: CurrentUser) => setUser(data))
+        .then((data: { name: string }) => setUser({ name: data.name, email: "", avatar: "" }))
         .catch(() => setUser(null))
-        .finally(() => setLoading(false))
-    }, [])
+        .finally(() => setLoading(false));
+}, []);
     return {user, loading}
 }
 

@@ -1,12 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Save, AlertCircle, CheckCircle2, Edit, X, Trash2 } from "lucide-react";
+import { Norma } from "@/types/control-painel";
+import { useParams } from "react-router-dom";
+import {toast} from "react-hot-toast"
 
 export default function FormNC() {
   const [projetos, setProjetos] = useState<any[]>([]);
   const [listaNCs, setListaNCs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro', texto: string } | null>(null);
-  
+  const [projects, setProjects] = useState<any[]>([]);
+  const [normas, setNormas] = useState<Norma[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [pacotesOCR, setPacotesOCR] = useState<any[]>([]);
+       const [savedConfigsLDP, setSavedConfigsLDP] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -15,15 +22,125 @@ export default function FormNC() {
     Responsavel_Abertura: "", Descricao: "", Categoria_Erro: ""
   });
 
-  const carregarDados = () => {
-    fetch("http://localhost:5277/api/TimesheetReport/projetos-lista")
-      .then(res => res.json()).then(json => { if (json.sucesso) setProjetos(json.dados); });
+    const carregarDesvios = async (projetoCodigo?: string) => {
+    try
+    {
+      const filtro = projetoCodigo && projetoCodigo.trim() !== "" ? projetoCodigo : "TODOS";
+      const res = await fetch(`http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=${encodeURIComponent(filtro)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.sucesso){
+          setListaNCs(json.dados?.ncs?.tabela || []);
+        }
+      }
+    }
+    catch (error)
+    {
+      console.error("Erro ao buscar desvios:", error);
+    }
 
-    fetch("http://localhost:5277/api/TimesheetReport/qualidade-contratos?projetoCodigo=TODOS")
-      .then(res => res.json()).then(json => { if (json.sucesso) setListaNCs(json.dados.ncs.tabela); });
-  };
+  }
 
-  useEffect(() => { carregarDados(); }, []);
+     const carregarDadosReais = async () => {
+      setLoading(true);
+      try {
+        // 1. Recupera o HubID do LocalStorage ou endpoint
+        let hubId = localStorage.getItem("hubId");
+        if (hubId === null) {
+          try {
+            const resHubs = await fetch('/DataManagement/Hubs');
+            if (resHubs.ok) {
+              const hubsData = await resHubs.json();
+              const hubs = Array.isArray(hubsData) ? hubsData : (hubsData.data || []);
+              if (hubs.length > 0) {
+                hubId = hubs[0].id;
+                if (hubId !== null) localStorage.setItem("hubId", hubId);
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao buscar hubs:", e);
+          }
+        }
+  
+        // 2. Chamadas paralelas
+        const [resP, resN, resT, resOCR, resLDP, resACC] = await Promise.all([
+          fetch('/api/admin/projetos'),
+          fetch('/api/admin/normas'),
+          fetch('/api/admin/templates'),
+          fetch('/api/admin/ocr/pacotes'),
+          fetch('/api/admin/projeto/listar-configuracoes-ldp'),
+          hubId ? fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`) : Promise.resolve(null)
+        ]);
+  
+        let projetosBanco: any[] = [];
+        if (resP.ok) {
+          const dadosVindosDoBanco = await resP.json();
+          projetosBanco = dadosVindosDoBanco.map((p: any) => ({
+            ...p,
+            is_Ativo: Boolean(p.is_Ativo)
+          }));
+        }
+  
+        let projetosACC: any[] = [];
+        if (resACC && resACC.ok) {
+          const text = await resACC.text();
+          if (text && text.trim().length > 0) {
+            const jsonACC = JSON.parse(text);
+            projetosACC = Array.isArray(jsonACC) ? jsonACC : (jsonACC.data || []);
+          }
+        }
+  
+        // 3. Mesclagem entre ACC e Banco Local
+        if (projetosACC.length > 0) {
+          const projetosUnificados = projetosACC.map((accProj: any) => {
+            const accId = accProj.id;
+            const accName = accProj.attributes?.name || accProj.name || "Sem Nome";
+  
+            const matchBanco = projetosBanco.find(
+              (p: any) => p.project_ID_ACC === accId || String(p.projetoId) === String(accId)
+            );
+  
+            if (matchBanco) return matchBanco;
+  
+            return {
+              projetoId: null,
+              nome_Projeto: accName,
+              project_ID_ACC: accId,
+              is_Ativo: false,
+              NormaID: null,
+              PacoteOCRID: null,
+              configId: "none"
+            };
+          });
+  
+          projetosBanco.forEach((pBanco: any) => {
+            const jaExiste = projetosUnificados.some(
+              (u: any) => u.project_ID_ACC === pBanco.project_ID_ACC || u.projetoId === pBanco.projetoId
+            );
+            if (!jaExiste) projetosUnificados.push(pBanco);
+          });
+  
+          setProjects(projetosUnificados);
+        } else {
+          setProjects(projetosBanco);
+        }
+  
+        if (resN && resN.ok) setNormas(await resN.json());
+        if (resT && resT.ok) setTemplates(await resT.json());
+        if (resOCR && resOCR.ok) setPacotesOCR(await resOCR.json());
+        if (resLDP && resLDP.ok) setSavedConfigsLDP(await resLDP.json());
+  
+      } catch (error) {
+        toast.error("Erro ao conectar com o servidor.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      carregarDadosReais();
+      carregarDesvios();
+    }, []);
 
   const handleChange = (e: any) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -46,7 +163,7 @@ export default function FormNC() {
     try {
       const res = await fetch(`http://localhost:5277/api/TimesheetReport/deletar-nc/${id}`, { method: "DELETE" });
       const json = await res.json();
-      if (json.sucesso) { setMensagem({ tipo: 'sucesso', texto: json.mensagem }); carregarDados(); if (formData.ID === id) handleCancelarEdicao(); } 
+      if (json.sucesso) { setMensagem({ tipo: 'sucesso', texto: json.mensagem }); carregarDadosReais(); carregarDesvios(formData.ProjetoCodigo); if (formData.ID === id) handleCancelarEdicao(); } 
       else { setMensagem({ tipo: 'erro', texto: json.mensagem }); }
     } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão ao tentar excluir.' }); }
   };
@@ -60,7 +177,7 @@ export default function FormNC() {
     try {
       const response = await fetch(`http://localhost:5277/api/TimesheetReport/${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
       const result = await response.json();
-      if (result.sucesso) { setMensagem({ tipo: 'sucesso', texto: result.mensagem }); handleCancelarEdicao(); carregarDados(); } 
+      if (result.sucesso) { setMensagem({ tipo: 'sucesso', texto: result.mensagem }); handleCancelarEdicao(); carregarDadosReais(); carregarDesvios(formData.ProjetoCodigo) } 
       else { setMensagem({ tipo: 'erro', texto: result.mensagem }); }
     } catch (error) { setMensagem({ tipo: 'erro', texto: 'Erro de conexão.' }); } 
     finally { setLoading(false); }
@@ -84,10 +201,14 @@ export default function FormNC() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="lg:col-span-2">
-            <label htmlFor="ProjetoCodigoNC" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Projeto Vinculado *</label>
-            <select id="ProjetoCodigoNC" name="ProjetoCodigo" title="Selecione o Projeto" aria-label="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 text-foreground text-sm focus:outline-none focus:border-emerald-500 transition-colors">
-              <option value="">Selecione o Projeto...</option>
-              {projetos.map((p, i) => <option key={i} value={p.Codigo}>{p.Codigo}</option>)}
+            <label htmlFor="ProjetoCodigo" className="block text-xs font-bold text-muted-foreground uppercase mb-1">Projeto Vinculado *</label>
+                        <select id="projectSelector4D"  name="ProjetoCodigo" title="Selecione o Projeto" value={formData.ProjetoCodigo} onChange={handleChange} className="  block  font-bold text-muted-foreground uppercase w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-amber-500 transition-colors">
+              <option value="">-- Escolha um Projeto --</option>
+              {projects.map((proj) => (
+                <option key={proj.project_ID_ACC ?? proj.projectId} value={proj.project_ID_ACC ?? proj.projectId}>
+                  {proj.nome_Projeto}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -173,7 +294,7 @@ export default function FormNC() {
               <X className="w-5 h-5" /> Cancelar
             </button>
           )}
-          <button type="submit" disabled={loading} className={`flex items-center gap-2 text-white font-bold py-2.5 px-8 rounded-md shadow-lg transition-colors disabled:opacity-50 ${isEditing ? 'bg-sky-600 hover:bg-sky-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}>
+          <button type="submit" disabled={loading} className={`flex items-center gap-2 text-white font-bold py-2.5 px-8 rounded-md shadow-lg transition-colors disabled:opacity-50 ${isEditing ? 'bg-sky-600 hover:bg-sky-500' : 'bg-sky-500 hover:bg-sky-400'}`}>
             {loading ? <span className="animate-spin text-xl">↻</span> : <Save className="w-5 h-5" />}
             {loading ? 'Processando...' : (isEditing ? 'Atualizar NC' : 'Salvar Nova NC')}
           </button>

@@ -1,10 +1,11 @@
 // Caminho: ClientApp/src/pages/Projects.tsx
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { UploadDocumentModal } from "@/components/UploadDocumentoModal";
 import React from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Search } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 
 // Componentes visuais existentes
 import { AnimatedBackground } from "@/components/ui/animated-background";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { ModeToggle } from "@/components/alternar-modo";
+import { useGlobalFileDrop } from "@/components/hooks/useGlobalFileDrop";
 
 // Componentes da Sidebar e Select do Shadcn
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -71,10 +73,17 @@ export default function Projects() {
   const [currentPage, setCurrentPage] = useState(1);
   const PROJECTS_PER_PAGE = 12;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Estados para os Hubs (Contas)
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [loadingHubs, setLoadingHubs] = useState(false);
+
+  const handleOpenUploadModal = (project: Project) => {
+    setSelectedProjectForUpload(project);
+    setIsUploadModalOpen(true);
+  }
 
   // 1. Procurar a lista de Hubs utilizando a mesma API do Hubs.tsx
 // 1. Procurar a lista de Hubs utilizando a mesma API do Hubs.tsx
@@ -109,7 +118,7 @@ export default function Projects() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/DataManagement/Data/Projetos?hubId=${hubId}`);
+      const response = await fetch(`/DataManagement/Data/Projects?hubId=${hubId}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -160,7 +169,7 @@ const handleTriggerRobot = async () => {
   const tid = toast.loading("🤖 Iniciando robô...");
 
   try {
-    const res = await fetch(`/DataManagement/Data/IniciarRobo`, {
+    const res = await fetch(`/DataManagement/IniciarRobo`, {
       method: "POST",
     });
 
@@ -258,10 +267,10 @@ const handleTriggerRobot = async () => {
 
          
        
-            <div className="min-h-screen p-6">
+            <div className="min-h-screen p-8">
             {/* Header */}
-            <header className="flex items-center justify-between mb-8 pb-4 border-b border-border/40">
-              <div className="flex items-center gap-5">
+            <header className="flex items-center justify-between  ">
+              <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-7"/>
 
                 <ModeToggle/>
@@ -269,23 +278,7 @@ const handleTriggerRobot = async () => {
                 </a>
                 
               </div>
-              
-              
-              
 
-              <nav className="flex items-center gap-4">
-               
-                <Button
-                  variant="ghost"
-                  className="text-foreground hover:text-black"
-                  onClick={() => navigate("/dashboard")}
-                >
-                  Contas
-                </Button>
-                
-                
-                
-              </nav>
             </header>
 
             <div className="max-w-7xl mx-auto">
