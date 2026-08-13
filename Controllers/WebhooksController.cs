@@ -107,7 +107,7 @@ namespace APS.WebApp.Controllers
 
                     if (ldpData.Any())
                     {
-                        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, appToken);
+                        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, appToken, "IGNORAR_WEBHOOK");
                         Console.WriteLine($"--> Sincronização automática concluída: {result}");
                     }
                 }

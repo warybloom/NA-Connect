@@ -54,7 +54,7 @@ namespace APS.WebApp.Services
             Console.WriteLine("\n--- [LOG] SERVIÇO DE NOMENCLATURA INICIADO ---");
             Console.WriteLine($"[LOG] Mapeamentos de Disciplinas carregados: {_mappings.Disciplinas.Count}");
             Console.WriteLine($"[LOG] Mapeamentos de Tipos de Documento carregados: {_mappings.TiposDeDocumento.Count}");
-            Console.WriteLine("--------------------------------------------------\n");
+            
         }
 
         /// <summary>

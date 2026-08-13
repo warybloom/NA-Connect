@@ -40,4 +40,11 @@ namespace APS.WebApp.Models
         [JsonPropertyName("key")]
         public string Key { get; set; } = string.Empty;
     }
+
+    public class FileItem
+{
+    public string FileId { get; set; }
+    public string Name { get; set; }
+    public string Type { get; set; } // Identifica se é "items" ou "folders"
+}
 }

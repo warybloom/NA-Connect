@@ -72,7 +72,9 @@ namespace NA_Connect.Services
                 var fileInfo = await _autodeskApi.GetFirstExcelInFolderAsync(
                     projectId,
                     folderId,
-                    robotToken);
+                    "LDP",
+                    robotToken
+                    ); // Passa null para usar o padrão de nomenclatura do projeto
 
                 if (string.IsNullOrEmpty(fileInfo.FileId))
                 {

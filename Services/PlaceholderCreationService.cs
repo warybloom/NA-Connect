@@ -300,7 +300,7 @@ namespace APS.WebApp.Services
                         }
 
                         _logger.LogInformation("Linha {RowNumber}: Criando placeholder '{FileName}' na pasta '{FolderName}'...", row.RowNumber, nomeArquivoFinal, nomePastaDestino);
-                        await _autodeskApi.CopyPlaceholderAsync(projectId, sourceVersionUrn, targetFolderId, nomeArquivoFinal, accessToken);
+                        await _autodeskApi.CopyPlaceholderAsync(projectId, sourceVersionUrn, targetFolderId, nomeArquivoFinal, "1.0", accessToken);
 
                         result.PlaceholdersCreated++;
                         result.CreatedFiles.Add(nomeArquivoFinal);

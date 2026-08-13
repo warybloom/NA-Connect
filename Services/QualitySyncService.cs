@@ -56,15 +56,15 @@ namespace NA_Connect.Services
         {
             _logger.LogInformation("Iniciando busca da pasta de QUALITY no ACC...");
  
-            string folderId = await _scheduleService.FindFolderByPaths(
-                hubId,
-                projectId,
-                new[] {
-                    // Procuar a pasta no ACC
-                    new[] { "05 - QUALIDADE", "05.06 - RELATÓRIO DE NÃO CONFORMIDADE DA NCR" },
-                    new[] { "05 - QUALITY", "01.15 - NCR NONCONFORMITY REPORT" }
-                },
-                accessToken);
+                string folderId = await _scheduleService.FindFolderByPaths(
+                    hubId,
+                    projectId,
+                    new[] {
+                        // Procuar a pasta no ACC
+                        new[] { "05 - QUALIDADE", "05.06 - RELATÓRIO DE NÃO CONFORMIDADE DA NCR" },
+                        new[] { "05 - QUALITY", "01.15 - NCR NONCONFORMITY REPORT" }
+                    },
+                    accessToken);
  
             if (string.IsNullOrEmpty(folderId))
             {

@@ -1,0 +1,28 @@
+// Local sugerido: SeuProjeto.Services/AccNavigationService.cs
+
+public class AccNavigationService
+{
+    private readonly HttpClient _httpClient;
+
+    public AccNavigationService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<List<FolderDto>> GetFolderContents(string projectId, string folderId, string accessToken)
+    {
+        var url = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/folders/{folderId}/contents";
+        
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.GetAsync(url);
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonString = await response.Content.ReadAsStringAsync();
+            // Aqui você filtra usando LINQ para retornar apenas o que for type == "folders"
+            return ParseFolders(jsonString);
+        }
+        
+        throw new Exception("Erro ao acessar APS: " + response.ReasonPhrase);
+    }
+}

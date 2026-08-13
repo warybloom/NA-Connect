@@ -51,6 +51,7 @@ namespace APS.WebApp.Areas.Authentication.Controllers
             var clientId = _config["APS:ClientId"];
             var clientSecret = _config["APS:ClientSecret"];
             var callbackUrl = _config["APS:CallbackUrl"];
+            
             var tokenRequestParams = new Dictionary<string, string>
             {
                 { "grant_type", "authorization_code" },
@@ -112,6 +113,97 @@ namespace APS.WebApp.Areas.Authentication.Controllers
                 return StatusCode(500, new { message = "Não foi possível obter o nome do utilizador." });
             }
         }
+
+
+[HttpGet]
+public async Task<IActionResult> GetProfile()
+{
+    var accessToken = HttpContext.Session.GetString("AccessToken");
+    if (string.IsNullOrEmpty(accessToken))
+    {
+        Console.WriteLine("AccessToken is null or empty.");
+        return Unauthorized(new { message = "Não autenticado." });
+    }
+
+    try
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "https://developer.api.autodesk.com/userprofile/v1/users/@me");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+
+var responseBody = await response.Content.ReadAsStringAsync();
+
+Console.WriteLine($"Status: {response.StatusCode}");
+Console.WriteLine(responseBody);
+
+if (!response.IsSuccessStatusCode)
+{
+    return StatusCode((int)response.StatusCode, responseBody);
+}
+
+        // 1. Lê a resposta como string
+        var content = await response.Content.ReadAsStringAsync();
+        var userJson = JsonDocument.Parse(content).RootElement;
+
+        // 2. Mapeamento correto dos campos
+        string name = userJson.TryGetProperty("name", out var nameProp) && !string.IsNullOrEmpty(nameProp.GetString())
+            ? nameProp.GetString()
+            : userJson.TryGetProperty("userName", out var userNameProp) ? userNameProp.GetString() : "Utilizador";
+
+        // Corrigido: a Autodesk usa 'emailId'
+        string email = userJson.TryGetProperty("emailId", out var emailProp) 
+            ? emailProp.GetString() 
+            : string.Empty;
+
+        // Corrigido: 'profileImages' em camelCase
+        string avatar = userJson.TryGetProperty("profileImages", out var profileImagesProp) && 
+                        profileImagesProp.TryGetProperty("sizeX80", out var avatarProp) 
+            ? avatarProp.GetString() 
+            : string.Empty;
+
+        return Ok(new { name, email, avatar });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = "Não foi possível obter o perfil do utilizador.", details = ex.Message });
+    }
+}
+[HttpGet]
+public async Task<IActionResult> GetLoggedInUserName()
+{
+    var accessToken = HttpContext.Session.GetString("AccessToken");
+    if (string.IsNullOrEmpty(accessToken))
+    {
+        return Unauthorized(new { message = "Não autenticado." });
+    }
+
+    try
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.userprofile.autodesk.com/userinfo");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return StatusCode((int)response.StatusCode, responseBody);
+        }
+
+        var userJson = JsonDocument.Parse(responseBody).RootElement;
+
+        string name = userJson.TryGetProperty("name", out var nameProp)
+            ? nameProp.GetString()
+            : "Utilizador";
+
+        return Ok(new { name });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = "Não foi possível obter o nome do utilizador.", details = ex.Message });
+    }
+}
 
         [HttpGet]
         public IActionResult Logout()

@@ -395,6 +395,90 @@ public async Task<string> UpdateWorkflowStatusAsync(string hubId, string project
     catch (Exception ex) { throw; }
     finally { if (File.Exists(tempPath)) File.Delete(tempPath); }
 }
+public async Task<string> SyncAccAttributesFromLdpAsync(string hubId, string projectId, string token, string ldpFileId)
+{
+    _logger.LogInformation("⚡ [ETAPA 7/11] Sincronizando Atributos no ACC (Lendo Config do SQL)...");
+    string tempFilePath = null;
+
+    try 
+    {
+        // 1. BUSCA A CHAVE NO BANCO DE DADOS
+        string keyColumnConfig = _dbService.ObterColunaChaveProjeto(projectId);
+        _logger.LogInformation($"[Sync] Usando a coluna chave definida no Banco: '{keyColumnConfig}'");
+
+        // 2. DOWNLOAD DIRETO
+        var itemDetails = await _autodeskApi.GetItemDetailsAsync(projectId, ldpFileId, token);
+        string downloadUrn = itemDetails?.TipVersionUrn ?? ldpFileId;
+
+        tempFilePath = Path.Combine(Path.GetTempPath(), $"LDP_SYNC_{Guid.NewGuid()}.xlsx");
+        
+        using (var stream = await _autodeskApi.DownloadFileStreamAsync(projectId, downloadUrn, token))
+        using (var fileStream = new FileStream(tempFilePath, FileMode.Create)) { await stream.CopyToAsync(fileStream); }
+
+        var ldpData = new List<Dictionary<string, string>>();
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
+        using (var package = new ExcelPackage(new FileInfo(tempFilePath))) 
+        {
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.Trim().ToUpper().Contains("LDP")) 
+                            ?? package.Workbook.Worksheets[0];
+            
+            int headerRow = 7, groupRow = 6;
+            // Tenta achar a linha de cabeçalho se não for a 7
+            for (int r = 1; r <= 20; r++) {
+                if (GetSafeCellValue(worksheet, r, 1).Equals("ITEM", StringComparison.OrdinalIgnoreCase)) { 
+                    headerRow = r; 
+                    groupRow = r - 1; 
+                    break; 
+                }
+            }
+
+            var headerMap = new Dictionary<string, int>();
+            int keyIdx = -1;
+
+            // Mapeia colunas
+            for (int col = 1; col <= worksheet.Dimension.End.Column; col++) {
+                string h = GetSafeCellValue(worksheet, headerRow, col);
+                if (string.IsNullOrEmpty(h)) continue;
+
+                if (h.Trim().Equals(keyColumnConfig, StringComparison.OrdinalIgnoreCase)) keyIdx = col;
+
+                string g = groupRow > 0 ? GetSafeCellValue(worksheet, groupRow, col) : "";
+                string combinedH = (g != "" && (g.ToUpper().Contains("EMISSÃO") || g.ToUpper().Contains("ISSUE"))) 
+                    ? (ColumnMatch(h, "PROPÓSITO", "PURPOSE") ? $"{g} - PROPÓSITO DE EMISSÃO" : $"{g} - {h}") : h;
+                combinedH = Regex.Replace(combinedH, @"\s+", " ").Trim();
+                headerMap[combinedH] = col;
+            }
+
+            if (keyIdx == -1) return $"Erro: A coluna chave '{keyColumnConfig}' não foi encontrada na planilha (Linha {headerRow}). Verifique o SQL 'Metadados_Projetos'.";
+
+            // Lê os dados
+            for (int row = headerRow + 1; row <= worksheet.Dimension.End.Row; row++) {
+                string keyValue = GetSafeCellValue(worksheet, row, keyIdx);
+                if (string.IsNullOrWhiteSpace(keyValue)) continue;
+
+                var rowData = new Dictionary<string, string>();
+                rowData["_DOC_NUMBER_KEY_"] = keyValue;
+                foreach (var kvp in headerMap) rowData[kvp.Key] = GetSafeCellValue(worksheet, row, kvp.Value);
+                ldpData.Add(rowData);
+            }
+        }
+
+        if (ldpData.Count == 0) return "Nenhum dado encontrado para sincronizar.";
+
+        // 4. ENVIA PARA A AUTODESK (CORREÇÃO AQUI 👇)
+        // Adicionado o 5º argumento: keyColumnConfig
+        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, token, keyColumnConfig);
+        
+        return result.SummaryMessage;
+    }
+    catch (Exception ex) {
+        _logger.LogError(ex, "Erro na Etapa 7 (Atributos).");
+        return $"Erro: {ex.Message}";
+    }
+    finally { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); }
+}
+
         
         private string NormalizeDoc(string? input)
         {
@@ -588,8 +672,8 @@ public async Task<string> SyncAccAttributesFromSqlAsync(string hubId, string pro
     try
     {
         // 1. Busca o padrão de nomenclatura no banco de dados da N&A
-        string padraoNomenclatura = _dbService.ObterContextoProjeto(projectId)?.NamingStandard ?? "NA";
-        _logger.LogInformation($"[Sync] Padrão de Nomenclatura detectado via Banco: '{padraoNomenclatura}'");
+        string keyColumnConfig = _dbService.ObterColunaChaveProjeto(projectId);
+        _logger.LogInformation($"[Sync] Padrão de Nomenclatura detectado via Banco: '{keyColumnConfig}'");
 
         var ldpData = new List<Dictionary<string, string>>();
 
@@ -636,7 +720,7 @@ cmd.CommandText = @"
                         string naCode = reader["NA_Document_Number"]?.ToString()?.Trim();
                         string clientCode = reader["Client_Document_Number"]?.ToString()?.Trim();
 
-                        string keyValue = padraoNomenclatura.Equals("CLIENT", StringComparison.OrdinalIgnoreCase) 
+                        string keyValue = keyColumnConfig.Equals("CLIENT", StringComparison.OrdinalIgnoreCase) 
                             ? clientCode 
                             : naCode;
 
@@ -695,7 +779,7 @@ ldpData.Add(rowData);
         _logger.LogInformation($"[Sync] {ldpData.Count} registros extraídos do SQL Server. Preparando montagem de Payload para o ACC...");
 
         // 5. Envia o lote de dados para a API da Autodesk processar as atualizações
-        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, token);
+        var result = await _autodeskApi.SyncLdpAttributesAsync(hubId, projectId, ldpData, token, keyColumnConfig);
         return result.SummaryMessage;
     }
     catch (Exception ex)
@@ -704,7 +788,6 @@ ldpData.Add(rowData);
         return $"Erro: {ex.Message}";
     }
 }
-
 
 
 private object TratarData(string valor)

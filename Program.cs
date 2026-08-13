@@ -9,6 +9,9 @@ using AccIntegration.WebApp.Data;
 using System.Data; 
 using NA_Connect.Services; 
 using System.IO;
+using APS.WebApp.Models;
+using AccIntegration.WebApp.Services;
+using NA_Connect.Controllers;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -42,6 +45,9 @@ Console.WriteLine($"\n\n--- APLICAÇÃO INICIADA COM O CÓDIGO MAIS RECENTE --- 
 builder.Services.AddDbContext<ApplicationDbContext>(dbOptions =>
     dbOptions.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<ConnectDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnection")));
+
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 builder.Services.AddCors(corsOptions =>
@@ -60,10 +66,6 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<HoldControlSyncService>();
-builder.Services.AddScoped<DatabaseService>();
-
-
 
 builder.Services.AddSession(sessionOptions =>
 {
@@ -90,16 +92,29 @@ builder.Services.AddScoped<AccReviewWorkflowService>();
 builder.Services.AddScoped<PdfMetadataService>();
 builder.Services.AddScoped<GrdToLdpSyncService>();
 builder.Services.AddScoped<LdpUpdateService>();
+builder.Services.AddScoped<GrdAutomationService>();
 builder.Services.AddScoped<HoldControlSyncService>();
+builder.Services.AddScoped<Plant3DAuditoriaService>();
+builder.Services.AddScoped<Plant3DDataFetcher>();
 builder.Services.AddScoped<QualitySyncService>();
+builder.Services.AddScoped<ILdpValidacaoService, LdpValidacaoService>();
 
 // Registros para a Automação N&A Connect
 builder.Services.AddScoped<DatabaseService>(); 
 builder.Services.AddScoped<AccProjectSyncService>(); 
 builder.Services.AddScoped<PlanningControlSyncService>();
 
-// O MOTOR PRINCIPAL (ROBÔ)
-builder.Services.AddHostedService<GrdAutomationWorker>();
+builder.Services.AddHttpClient<AccUploadService>();
+
+
+// -------------------------------------------------------------------
+// 🤖 O MOTOR PRINCIPAL (ROBÔ) — registro único, sem duplicação
+// -------------------------------------------------------------------
+builder.Services.AddSingleton<RoboStatusService>();
+builder.Services.AddSingleton<GrdAutomationWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GrdAutomationWorker>());
+
+builder.Services.AddHostedService<SyncWorker>();
 
 var app = builder.Build();
 
@@ -141,7 +156,6 @@ using (var scope = app.Services.CreateScope())
     var dbService = scope.ServiceProvider.GetRequiredService<DatabaseService>();
     var syncService = scope.ServiceProvider.GetRequiredService<AccProjectSyncService>(); 
     
-    Console.WriteLine("--------------------------------------------------");
     Console.WriteLine(">>> SQL TEST: Verificando Hubs no banco local...");
     
     try 
@@ -167,7 +181,6 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine($">>> [ERRO] Falha na operação SQL/ACC: {ex.Message}");
     }
-    Console.WriteLine("--------------------------------------------------\n");
 }
 
 using (var scopeTeste = app.Services.CreateScope())
