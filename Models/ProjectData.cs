@@ -1,5 +1,6 @@
 // Ficheiro: ProjectData.cs
 // Pasta: Models/
+#nullable disable
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 

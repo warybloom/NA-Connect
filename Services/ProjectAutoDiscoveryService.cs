@@ -1,4 +1,5 @@
 // Modulo: APS.WebApp.Services/ProjectAutoDiscoveryService.cs
+#nullable disable
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using System;

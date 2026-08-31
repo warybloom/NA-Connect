@@ -1,4 +1,5 @@
 // Modulo: NA_Connect.Models/ProjectDiscoveryResult.cs
+#nullable disable
 using System;
 
 namespace NA_Connect.Models

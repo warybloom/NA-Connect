@@ -49,6 +49,15 @@ namespace LDP_System.Modules.Admin.Controllers
                         INNER JOIN [dbo].[Projetos] P ON M.[Project_ID_ACC] = P.[Project_ID_ACC]
                         WHERE P.[ProjetoID] = @ProjetoId";
 
+                    var sqlUpdateConfigLdp = @"
+                        UPDATE C
+                        SET C.[Project_ID_ACC] = P.[Project_ID_ACC]
+                        FROM [dbo].[ConfiguracoesLDP] C 
+                        INNER JOIN [dbo].[Projetos] P ON P.[ProjetoID] = @ProjetoId
+                        WHERE C.[ConfigLDPID] = @ConfigLDPID";
+
+                    await conexao.ExecuteAsync(sqlUpdateConfigLdp, new { ConfigLDPID = request.ConfigLDPID, ProjetoId = request.ProjetoId });
+
                     await conexao.ExecuteAsync(sqlUpdateProjeto, new { ConfigLDPID = request.ConfigLDPID, ProjetoId = request.ProjetoId });
                     
                     // Executa o update de metadados de forma segura (ignora se a tabela não existir/falhar)

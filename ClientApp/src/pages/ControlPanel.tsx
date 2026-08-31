@@ -1,7 +1,8 @@
 // Localização: src/pages/ControlPanel.tsx
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area"
 // Ícones do Lucide
 import { 
   Search, 
@@ -58,6 +59,8 @@ const OCRCleanupTool = ({ pacotes, onRefresh }: { pacotes: any[], onRefresh: () 
   const [selectedPacote, setSelectedPacote] = useState<string>("");
   const [tipoFolha, setTipoFolha] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  
+  
 
   const handleClear = async () => {
     if (!selectedPacote || !tipoFolha) {
@@ -86,6 +89,8 @@ const OCRCleanupTool = ({ pacotes, onRefresh }: { pacotes: any[], onRefresh: () 
       setLoading(false);
     }
   };
+
+  
 
   return (
     <div className="flex flex-col gap-4 p-6 bg-destructive/5 border border-destructive/20 rounded-xl backdrop-blur-md">
@@ -155,6 +160,8 @@ export default function ControlPanel() {
   const [loading, setLoading] = useState(true);
   const [isNewOCRDocOpen, setIsNewOCRDocOpen] = useState(false);
   const [newOCRName, setNewOCRName] = useState("");
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState (1);
   
   // Presets LDP & Pacotes OCR
   const [savedConfigsLDP, setSavedConfigsLDP] = useState<any[]>([]);
@@ -194,99 +201,69 @@ export default function ControlPanel() {
     }
   };
 
+  const projectsRef = useRef(projects);
+useEffect(() => {
+  projectsRef.current = projects;
+}, [projects]);
+
+// Fila de requisições por projeto — garante ordem e evita sobrescrita
+const patchQueueRef = useRef<Record<number, Promise<any>>>({});
+
+// patchProjeto agora aceita um override explícito
+const patchProjeto = (projetoId: number, overrides: Record<string, any> = {}) => {
+  const prev = patchQueueRef.current[projetoId] || Promise.resolve();
+
+  const next = prev.catch(() => {}).then(() => {
+    const p = projectsRef.current.find(pr => pr.projetoId === projetoId);
+    if (!p) return;
+    const payload = { ...p, ...overrides };
+    return fetch(`/api/admin/projeto/${projetoId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        is_Ativo: payload.is_Ativo,
+        NormaID: payload.NormaID,
+        PacoteOCRID: payload.PacoteOCRID,
+      }),
+    });
+  });
+
+  patchQueueRef.current[projetoId] = next;
+  return next;
+};
+
   const carregarDadosReais = async () => {
     setLoading(true);
     try {
-      // 1. Recupera o HubID do LocalStorage ou endpoint
-      let hubId = localStorage.getItem("hubId");
-      if (hubId === null) {
-        try {
-          const resHubs = await fetch('/DataManagement/Data/Hubs');
-          if (resHubs.ok) {
-            const hubsData = await resHubs.json();
-            const hubs = Array.isArray(hubsData) ? hubsData : (hubsData.data || []);
-            if (hubs.length > 0) {
-              hubId = hubs[0].id;
-              if (hubId !== null) localStorage.setItem("hubId", hubId);
-            }
+        const [resP, resN, resT, resOCR, resLDP] = await Promise.all([
+            fetch('/api/admin/projetos'),
+            fetch('/api/admin/normas'),
+            fetch('/api/admin/templates'),
+            fetch('/api/admin/ocr/pacotes'),
+            fetch('/api/admin/projeto/listar-configuracoes-ldp') // ✅ Novo endpoint de Presets
+        ]);
+        
+        if (resP.ok) {
+              const dadosVindosDoBanco = await resP.json();
+              
+              // 🚀 O PULO DO GATO: Converte o 0/1 do Banco para o true/false do React
+              const projetosFormatados = dadosVindosDoBanco.map((p: any) => ({
+                  ...p,
+                  is_Ativo: Boolean(p.is_Ativo) // Se for 0 vira false, se for 1 vira true
+              }));
+
+              setProjects(projetosFormatados);
           }
-        } catch (e) {
-          console.error("Erro ao buscar hubs:", e);
-        }
-      }
-
-      // 2. Chamadas paralelas
-      const [resP, resN, resT, resOCR, resLDP, resACC] = await Promise.all([
-        fetch('/api/admin/projetos'),
-        fetch('/api/admin/normas'),
-        fetch('/api/admin/templates'),
-        fetch('/api/admin/ocr/pacotes'),
-        fetch('/api/admin/projeto/listar-configuracoes-ldp'),
-        hubId ? fetch(`/DataManagement/Projetos?hubId=${hubId}`) : Promise.resolve(null)
-      ]);
-
-      let projetosBanco: any[] = [];
-      if (resP.ok) {
-        const dadosVindosDoBanco = await resP.json();
-        projetosBanco = dadosVindosDoBanco.map((p: any) => ({
-          ...p,
-          is_Ativo: Boolean(p.is_Ativo)
-        }));
-      }
-
-      let projetosACC: any[] = [];
-      if (resACC && resACC.ok) {
-        const text = await resACC.text();
-        if (text && text.trim().length > 0) {
-          const jsonACC = JSON.parse(text);
-          projetosACC = Array.isArray(jsonACC) ? jsonACC : (jsonACC.data || []);
-        }
-      }
-
-      // 3. Mesclagem entre ACC e Banco Local
-      if (projetosACC.length > 0) {
-        const projetosUnificados = projetosACC.map((accProj: any) => {
-          const accId = accProj.id;
-          const accName = accProj.attributes?.name || accProj.name || "Sem Nome";
-
-          const matchBanco = projetosBanco.find(
-            (p: any) => p.project_ID_ACC === accId || String(p.projetoId) === String(accId)
-          );
-
-          if (matchBanco) return matchBanco;
-
-          return {
-            projetoId: null,
-            nome_Projeto: accName,
-            project_ID_ACC: accId,
-            is_Ativo: false,
-            NormaID: null,
-            PacoteOCRID: null,
-            configId: "none"
-          };
-        });
-
-        projetosBanco.forEach((pBanco: any) => {
-          const jaExiste = projetosUnificados.some(
-            (u: any) => u.project_ID_ACC === pBanco.project_ID_ACC || u.projetoId === pBanco.projetoId
-          );
-          if (!jaExiste) projetosUnificados.push(pBanco);
-        });
-
-        setProjects(projetosUnificados);
-      } else {
-        setProjects(projetosBanco);
-      }
-
-      if (resN && resN.ok) setNormas(await resN.json());
-      if (resT && resT.ok) setTemplates(await resT.json());
-      if (resOCR && resOCR.ok) setPacotesOCR(await resOCR.json());
-      if (resLDP && resLDP.ok) setSavedConfigsLDP(await resLDP.json());
+        
+        if (resN.ok) setNormas(await resN.json());
+        if (resT.ok) setTemplates(await resT.json());
+        if (resOCR.ok) setPacotesOCR(await resOCR.json()); 
+        if (resLDP.ok) setSavedConfigsLDP(await resLDP.json()); // ✅ Armazena os presets
 
     } catch (error) {
-      toast.error("Erro ao conectar com o servidor.");
+        toast.error("Erro ao conectar com o servidor.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
@@ -298,6 +275,17 @@ export default function ControlPanel() {
     () => projects.filter((p) => p.nome_Projeto?.toLowerCase().includes(searchTerm.toLowerCase())),
     [projects, searchTerm]
   );
+
+  useEffect(() => {
+    setCurrentPage (1); 
+  }, [searchTerm]);
+
+  const totalPage = Math.max(1, Math.ceil(filteredProjects.length / ITEMS_PER_PAGE));
+
+  const paginatedProjects = useMemo (() =>{
+    const start = (currentPage - 1 ) * ITEMS_PER_PAGE;
+    return filteredProjects.slice (start, start + ITEMS_PER_PAGE);
+  }, [filteredProjects, currentPage]);
 
   // ---------------------------------------------------------
   // ⚡ ALTERNAR STATUS E VINCULAÇÃO COM BANCO LOCAL (PATCH + SINCRONIZAÇÃO)
@@ -407,61 +395,53 @@ const handleApplyPreset = async (projectId: number, configId: string) => {
   }
 };
 
+
+
 const handleNormaChange = useCallback(async (project: any, val: string) => {
   if (!project.projetoId) {
     toast.error("Ative o projeto antes de definir uma norma.");
     return;
   }
   const novaNormaId = val === "none" ? null : Number(val);
-  
-  setProjects(prev => prev.map(p => p.projetoId === project.projetoId ? { ...p, NormaID: novaNormaId } : p));
+
+  setProjects(prev => {
+    const updated = prev.map(p => p.projetoId === project.projetoId ? { ...p, NormaID: novaNormaId } : p);
+    projectsRef.current = updated; // sincroniza o ref na hora, sem esperar o useEffect
+    return updated;
+  });
 
   try {
-    const res = await fetch(`/api/admin/projeto/${project.projetoId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        is_Ativo: project.is_Ativo, 
-        NormaID: novaNormaId, 
-        PacoteOCRID: project.PacoteOCRID 
-      })
-    });
-
-    if (!res.ok) throw new Error();
+    const res = await patchProjeto(project.projetoId, { NormaID: novaNormaId });
+    if (!res || !res.ok) throw new Error();
     toast.success("Norma salva no banco!");
   } catch (err) {
     toast.error("Erro ao salvar norma no servidor.");
-    carregarDadosReais(); 
+    carregarDadosReais();
   }
 }, []);
 
-  const handleUpdatePacoteOCR = async (project: any, val: string) => {
-    if (!project.projetoId) {
-      toast.error("Ative o projeto antes de definir um pacote OCR.");
-      return;
-    }
-    const pacoteId = val === "" ? null : Number(val);
-    
-    setProjects(prev => prev.map(p => p.projetoId === project.projetoId ? { ...p, PacoteOCRID: pacoteId } : p));
+const handleUpdatePacoteOCR = async (project: any, val: string) => {
+  if (!project.projetoId) {
+    toast.error("Ative o projeto antes de definir um pacote OCR.");
+    return;
+  }
+  const pacoteId = val === "" ? null : Number(val);
 
-    try {
-      const res = await fetch(`/api/admin/projeto/${project.projetoId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          is_Ativo: project.is_Ativo, 
-          NormaID: project.NormaID, 
-          PacoteOCRID: pacoteId 
-        })
-      });
+  setProjects(prev => {
+    const updated = prev.map(p => p.projetoId === project.projetoId ? { ...p, PacoteOCRID: pacoteId } : p);
+    projectsRef.current = updated;
+    return updated;
+  });
 
-      if (!res.ok) throw new Error();
-      toast.success("Pacote OCR salvo no banco!");
-    } catch (err) {
-      toast.error("Erro ao salvar pacote OCR no servidor.");
-      carregarDadosReais();
-    }
-  };
+  try {
+    const res = await patchProjeto(project.projetoId, { PacoteOCRID: pacoteId });
+    if (!res || !res.ok) throw new Error();
+    toast.success("Pacote OCR salvo no banco!");
+  } catch (err) {
+    toast.error("Erro ao salvar pacote OCR no servidor.");
+    carregarDadosReais();
+  }
+};
 
   const handleCreateOCRPackage = async () => {
     if (!newOCRName.trim()) {
@@ -762,7 +742,7 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
             
             <div className="flex items-center gap-4">
               <Button 
-                onClick={() => navigate('/ocr')}
+                onClick={() => navigate('/calibração-visão')}
                 className="bg-primary hover:bg-primary/90 text-white font-black text-[10px] uppercase italic tracking-widest shadow-lg shadow-primary/20"
               >
                 <Eye className="w-4 h-4 mr-2" />
@@ -772,7 +752,7 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
             </div>
           </div>
 
-          <div className="w-full overflow-hidden rounded-xl border border-border/50 glass-card shadow-2xl">
+<div className="w-full overflow-hidden rounded-xl border border-border/50 glass-card shadow-2xl">
             <table className="w-full text-left border-collapse table-fixed">
               <thead>
                 <tr className="bg-muted/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black border-b border-border/50">
@@ -785,7 +765,7 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30 bg-card/10">
-                {filteredProjects.map((project: any) => {
+                {paginatedProjects.map((project: any) => {
                   const currentConfigId = project.configId || project.ConfigLDPID || project.configLDPID;
                   const selectValue = currentConfigId ? String(currentConfigId) : "none";
 
@@ -904,8 +884,41 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
                 })}
               </tbody>
             </table>
-          </div>
 
+            {filteredProjects.length > ITEMS_PER_PAGE && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-card/10">
+                <span className="text-[10px] font-black uppercase text-muted-foreground">
+                  Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredProjects.length)} de {filteredProjects.length} projetos
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="font-black text-[10px] uppercase h-8"
+                  >
+                    Anterior
+                  </Button>
+
+                  <span className="text-[10px] font-black uppercase text-muted-foreground px-2">
+                    Página {currentPage} de {totalPage}
+                  </span>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPage}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPage, p + 1))}
+                    className="font-black text-[10px] uppercase h-8"
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="mt-8 max-w-2xl">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 italic">Manutenção de Dados OCR</h3>
             <OCRCleanupTool pacotes={pacotesOCR} onRefresh={carregarDadosReais} />
@@ -984,6 +997,7 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
                     </div>
                   </div>
                   <div className="w-full overflow-hidden rounded-xl border border-border/50 glass-card">
+                  <ScrollArea className="max-h-[400px]">
                     <table className="w-full text-left">
                       <thead className="bg-muted/40 text-[9px] uppercase font-black text-muted-foreground border-b border-border/50">
                         <tr><th className="px-4 py-3">Sigla</th><th className="px-4 py-3">Arquivo</th><th className="px-4 py-3">Status</th></tr>
@@ -1003,6 +1017,7 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
                         })}
                       </tbody>
                     </table>
+                    </ScrollArea>
                   </div>
                 </div>
 
@@ -1015,8 +1030,10 @@ const handleSaveNorma = async (normaParaSalvar: Norma) => {
                     </div>
                   </div>
                   <div className="bg-black/20 p-4 rounded-lg text-[10px] font-mono text-muted-foreground max-h-[300px] overflow-y-auto">
+                  <ScrollArea className="bg-black/20 p-4 rounded-lg text-[10px] font-mono text-muted-foreground max-h-[300px]">
                     {filesToUpload.length === 0 && <span className="italic opacity-50 text-[10px]">Nenhum arquivo selecionado...</span>}
                     {filesToUpload.map(f => <div key={f.name} className="flex items-center gap-2 mb-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div><span className="truncate">{f.name}</span></div>)}
+                    </ScrollArea>
                   </div>
                 </div>
               </div>

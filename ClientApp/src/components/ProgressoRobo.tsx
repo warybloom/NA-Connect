@@ -1,17 +1,54 @@
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import {useState, useEffect, useRef} from "react";
 
 interface ProgressoRoboProps {
     executando: boolean;
     porcentagem: number; 
     etapaAtualTexto?: string;
+    tempoExibicaoAposConcluir?: number;
 }
 
 export function ProgressoRobo({
     executando,
     porcentagem,
-    etapaAtualTexto = "Aguardando Início"
+    etapaAtualTexto = "Aguardando Início",
+    tempoExibicaoAposConcluir = 6000,
 }: ProgressoRoboProps) {
     const valorProgresso = Math.min(Math.max(porcentagem,0),100);
+
+
+    const [visivel, setVisivel] = useState (false);
+    const executandoAnteriorRef = useRef(executando);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+
+  
+    useEffect(() => {
+    const estavaExecutando = executandoAnteriorRef.current;
+
+    // Se o robô estiver rodando vai mostrar a barra de progresso 
+    if (executando) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setVisivel(true);
+    }
+
+    // Robô terminou de rodar vai mostrar um aviso
+    // por um tempo, depois esconde
+    if (estavaExecutando && !executando) {
+      setVisivel(true);
+      timeoutRef.current = setTimeout(() => {
+        setVisivel(false);
+      }, tempoExibicaoAposConcluir);
+    }
+
+    executandoAnteriorRef.current = executando;
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [executando, tempoExibicaoAposConcluir]);
+
+  if (!visivel) return null;
     
     
 return (

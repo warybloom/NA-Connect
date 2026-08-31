@@ -1,4 +1,5 @@
 // Caminho: Controllers/WebhooksController.cs (VERSÃO FINAL E COMPLETA)
+#nullable disable
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.IO;

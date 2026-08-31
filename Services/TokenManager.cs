@@ -1,6 +1,6 @@
 // Pasta: C:/.../AccIntegration.WebApp/Services/
 // Ficheiro: TokenManager.cs
-
+#nullable disable
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;

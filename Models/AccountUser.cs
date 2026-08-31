@@ -1,5 +1,6 @@
 // Pasta: C:/.../AccIntegration.WebApp/Models/
 // Ficheiro: AccountUser.cs
+#nullable disable
 using System.Text.Json.Serialization;
 
 namespace APS.WebApp.Models // <-- Namespace para os modelos

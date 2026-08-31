@@ -1,3 +1,4 @@
+#nullable disable
 namespace NA_Connect.Models
 {
     public class OCRCoordenadaDTO

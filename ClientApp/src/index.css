@@ -10,6 +10,10 @@
 ================================================================================
 */
 @layer base {
+
+  body{
+    @apply bg-background text-foreground transition-colors duration-1000 ease-in-out;
+  }
   /* ☀️ TEMA CLARO (LIGHT) - Aplica por padrão e via classe .light */
   :root, .light {
     --background: 0 0% 100%;             /* Branco Puro */

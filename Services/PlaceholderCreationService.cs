@@ -1,4 +1,5 @@
 // Ficheiro: Services/PlaceholderCreationService.cs (COM MELHORIA DE ERRO E PREVENÇÃO)
+#nullable disable
 using APS.WebApp.Models;
 using Microsoft.AspNetCore.Hosting; // Removido se não usado diretamente aqui
 using OfficeOpenXml;

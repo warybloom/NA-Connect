@@ -1,3 +1,4 @@
+#nullable disable
 using System.Text.Json.Serialization;
 
 namespace ForgeSync.Modules.Piping.Models

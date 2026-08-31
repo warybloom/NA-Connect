@@ -1,4 +1,5 @@
 // Ficheiro: Models/VersionViewModel.cs
+#nullable disable
 using System.Text.Json.Serialization;
 
 namespace APS.WebApp.Models // Garante que o namespace está correto para o seu projeto

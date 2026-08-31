@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Threading.Tasks;
 using Autodesk.Forge; // Referência à SDK da Autodesk

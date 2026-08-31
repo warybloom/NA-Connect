@@ -3,36 +3,40 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { Toaster } from 'react-hot-toast' // Importa o componente Toaster
+import { Toaster } from 'react-hot-toast'
+import { PermissionsProvider } from './contexts/PermissionsContext.tsx'
+import { ScrollArea } from './components/ui/scroll-area.tsx'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {/* O componente App é a sua aplicação principal */}
-    <App />
+    {/* Envolva a aplicação com as classes do Tailwind */}
+    <ScrollArea className="h-screen bg-background text-foreground transition-colors duration-500 ease-in-out">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-500 ease-in-out">
+      <PermissionsProvider>
+        <App />
+      </PermissionsProvider>
+      
+    </div>
+    </ScrollArea>
 
-    {/* O Toaster fica aqui, no topo da árvore de componentes.
-      Ele vai ouvir e exibir qualquer notificação 'toast' chamada em qualquer lugar da aplicação.
-    */}
     <Toaster
-      position="top-right" // Define a posição das notificações na tela
-      reverseOrder={false} // Mantém a ordem padrão das notificações
+      position="top-right"
+      reverseOrder={false}
       toastOptions={{
-        // Estilos padrão para os diferentes tipos de toast
-        duration: 5000, // Duração de 5 segundos por padrão
+        duration: 5000,
         style: {
           background: '#363636',
           color: '#fff',
         },
-        // Estilos específicos para sucesso e erro
         success: {
           style: {
-            background: '#28a745', // Fundo verde para sucesso
+            background: '#28a745',
             color: 'white',
           },
         },
         error: {
           style: {
-            background: '#dc3545', // Fundo vermelho para erro
+            background: '#dc3545',
             color: 'white',
           },
         },

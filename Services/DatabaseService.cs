@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Data;
 using System.Collections.Generic;
@@ -80,6 +81,22 @@ namespace NA_Connect.Services
                     conn.Open();
                     cmd.ExecuteNonQuery();
                 }
+            }
+        }
+
+        public dynamic ObterNormaDoProjeto (string projectIdAcc)
+        {
+            using (var conn = new SqlConnection(_localConnectionString))
+            {
+                const string sql = @"
+                    SELECT N.NormaID, N.Nome_Norma, N.Descricao
+                    FROM Projetos P
+                    LEFT JOIN Metadados_Projetos M ON P.Project_ID_ACC = M.Project_ID_ACC
+                    LEFT JOIN Normas_Coordenacao N ON M.NormaID = N.NormaID
+                    WHERE P.Project_ID_ACC = @pid";
+
+                    if (conn.State == ConnectionState.Closed) conn.Open();
+                    return conn.QueryFirstOrDefault(sql, new {pid = projectIdAcc});
             }
         }
 
@@ -850,6 +867,45 @@ public ConfigLdpContext ObterConfiguracaoLdp(string projectIdAcc)
             }
         }
 
+        #region 👤 Módulo 05: Usuários
+
+public UsuarioDTO ObterOuCriarUsuario(string nome, string email)
+{
+    using (var conn = new SqlConnection(_localConnectionString))
+    {
+        conn.Open();
+
+        const string sqlSelect = @"
+            SELECT UserID, Nome, Email, RoleSistema, Ativo, DataCadastro
+            FROM [dbo].[Usuarios]
+            WHERE Email = @email";
+
+        var usuario = conn.QueryFirstOrDefault<UsuarioDTO>(sqlSelect, new { email });
+
+        if (usuario != null)
+        {
+            return usuario;
+        }
+
+        const string sqlInsert = @"
+            INSERT INTO [dbo].[Usuarios] (Nome, Email, RoleSistema, Ativo, DataCadastro)
+            OUTPUT INSERTED.UserID, INSERTED.Nome, INSERTED.Email, INSERTED.RoleSistema, INSERTED.Ativo, INSERTED.DataCadastro
+            VALUES (@nome, @email, @role, @ativo, GETDATE())";
+
+        var novoUsuario = conn.QuerySingle<UsuarioDTO>(sqlInsert, new
+        {
+            nome,
+            email,
+            role = "Viewer", // role padrão para novo cadastro
+            ativo = true
+        });
+
+        return novoUsuario;
+    }
+}
+
+#endregion
+
         public Dictionary<string, Dictionary<string, string>> GetDadosCronogramaDoBanco(string projectIdAcc)
         {
             var dict = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
@@ -1301,6 +1357,23 @@ public List<ProjectAdminDTO> ListarProjetosAdmin()
     return conn.Query<ProjectAdminDTO>(sql).ToList();
 }
 
+public async Task<bool> ExisteDocumentoAsync(string nomeArquivoSemExtensao)
+{
+    var nomeUpper = nomeArquivoSemExtensao.Trim().ToUpper();
+
+    const string sql = @"
+        SELECT TOP 1 1
+        FROM [DB_NA_CONNECT].[dbo].[Ldp_Unificada]
+        WHERE UPPER(LTRIM(RTRIM(NA_Document_Number))) = @Nome
+           OR UPPER(LTRIM(RTRIM(Client_Document_Number))) = @Nome";
+
+    using (var conn = new SqlConnection(_connectionString))
+    {
+        var resultado = await conn.QueryFirstOrDefaultAsync<int?>(sql, new { Nome = nomeUpper });
+        return resultado.HasValue;
+    }
+}
+
         public void ExcluirTemplate(int id)
         {
             using var conn = new SqlConnection(_localConnectionString);
@@ -1363,6 +1436,8 @@ public List<ProjectAdminDTO> ListarProjetosAdmin()
             }
         }
 
+        
+
         #endregion
     }
         public class ConfigLdpContext 
@@ -1375,4 +1450,13 @@ public List<ProjectAdminDTO> ListarProjetosAdmin()
         public string File_Name_Pattern { get; set; }
         public string Folder_MasterList_URN { get; set; }
     }
+    public class UsuarioDTO
+{
+    public int UserID { get; set; }
+    public string Nome { get; set; }
+    public string Email { get; set; }
+    public string RoleSistema { get; set; }
+    public bool Ativo { get; set; }
+    public DateTime DataCadastro { get; set; }
+}
 }

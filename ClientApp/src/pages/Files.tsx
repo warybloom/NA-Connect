@@ -32,6 +32,13 @@ import {
 import { useCurrentUser } from "@/components/hooks/use-current-user";
 
 
+interface NormaProjeto {
+    normaId: number | null;
+    nomeNorma: string;
+    descricao?: string;
+}
+
+
 interface ApiDataItem {
     id: string; type: 'folders' | 'items';
     attributes: { displayName: string; lastModifiedTime: string; lastModifiedUserName: string; };
@@ -65,6 +72,7 @@ export default function Files() {
     const hubId = searchParams.get('hubId');
     const location = useLocation();
     const projectName = location.state?.projectName || "Projeto";
+    const [normaProjeto, setNormaProjeto] = useState<NormaProjeto | null>(null);
 
     // --- Estados do Componente ---
     const [content, setContent] = useState<TableRowData[]>([]);
@@ -136,14 +144,23 @@ export default function Files() {
         setLoading(true);
         setFolderPath([]); 
         try {
-            const [contentResponse, pathResponse] = await Promise.all([
+            const [contentResponse, pathResponse, normaResponse] = await Promise.all([
                 fetch(`/DataManagement/Data/ConteudoPasta?projectId=${projectId}&folderId=${folderId}`),
-                fetch(`/DataManagement/Data/GetFolderPath?projectId=${projectId}&folderId=${folderId}`)
+                fetch(`/DataManagement/Data/GetFolderPath?projectId=${projectId}&folderId=${folderId}`),
+                fetch(`/DataManagement/Data/GetNormaProjeto?projectId=${projectId}`)
             ]);
             
             if (contentResponse.status === 401 || pathResponse.status === 401) {
                 navigate('/login');
                 return;
+            }
+
+            if(normaResponse.ok){
+                const normaData: NormaProjeto = await normaResponse.json();
+                setNormaProjeto(normaData);
+            }
+            else {
+                setNormaProjeto(null);
             }
 
             if (contentResponse.ok) {
@@ -428,12 +445,17 @@ export default function Files() {
                                 <ModeToggle />
                             </div>
                             <div className="flex-1 text-center px-5">
-                                {projectName && (
-                                    <h2 className="text-lg font-semibold text-foreground truncate leading-tight">
-                                        {projectName}
-                                    </h2>
-                                )}
-                            </div>
+    {projectName && (
+        <h2 className="text-4xl font-bold text-foreground truncate leading-tight">
+            {projectName}
+        </h2>
+    )}
+    {normaProjeto && (
+        <span className="inline-block mt-1 text-2xl font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+            Norma do Projeto: {normaProjeto.nomeNorma}
+        </span>
+    )}
+</div>
                             <nav className="flex items-center gap-2">
                                 
                                 
@@ -455,6 +477,9 @@ export default function Files() {
                                 }}
                                 className="mb-6"
                             />
+
+
+                            
 
                             <div className="flex items-center justify-between mb-8">
                                 <h1 className="text-3xl font-bold text-foreground">{currentFolderName}</h1>
@@ -483,12 +508,8 @@ export default function Files() {
 
                                     </Button>
                                     
-                                    <Button onClick={handleSyncClick} disabled={isSyncing}>
-                                        {isSyncing ? "Sincronizando..." : "Sincronizar LDP"}
-                                    </Button>
-                                    <Button onClick={handleUpdateFromDbClick} disabled={isUpdatingFromDb} variant="secondary">
-                                        {isUpdatingFromDb ? "Atualizando..." : "Atualizar LDP do Banco"}
-                                    </Button>
+                                    
+                                    
                                     <Button onClick={handleInstallWebhook} variant="outline" size="icon" title="Instalar Webhook">
                                         <span className="sr-only">Webhook</span>
                                         ⚙️

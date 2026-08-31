@@ -34,6 +34,7 @@ export function NavMain({
     items?: {
       title: string
       url: string
+      icon?: LucideIcon
     }[]
   }[]
   onAction?: (action: string) => void // 👈 novo prop opcional
@@ -64,7 +65,8 @@ export function NavMain({
                       {item.items.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
-                            <Link to={subItem.url}>
+                            <Link to={subItem.url} className="flex items-center gap-2">
+                              {subItem.icon && <subItem.icon />}
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>

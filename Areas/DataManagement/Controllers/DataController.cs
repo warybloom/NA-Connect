@@ -1,5 +1,6 @@
 // Ficheiro: Areas/DataManagement/Controllers/DataController.cs
 
+#nullable disable
 using APS.WebApp.Models;
 using APS.WebApp.Services;
 using Microsoft.AspNetCore.Http;
@@ -396,6 +397,22 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
                 return StatusCode(500, new { message = "Ocorreu um erro no servidor durante a criação do projeto.", details = ex.Message });
             }
         } 
+
+        [HttpGet]
+            public IActionResult GetNormaProjeto(string projectId)
+            {
+                if (string.IsNullOrWhiteSpace(projectId))
+                    return BadRequest(new { message = "projectId é obrigatório." });
+
+                var norma = _dbService.ObterNormaDoProjeto(projectId);
+
+                return Ok(new
+                {
+                    normaId = norma?.NormaID,
+                    nomeNorma = norma?.Nome_Norma ?? "Nenhuma norma configurada",
+                    descricao = norma?.Descricao
+                });
+            }
 
         [HttpGet]
         public async Task<IActionResult> GetProjectTemplates([FromQuery] string hubId)

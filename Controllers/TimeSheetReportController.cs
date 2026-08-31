@@ -1,3 +1,4 @@
+#nullable disable
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Dapper;

@@ -1,3 +1,4 @@
+#nullable disable
 using APS.WebApp.Models;
 using NA_Connect.Services;
 using System.Data;

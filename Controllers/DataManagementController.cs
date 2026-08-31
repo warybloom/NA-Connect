@@ -160,5 +160,6 @@ namespace NA_Connect.Controllers
                 return BadRequest(new { message = "Falha ao ler o log.", error = ex.Message });
             }
         }
+        
     }
 }

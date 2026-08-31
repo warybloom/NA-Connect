@@ -1,3 +1,4 @@
+#nullable disable
 using Tesseract;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;

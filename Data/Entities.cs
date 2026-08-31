@@ -1,4 +1,5 @@
 // Local: AccIntegration.WebApp.Data/Entities.cs
+#nullable disable
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

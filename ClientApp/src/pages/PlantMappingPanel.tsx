@@ -87,7 +87,7 @@ export default function PlantMappingPanel({ projectId }: { projectId: string }) 
                         <Settings2 className="text-blue-500 w-6 h-6" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black uppercase italic text-white tracking-tighter">Dicionário de Atributos</h2>
+                        <h2 className="text-2xl font-black text-foreground uppercase italic tracking-tight">Dicionário de Atributos</h2>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Configuração De/Para por Projeto</p>
                     </div>
                 </div>

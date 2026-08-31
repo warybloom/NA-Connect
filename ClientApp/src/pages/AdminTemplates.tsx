@@ -174,19 +174,19 @@ useEffect(() => {
             </div>
 
             {/* ÁREA DE TRABALHO — ocupa o espaço restante e rola internamente se precisar */}
-            <div className="flex-1 min-h-0 bg-slate-900 rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col lg:flex-row">
+            <div className="flex-1 min-h-0 bg-card rounded-xl border  shadow-card overflow-hidden flex flex-col lg:flex-row tracking-tight">
 
               {/* COLUNA ESQUERDA: INSTRUÇÕES E TAGS DISPONÍVEIS */}
-              <div className="w-full lg:w-1/3 border-r border-slate-700 p-6 bg-slate-800/30 flex flex-col gap-6 overflow-y-auto custom-scrollbar min-h-0">
+              <div className="w-full lg:w-1/3  h-full p-3 bg-slate-800/30 flex flex-col gap-2 overflow-y-auto custom-scrollbar min-h-0 shadow-md">
 
                 <div>
-                  <h3 className="text-sm font-black text-slate-100 uppercase mb-2">1. Prepare seu Documento</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-tighter ">1. Prepare seu Documento</h3>
+                  <p className="text-xs text-foreground leading-relaxed mb-4">
                     O sistema preenche o seu documento magicamente. Basta você copiar e colar as "Tags" abaixo dentro do seu arquivo, exatamente nos locais onde o texto deve aparecer.
                   </p>
 
-                  <div className="bg-slate-950 border border-slate-700 rounded-lg p-3">
-                    <h4 className="text-[10px] font-bold uppercase text-slate-500 mb-3 flex items-center gap-1"><Code2 className="w-3 h-3" /> Tags Disponíveis para copiar:</h4>
+                  <div className="bg-slate-950  border-slate-700 rounded-lg p-2">
+                    <h4 className="text-[10px] font-bold uppercase text-slate-500 mb-3 flex items-center"><Code2 className="w-4 h-4" /> Tags Disponíveis para copiar:</h4>
                     <div className="flex flex-wrap gap-2">
                       {camposDisponiveis[moduloAtivo].map(campo => (
                         <div key={campo} className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[10px] font-mono px-2 py-1 rounded cursor-copy hover:bg-indigo-500 hover:text-white transition-colors" title="Copiar Tag">
@@ -208,7 +208,7 @@ useEffect(() => {
                   />
                   <UploadCloud className="w-10 h-10 text-indigo-500 mb-3 group-hover:scale-110 transition-transform" />
                   <span className="text-sm font-bold text-slate-200">Arraste o arquivo com as Tags aqui</span>
-                  <span className="text-[10px] text-slate-500 mt-1 uppercase font-bold">Apenas .DOCX ou .XLSX</span>
+                  <span className="text-[10px] text-foreground mt-1 uppercase font-bold">Apenas .DOCX ou .XLSX</span>
                 </div>
 
                 {templateAtual && !isScanning && (
@@ -230,7 +230,7 @@ useEffect(() => {
               </div>
 
               {/* COLUNA DIREITA: CHECKLIST DE VALIDAÇÃO (VERDADEIRO) */}
-              <div className="flex-1 min-h-0 p-0 bg-slate-900 flex flex-col relative">
+              <div className="flex-1 min-h-0 p-0 bg-card flex flex-col relative uppercase tracking-tight">
 
                 {!templateAtual && !isScanning && !scanningError && (
                   <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 p-6 opacity-60">
@@ -261,10 +261,10 @@ useEffect(() => {
 
                 {scanResult && !isScanning && !scanningError && (
                   <div className="w-full h-full flex flex-col animate-enter z-0 min-h-0">
-                    <div className="p-6 border-b border-slate-800 bg-slate-900 sticky top-0 z-10 shrink-0">
+                    <div className="p-6 border-b  bg-card sticky top-0 z-10 shrink-0">
                       <div className="flex items-center gap-3 mb-2">
                         <ListChecks className="w-6 h-6 text-emerald-500" />
-                        <h3 className="text-lg font-black text-slate-100 uppercase">Verificação Autêntica</h3>
+                        <h3 className="text-lg font-black text-foreground uppercase">Verificação Autêntica</h3>
                       </div>
                       <p className="text-xs text-slate-400">
                         Nosso backend de OpenXML varreu o arquivo <strong>{templateAtual}</strong> e confirmou <strong className="text-emerald-400">{tagsEncontradas.length} tags válidas</strong> no documento.
@@ -300,11 +300,11 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-end shrink-0">
+                    <div className="p-6 border-t  bg-card flex justify-end shrink-0">
                       <button
                         onClick={handleSaveTemplate}
                         disabled={isScanning}
-                        className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-bold py-2.5 px-8 rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2"
+                        className="bg-primary disabled:bg-slate-700 text-white font-bold py-2.5 px-8 rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2"
                       >
                         {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         {isScanning ? "Gravando no Banco..." : "Salvar Template Verdadeiro"}

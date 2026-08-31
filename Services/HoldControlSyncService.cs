@@ -1,3 +1,4 @@
+#nullable disable
 using APS.WebApp.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

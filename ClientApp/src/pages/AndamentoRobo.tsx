@@ -18,6 +18,7 @@ import {
   Check
 } from "lucide-react";
 import toast from 'react-hot-toast';
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ModeToggle } from "@/components/alternar-modo";
@@ -95,6 +96,13 @@ export default function AndamentoRobo() {
   const [logSelecionado, setLogSelecionado] = useState<string | null>(null);
   const [conteudoLog, setConteudoLog] = useState<string>("");
   const [carregandoConteudoLog, setCarregandoConteudoLog] = useState(false);
+
+  // ------ Paginação ---- 
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+
+  
 
   // Referência para Auto-Scroll do Terminal de Logs
   const terminalRef = useRef<HTMLPreElement>(null);
@@ -350,6 +358,17 @@ export default function AndamentoRobo() {
 
   const projetosAtivos = projetos.filter(p => p.is_Ativo).length;
 
+  const totalPage = Math.max(1, Math.ceil(projetos.length / ITEMS_PER_PAGE));
+  const projetosPaginados = projetos.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  },[projetos.length]
+  )
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -420,18 +439,15 @@ export default function AndamentoRobo() {
                     <ScrollText className="w-3.5 h-3.5" />
                     Logs de Execução
                   </TabsTrigger>
-                  <TabsTrigger value="validador" className="font-black text-[10px] tracking-[0.2em] uppercase data-[state=active]:bg-primary px-4 sm:px-6 py-2.5 flex items-center gap-2 whitespace-nowrap">
-                    <Check className="w-3.5 h-3.5" />
-                    Validador
-                  </TabsTrigger>
+                  
                 </TabsList>
                 
                 {/* ======================= ABA: PROJETOS ======================= */}
                 <TabsContent value="projetos" className="flex-1 min-h-0 m-0 overflow-hidden">
-                  <div className="h-full w-full border border-border/50 bg-card/30 flex flex-col overflow-hidden rounded-lg flex-wrap">
+                  <div className="h-full w-full border border-border/50 bg-card flex flex-col overflow-hidden rounded-md flex-wrap ">
 
                     <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border/50">
-                      <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-1">
                         <ListChecks className="w-4 h-4 text-indigo-400" />
                         <span className="text-xs font-black uppercase tracking-widest text-foreground">
                           Projetos Cadastrados
@@ -452,7 +468,7 @@ export default function AndamentoRobo() {
                       </button>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                       {carregandoProjetos ? (
                         <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-16">
                           <Loader2 className="w-6 h-6 animate-spin" />
@@ -470,7 +486,7 @@ export default function AndamentoRobo() {
                         </div>
                       ) : (
                         <div className="divide-y divide-border/50">
-                          {projetos.map((projeto) => (
+                          {projetosPaginados.map((projeto) => (
                             <div 
                               key={projeto.projetoId} 
                               className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-card/50 transition-colors"
@@ -509,12 +525,38 @@ export default function AndamentoRobo() {
                         </div>
                       )}
                     </div>
+                                      {!carregandoProjetos && !erroProjetos && projetos.length > ITEMS_PER_PAGE && (
+  <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border/50">
+    <span className="text-[10px] font-bold uppercase text-muted-foreground">
+      Página {currentPage} de {totalPage}
+    </span>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg border border-border/50 text-muted-foreground hover:text-indigo-400 hover:border-indigo-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        Anterior
+      </button>
+      <button
+        onClick={() => setCurrentPage((p) => Math.min(totalPage, p + 1))}
+        disabled={currentPage === totalPage}
+        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg border border-border/50 text-muted-foreground hover:text-indigo-400 hover:border-indigo-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        Próxima
+      </button>
+    </div>
+  </div>
+)}
                   </div>
+
+                  
                 </TabsContent>
                 
 
                 {/* ======================= ABA: LOGS ======================= */}
                 <TabsContent value="logs" className="flex-1 min-h-0 m-0 overflow-hidden">
+                  
                   <div className="h-full w-full border border-border/50 bg-card/30 flex flex-col lg:flex-row overflow-hidden rounded-lg">
 
                     {/* Lista de logs (Sidebar esquerda) */}
@@ -535,6 +577,7 @@ export default function AndamentoRobo() {
                         </button>
                       </div>
 
+                    <ScrollArea className="flex-1 min-h-0">
                       <div className="flex-1 min-h-0 overflow-y-auto">
                         {carregandoLogs ? (
                           <div className="flex flex-col items-center justify-center h-full gap-1 text-muted-foreground py-10">
@@ -568,6 +611,7 @@ export default function AndamentoRobo() {
                           </div>
                         )}
                       </div>
+                      </ScrollArea>
                     </div>
 
                     {/* Conteúdo do log (Painel principal) */}
@@ -583,6 +627,7 @@ export default function AndamentoRobo() {
                             <span className="text-xs font-mono text-foreground truncate">{logSelecionado}</span>
                            
                           </div>
+                          <ScrollArea className="flex-1 min-h-0">
                           <div className="flex-1 min-h-0 overflow-y-auto p-5">
                             {carregandoConteudoLog ? (
                               <div className="flex items-center justify-center h-full gap-2 text-muted-foreground">
@@ -592,26 +637,19 @@ export default function AndamentoRobo() {
                               <VisualizadorLogResumido conteudoLog={conteudoLog} />
                             )}
                           </div>
+                          </ScrollArea>
                         </>
                       )}
                     </div>
-                  </div>
-
-                  
-                </TabsContent>
-
-                  <TabsContent value="validador" className="flex-1 min-h-0 m-0 overflow-hidden">
-                  <div className="h-full w-full border border-border/50 bg-card/30 flex flex-col lg:flex-row overflow-hidden rounded-lg">
-
-   
-
-
-                    {/* Conteúdo do validador */}
                     
                   </div>
+                  
 
                   
                 </TabsContent>
+
+                    
+
                 
               </Tabs>
 

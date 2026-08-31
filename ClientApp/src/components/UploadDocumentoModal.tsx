@@ -22,7 +22,7 @@ interface UploadDocumentModalProps {
   onSuccess?: () => void | Promise<void>;
 }
 
-const EXTENSOES_ACEITAS = [".xlsx", ".xlsm", ".xls"];
+const EXTENSOES_ACEITAS = [".xlsx", ".xlsm", ".xls", ".csv", ".docx", ".pdf"];
 
 export function UploadDocumentModal({
   isOpen,
@@ -51,7 +51,7 @@ export function UploadDocumentModal({
       if (validarExtensao(initialFile.name)) {
         setFile(initialFile);
       } else {
-        toast.error("Envie apenas arquivos Excel (.xlsx, .xlsm ou .xls).");
+        toast.error("Formato não suportado. Envie xlsx, xls, csv, docx ou pdf.");
       }
     }
   }, [isOpen, initialFile]);
@@ -180,7 +180,7 @@ export function UploadDocumentModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Planilha LDP (Excel)</Label>
+           <Label>Planilha LDP</Label>
 
             <div
               onDragOver={handleDragOver}

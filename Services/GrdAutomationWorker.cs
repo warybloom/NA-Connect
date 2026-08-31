@@ -1,4 +1,5 @@
 // Caminho: Services/GrdAutomationWorker.cs
+#nullable disable
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -226,7 +227,8 @@ namespace APS.WebApp.Services
                                     var folderLdpId = await scheduleService.FindFolderByPaths(hubId, formattedProjectId, new[] {
                                         new[] { "09 - DESENVOLVIMENTO", "09.14 - GESTÃO" },
                                         new[] { "09 - DEVELOPING", "09.14 - MANAGEMENT" },
-                                        new[] { "09 - MODEL DEVELOPING", "09.14 - MANAGEMENT" }
+                                        new[] { "09 - MODEL DEVELOPING", "09.14 - MANAGEMENT" },
+                                        new[]{  "01 - PLANEJAMENTO E CONTROLE", "01.06 - LISTA DE DOCUMENTOS PROJETO"}
                                     }, robotToken);
 
                                     if (!string.IsNullOrEmpty(folderLdpId))

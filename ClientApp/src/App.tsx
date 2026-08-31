@@ -21,6 +21,12 @@ import TabLancamentos from "./components/TabLancamentos";
 import { OCRManager } from "./pages/OCRManager";
 import TabSettings from "./components/plant3d/TabSettings";
 import AndamentoRobo from "./pages/AndamentoRobo";
+import {ConfigTemplates} from "./pages/ConfigTemplates"
+import UserPermissionsPanel from "./pages/PermissionControl";
+import { User } from "lucide-react";
+import PermissionRoute from "./components/PermissionRoute";
+
+
 
 
 const Plant3DAuditHubWrapper = () => {
@@ -50,6 +56,9 @@ const App = () => (
         {/* Rotas Protegidas */}
         <Route element={<ProtectedRoute />}>
 
+          <Route element={<PermissionRoute/>}>
+        
+
           {/* Visão Geral — redireciona a raiz direto para Projects */}
           <Route path="/" element={<Navigate to="/projects" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -64,6 +73,7 @@ const App = () => (
           <Route path="/vision-studio" element={<VisionStudio />} />
           <Route path="/agend-robo" element={<AgendamentoRobo />} />
           <Route path="/confi-ldp" element={<LDPConfigPage />} />
+          <Route path="/config-temp" element={< ConfigTemplates/>}/>
           <Route path="/platn3d-audit/:projecId" element={<Plant3DAuditHubWrapper />} />
           <Route path="/folhas/:pacoteId/:tipoFolha" element={<OcrCalibratorWrapper />} />
           <Route path="/admincontrol" element={<AdminControl />} />
@@ -73,7 +83,11 @@ const App = () => (
           <Route path="/calibração-visão" element={<OCRManager />} />
           <Route path="/auditoria-platn3d" element={<TabSettings />} />
           <Route path="/andamento-robo" element = {<AndamentoRobo/>} />
+          <Route path="/permission-page" element = {<UserPermissionsPanel/>} />
 
+
+        
+        </Route>
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

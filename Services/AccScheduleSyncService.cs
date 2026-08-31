@@ -1,3 +1,4 @@
+#nullable disable
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using OfficeOpenXml;

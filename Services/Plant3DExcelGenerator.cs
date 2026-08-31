@@ -1,3 +1,4 @@
+#nullable disable
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System;

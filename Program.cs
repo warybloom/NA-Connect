@@ -12,6 +12,8 @@ using System.IO;
 using APS.WebApp.Models;
 using AccIntegration.WebApp.Services;
 using NA_Connect.Controllers;
+using APS.WebApp.Services.Parsers; 
+using Microsoft.AspNetCore.Http;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -50,16 +52,17 @@ builder.Services.AddDbContext<ConnectDbContext>(options =>
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+// 1. CONFIGURAÇÃO DE CORS
 builder.Services.AddCors(corsOptions =>
 {
     corsOptions.AddPolicy(name: MyAllowSpecificOrigins,
-                      policy =>
-                      {
-                          policy.WithOrigins("http://localhost:5173") 
-                                .AllowAnyHeader()
-                                .AllowAnyMethod()
-                                .AllowCredentials();
-                      });
+                          policy =>
+                          {
+                              policy.WithOrigins("http://localhost:5173") 
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod()
+                                    .AllowCredentials(); // OBRIGATÓRIO para trafegar cookies de sessão
+                          });
 });
 
 builder.Services.AddControllersWithViews();
@@ -67,11 +70,20 @@ builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddHttpClient();
 
+// 2. CONFIGURAÇÃO DE POLÍTICA DE COOKIES E SESSÃO
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+});
+
 builder.Services.AddSession(sessionOptions =>
 {
-    sessionOptions.IdleTimeout = TimeSpan.FromMinutes(60);
+    sessionOptions.IdleTimeout = TimeSpan.FromHours(8);
     sessionOptions.Cookie.HttpOnly = true;
     sessionOptions.Cookie.IsEssential = true;
+    sessionOptions.Cookie.SameSite = SameSiteMode.Lax; // Essencial para fluxos OAuth e CORS entre portas
+    sessionOptions.Cookie.Name = ".AspNetCore.Session.MyApp";
 });
 
 // -------------------------------------------------------------------
@@ -97,6 +109,11 @@ builder.Services.AddScoped<HoldControlSyncService>();
 builder.Services.AddScoped<Plant3DAuditoriaService>();
 builder.Services.AddScoped<Plant3DDataFetcher>();
 builder.Services.AddScoped<QualitySyncService>();
+builder.Services.AddScoped<ILdpFileParser, ExcelLdpFileParser>();
+builder.Services.AddScoped<ILdpFileParser, CsvLdpFileParser>();
+builder.Services.AddScoped<ILdpFileParser, DocxLdpFileParser>();
+builder.Services.AddScoped<ILdpFileParser, PdfLdpFileParser>();
+builder.Services.AddScoped<ILdpFileParserFactory, LdpFileParserFactory>();
 builder.Services.AddScoped<ILdpValidacaoService, LdpValidacaoService>();
 
 // Registros para a Automação N&A Connect
@@ -105,7 +122,6 @@ builder.Services.AddScoped<AccProjectSyncService>();
 builder.Services.AddScoped<PlanningControlSyncService>();
 
 builder.Services.AddHttpClient<AccUploadService>();
-
 
 // -------------------------------------------------------------------
 // 🤖 O MOTOR PRINCIPAL (ROBÔ) — registro único, sem duplicação
@@ -119,7 +135,7 @@ builder.Services.AddHostedService<SyncWorker>();
 var app = builder.Build();
 
 // ===================================================================
-// ✅ PIPELINE DE REQUISIÇÕES HTTP
+// ✅ PIPELINE DE REQUISIÇÕES HTTP (A ORDEM É CRÍTICA)
 // ===================================================================
 
 if (app.Environment.IsDevelopment())
@@ -133,9 +149,18 @@ else
 }
 
 app.UseStaticFiles();
+
 app.UseRouting();
+
+// Aplica a política de cookies antes do CORS e da Sessão
+app.UseCookiePolicy();
+
+// Permite requisições vindas do React com credenciais
 app.UseCors(MyAllowSpecificOrigins);
+
+// Ativa a sessão no pipeline
 app.UseSession();
+
 app.UseAuthorization();
 
 app.MapControllerRoute(

@@ -72,7 +72,7 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">{getInitial(user.name)}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>
@@ -80,31 +80,20 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-          
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
-              <button>
-                <a
-                  
-                  href="/Authentication/OAuth/Logout"
-                  className="text-sm text-muted-foreground hover:text-blue-600 text-white"
-                >
-                  Sair
-                </a>
-              </button>
-            </DropdownMenuItem>
+            
+            <DropdownMenuItem
+  asChild
+  className="cursor-pointer bg-card font-medium text-foreground hover:bg-red-700 focus:bg-red-700 focus:text-white"
+>
+  <button
+    type="button"
+    onClick={() => (window.location.href = "/Authentication/OAuth/Logout")}
+    className="flex w-full items-center gap-2 px-3 py-2 text-sm"
+  >
+    <LogOut className="h-4 w-4" />
+    <span>Sair</span>
+  </button>
+</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -1,3 +1,4 @@
+#nullable disable
 using APS.WebApp.Services;
 using com.sun.corba.se.impl.orbutil.concurrent;
 using Microsoft.Extensions.Configuration;

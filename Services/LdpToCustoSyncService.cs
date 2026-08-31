@@ -1,3 +1,4 @@
+#nullable disable
 using AccIntegration.WebApp.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
