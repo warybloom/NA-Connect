@@ -1,0 +1,26 @@
+# PRIORIDADE ABSOLUTA — FAZER O BI CHS001 FUNCIONAR AGORA (AUTORIZADO PELO USUÁRIO)
+
+Usuário autorizou integralmente a execução: "taca o pau e faz funcionar". Não entregue apenas plano; execute, teste e, quando seguro, implante. MAS é igualmente obrigatória sua instrução anterior: **"não vamos mexer no que fizemos; se necessário cria um novo só para essas telas novas"**. Isso substitui quaisquer diretrizes contraditórias.
+
+REPOSITÓRIO: C:\Dev\N-A-Connect aa\N-A-Connect
+BANCO: .\SQLEXPRESS / DB_NA_CONNECT; backend 5277; frontend Vite 5173, Cloudflare. Projeto CHS001 - ETHANOL PLANT.
+FONTES: .mpp oficial em ACC SOMENTE LEITURA; PBIX em F:\BI N&A CONNECT\CHS001-000-PM0-RT-002-01.pbix SOMENTE LEITURA.
+LEITURA ANTES DE AGIR: _bi_chs001_replica/DIRETRIZ_ISOLAMENTO_OBRIGATORIA_20261015.md, EXECUCAO_AUTONOMA_CLAUDE_CODEX_20261015.md, AUDITORIA_CODEX_GRAFICOS_20261015.md, STATUS_CORRECAO_TELAS_20261015.md, STATUS_POS_AUDITORIA_CLAUDE.md, MAPA_MEDIDAS_DAX.md, PRIORIDADE_10_TELAS.md e AGENTS/CLAUDE.md locais quando presentes.
+
+ESTADO VERIFICADO AGORA: em 15/10 22:28, não há Services/BiChs001Schedule, nem schema bi_chs001, nem relatório final; último relatório 19:12 diz logos extras omitidas e motor de curvas testado somente com PBIX cache, sem fatos reais no banco. Há processos Claude em outras tarefas; NÃO editar arquivos deles, ThemeLogo, Norma, dashboards existentes ou serviços CronogramaTipo2. O repositório tem arquivos UNTRACKED preexistentes! Não limpar, resetar, sobrescrever nem excluir.
+
+SUA MISSÃO COMO AGENTE PRINCIPAL:
+1. Trave o escopo e crie backup verificável das fontes ESPECIFICAS novas BI. Capture git status, processos, dados baselines de CHS001, esquema, versão. Preserve os módulos antigos.
+2. CRIE pipeline NOVO E EXCLUSIVO do BI CHS001: Services/BiChs001Schedule com leitor MPXJ.Net compatível, lendo cópia temporária do .mpp mais recente no ACC sem alterar .mpp/importador existente/serviço de sincronização Tipo2. Traga START, BASELINE START, FINISH, BASELINE FINISH, Work, ActualWork, BaselineWork, UID pai, OutlineLevel, assignments, timephased work e calendários. O cache PBIX AssignmentByDay é grão semanal com domingos; concilie unidades e datas contra original. Se .mpp contemporâneo faltar informação, registre especificamente.
+3. APENAS objetos SQL NOVOS isolados (schema bi_chs001, tabelas/view novas), nenhum ALTER em dbo/Cronograma_Projetos/views legadas. Faça backup verificável do SQL antes de criar (sem sobrescrever .bak existente), scripts UP/DOWN idempotentes testados em banco cópia/teste, depois execute migração aditiva isolada. Persistir snapshot de tarefas + tempos diários/semanais atomicamente e leitura por project_id+versão, sem contaminar outros projetos. Não iniciar worker global.
+4. CRIE ENDPOINTS BI exclusivos com autorização reutilizada, dados reais, comparação com DAX PBIX e estado de disponibilidade. Adeque frontend biChs001 para Cumulative Progress, Weekly Progress, Curva S, ACC Planned/Complete/Deviation, matriz hierárquica Level5-7, curvas 3D, resumos 30/60/90, 6 LDP e Programação. Não usar cache PBIX como fonte operativa. Não fabricar medidas ou "mostrar gráfico" com números falsos.
+5. Corrigir gate typo "Emgineering - 30%" por ALIAS auditável apenas CHS001 dentro novo BI, preservando campo original do MPP e filtros DAX: 30% inclusão, 60/90 exclusões. Testes para a contagem 196/347/190 e não alterar .mpp original.
+6. Conferir a remoção de 2 logos extras: MANTER somente primeira logo da N&A do lado esquerdo, não mudar os logos do resto da aplicação nem estilo global.
+7. Testes dedicados de MPXJ, snapshots SQL, curvas por data, contratos da API, permissões, erros da interface; scripts de smoke tests autenticados quando contexto já disponível. Comparar valores ao PBIX, preservando diferença entre cache 08/10 e fontes atuais. Fazer build frontend/backend e testes regressão. Acesse UI se puder sem solicitar senhas.
+8. Deploy controlado: só depois de testes/backup/rollback, verifique worker seguro, não mate jobs existentes nem perca 5173/5277/Cloudflare; reinicie apenas serviço afetado usando plano seguro. Teste API ativa e 10 telas visualmente e numericamente; registre se não for possível validar sessão.
+9. Ao fim, solicite auditoria SOMENTE LEITURA ao Codex (CLI disponível), SEM editar arquivo em comum. Se você não conseguir lançar, produza prompt _bi_chs001_replica/PROMPT_CODEX_VALIDACAO_FINAL.md e continue testes internos. Não espere a auditoria para implementar.
+10. Escreva _bi_chs001_replica/RELATORIO_FINAL_IMPLEMENTACAO_BI_CHS001_20261015.md com REAL status de cada uma das 10 telas, evidências, backups e scripts de rollback, SQL alterado apenas em schema novo, horários e testes reais, pendências concretas. Documente claramente o que ainda NÃO está pronto se necessário.
+
+IMPORTANTE: se encontrar trabalho ativo de outro agente nos MESMOS arquivos, interrompa APENAS a edição conflitante, documente o conflito e trabalhe em novos arquivos isolados até ficar livre. Informe o usuário pelo relatório. Sem autorizações adicionais necessárias para código/testes/deploy reversível no BI isolado. Não use Graphify se bloquear.
+
+COMECE A AGIR IMEDIATAMENTE; NÃO FINALIZE APENAS COM DIAGNÓSTICO.

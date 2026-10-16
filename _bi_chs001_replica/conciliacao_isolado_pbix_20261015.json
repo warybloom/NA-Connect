@@ -1,0 +1,182 @@
+{
+  "folhas_pbix": 755,
+  "casadas_por_guid": 755,
+  "campos": {
+    "Início": {
+      "comparadas": 755,
+      "iguais_exato": 755,
+      "iguais_2casas_ou_minuto": 755
+    },
+    "Término": {
+      "comparadas": 755,
+      "iguais_exato": 755,
+      "iguais_2casas_ou_minuto": 755
+    },
+    "Início da Linha de Base": {
+      "comparadas": 755,
+      "iguais_exato": 755,
+      "iguais_2casas_ou_minuto": 755
+    },
+    "Término da Linha de Base": {
+      "comparadas": 755,
+      "iguais_exato": 755,
+      "iguais_2casas_ou_minuto": 755
+    },
+    "Trabalho": {
+      "comparadas": 755,
+      "iguais_exato": 519,
+      "iguais_2casas_ou_minuto": 641
+    },
+    "Trab Linha de Base": {
+      "comparadas": 755,
+      "iguais_exato": 737,
+      "iguais_2casas_ou_minuto": 737
+    },
+    "Trabalho Real": {
+      "comparadas": 755,
+      "iguais_exato": 446,
+      "iguais_2casas_ou_minuto": 568
+    }
+  },
+  "gates": {
+    "CHS Deliverables": {
+      "mpp_com_alias": 7,
+      "pbix": 7
+    },
+    "Engineering - 30%": {
+      "mpp_com_alias": 196,
+      "pbix": 196
+    },
+    "Engineering - 60%": {
+      "mpp_com_alias": 347,
+      "pbix": 347
+    },
+    "Engineering - 90%": {
+      "mpp_com_alias": 190,
+      "pbix": 190
+    },
+    "Field Activies": {
+      "mpp_com_alias": 3,
+      "pbix": 3
+    },
+    "Milestone": {
+      "mpp_com_alias": 8,
+      "pbix": 8
+    },
+    "WFX Deliverables": {
+      "mpp_com_alias": 4,
+      "pbix": 4
+    }
+  },
+  "exemplos_diferenca": {
+    "Trabalho Real": [
+      {
+        "NodeKey": "{232AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.1.4.32",
+        "pbix": 11.2,
+        "mpp": 16
+      },
+      {
+        "NodeKey": "{242AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.1.4.33",
+        "pbix": 11.2,
+        "mpp": 16
+      },
+      {
+        "NodeKey": "{B82CEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.1.2.4",
+        "pbix": 2.0,
+        "mpp": 2.8
+      },
+      {
+        "NodeKey": "{7F2CEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.1.2.7",
+        "pbix": 2.0,
+        "mpp": 2.8
+      },
+      {
+        "NodeKey": "{802CEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.1.2.8",
+        "pbix": 2.0,
+        "mpp": 2.8
+      }
+    ],
+    "Trabalho": [
+      {
+        "NodeKey": "{F82BEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.1.7",
+        "pbix": 0.016667,
+        "mpp": 0
+      },
+      {
+        "NodeKey": "{B02AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.3.3.20",
+        "pbix": 5.733333,
+        "mpp": 5.74
+      },
+      {
+        "NodeKey": "{B32AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.3.3.52",
+        "pbix": 5.733333,
+        "mpp": 5.74
+      },
+      {
+        "NodeKey": "{B42AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.3.3.53",
+        "pbix": 5.733333,
+        "mpp": 5.74
+      },
+      {
+        "NodeKey": "{B52AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.3.3.54",
+        "pbix": 5.733333,
+        "mpp": 5.74
+      }
+    ],
+    "Trab Linha de Base": [
+      {
+        "NodeKey": "{F82BEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.1.7",
+        "pbix": 0.01,
+        "mpp": 0
+      },
+      {
+        "NodeKey": "{E02AEF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.6.4.4.1",
+        "pbix": 0.01,
+        "mpp": 0
+      },
+      {
+        "NodeKey": "{B829EF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.1.2",
+        "pbix": 0.01,
+        "mpp": 0
+      },
+      {
+        "NodeKey": "{B929EF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.1.1",
+        "pbix": 0.01,
+        "mpp": 0
+      },
+      {
+        "NodeKey": "{BE29EF7B-3DB2-F111-AF8A-8DDCF8B3E583}",
+        "EDT": "1.2.1",
+        "pbix": 0.01,
+        "mpp": 0
+      }
+    ]
+  },
+  "serie_real_semanal": {
+    "pares_pbix": 2010,
+    "pares_mpp_nao_nulos": 2229,
+    "pares_uniao": 2229,
+    "iguais_exato": 1087,
+    "iguais_2casas": 2010,
+    "so_no_pbix": 0,
+    "so_no_mpp": 219,
+    "datas_pbix_todas_domingo": true,
+    "soma_pbix": 7569.337046,
+    "soma_mpp_mesmas_tarefas": 7798.856827,
+    "exemplos_diferenca": []
+  }
+}

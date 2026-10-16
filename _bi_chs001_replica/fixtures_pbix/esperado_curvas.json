@@ -1,0 +1,273 @@
+{
+ "30": {
+  "ACC | % Realizado": 1,
+  "ACC | % Planejado": 1.0,
+  "BASE SEM | % Planejado": 0.0,
+  "BASE SEM | % Realizado": 0.0,
+  "ACC | % Desvio": 0.0,
+  "BASE SEM | % Desvio": 0.0,
+  "PRAZO | Início Baseline": "2026-06-19T08:02:00",
+  "PRAZO | Início Reprogramado": "2026-06-19T08:02:00",
+  "PRAZO | Duração Baseline": 53,
+  "pontos": [
+   {
+    "categoria": "2026-06-18",
+    "CURVA | % Baseline": 0.0005855734194405382,
+    "CURVA | % Reprogramado": 0.00036435679431855714,
+    "COLUNA | % Baseline": 0.00036435679431855714,
+    "COLUNA | % Realizado": 0.0004082260103166741,
+    "CURVA | % Realizado": 0.0004082260103166741
+   },
+   {
+    "categoria": "2026-06-25",
+    "CURVA | % Baseline": 0.03517999693125652,
+    "CURVA | % Reprogramado": 0.02263027450971595,
+    "COLUNA | % Baseline": 0.022265917715397394,
+    "COLUNA | % Realizado": 0.007049011034058688,
+    "CURVA | % Realizado": 0.007457237044375363
+   },
+   {
+    "categoria": "2026-07-02",
+    "CURVA | % Baseline": 0.1893874478795698,
+    "CURVA | % Reprogramado": 0.10824035735004327,
+    "COLUNA | % Baseline": 0.08561008284032731,
+    "COLUNA | % Realizado": 0.044095100946264475,
+    "CURVA | % Realizado": 0.05155233799063983
+   },
+   {
+    "categoria": "2026-07-09",
+    "CURVA | % Baseline": 0.3807011518780522,
+    "CURVA | % Reprogramado": 0.21040961458941504,
+    "COLUNA | % Baseline": 0.10216925723937176,
+    "COLUNA | % Realizado": 0.06281766849998292,
+    "CURVA | % Realizado": 0.11437000649062275
+   },
+   {
+    "categoria": "2026-07-16",
+    "CURVA | % Baseline": 0.5779790291593007,
+    "CURVA | % Reprogramado": 0.3149889637856502,
+    "COLUNA | % Baseline": 0.1045793491962352,
+    "COLUNA | % Realizado": 0.05926255833020189,
+    "CURVA | % Realizado": 0.17363256482082465
+   },
+   {
+    "categoria": "2026-07-23",
+    "CURVA | % Baseline": 0.7620598155143179,
+    "CURVA | % Reprogramado": 0.42970747827238664,
+    "COLUNA | % Baseline": 0.11471851448673641,
+    "COLUNA | % Realizado": 0.1643976910463567,
+    "CURVA | % Realizado": 0.33803025586718133
+   },
+   {
+    "categoria": "2026-07-30",
+    "CURVA | % Baseline": 0.8878422624795596,
+    "CURVA | % Reprogramado": 0.5568504406825283,
+    "COLUNA | % Baseline": 0.1271429624101417,
+    "COLUNA | % Realizado": 0.17815483858846035,
+    "CURVA | % Realizado": 0.5161850944556416
+   },
+   {
+    "categoria": "2026-08-06",
+    "CURVA | % Baseline": 0.9807584620545963,
+    "CURVA | % Reprogramado": 0.7208647209472894,
+    "COLUNA | % Baseline": 0.16401428026476106,
+    "COLUNA | % Realizado": 0.24123904861134834,
+    "CURVA | % Realizado": 0.75742414306699
+   },
+   {
+    "categoria": "2026-08-13",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 0.8689195638495768,
+    "COLUNA | % Baseline": 0.1480548429022874,
+    "COLUNA | % Realizado": 0.10011279848324395,
+    "CURVA | % Realizado": 0.8575369415502339
+   },
+   {
+    "categoria": "2026-08-20",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 0.9874605814869728,
+    "COLUNA | % Baseline": 0.11854101763739597,
+    "COLUNA | % Realizado": 0.13518783349844565,
+    "CURVA | % Realizado": 0.9927247750486795
+   },
+   {
+    "categoria": "2026-08-27",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 1,
+    "COLUNA | % Baseline": 0.012539418513027221,
+    "COLUNA | % Realizado": 0.007275241348683086,
+    "CURVA | % Realizado": 1
+   }
+  ]
+ },
+ "60": {
+  "ACC | % Realizado": 0.7386890140639136,
+  "ACC | % Planejado": 0.9847781074000472,
+  "BASE SEM | % Planejado": 0.11669940514125321,
+  "BASE SEM | % Realizado": 0.0,
+  "ACC | % Desvio": -0.2460890933361336,
+  "BASE SEM | % Desvio": -0.11669940514125321,
+  "PRAZO | Início Baseline": "2026-08-12T08:00:00",
+  "PRAZO | Início Reprogramado": "2026-08-25T08:00:00",
+  "PRAZO | Duração Baseline": 47,
+  "pontos": [
+   {
+    "categoria": "2026-08-13",
+    "COLUNA | % Baseline": 0.08215313874573418,
+    "CURVA | % Baseline": 0.08215313874573418,
+    "CURVA | % Reprogramado": 0.0,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-08-20",
+    "COLUNA | % Baseline": 0.18879411480868682,
+    "CURVA | % Baseline": 0.270947253554421,
+    "CURVA | % Reprogramado": 0.0,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-08-27",
+    "COLUNA | % Baseline": 0.20102024974878385,
+    "CURVA | % Baseline": 0.47196750330320486,
+    "CURVA | % Reprogramado": 0.026519594152974273,
+    "COLUNA | % Realizado": 0.0777855961399629,
+    "CURVA | % Realizado": 0.0777855961399629
+   },
+   {
+    "categoria": "2026-09-03",
+    "COLUNA | % Baseline": 0.20881423788357228,
+    "CURVA | % Baseline": 0.6807817411867771,
+    "CURVA | % Reprogramado": 0.14671135715055994,
+    "COLUNA | % Realizado": 0.21913139186138955,
+    "CURVA | % Realizado": 0.29691698800135247
+   },
+   {
+    "categoria": "2026-09-10",
+    "COLUNA | % Baseline": 0.173589291812979,
+    "CURVA | % Baseline": 0.8543710329997561,
+    "CURVA | % Reprogramado": 0.3409954578438629,
+    "COLUNA | % Realizado": 0.18170398651180217,
+    "CURVA | % Realizado": 0.47862097451315466
+   },
+   {
+    "categoria": "2026-09-17",
+    "COLUNA | % Baseline": 0.10396750432275104,
+    "CURVA | % Baseline": 0.9583385373225072,
+    "CURVA | % Reprogramado": 0.527536036321881,
+    "COLUNA | % Realizado": 0.14592023887634906,
+    "CURVA | % Realizado": 0.6245412133895037
+   },
+   {
+    "categoria": "2026-09-24",
+    "COLUNA | % Baseline": 0.03954122444822117,
+    "CURVA | % Baseline": 0.9978797617707283,
+    "CURVA | % Reprogramado": 0.7198813319253897,
+    "COLUNA | % Realizado": 0.0982550331265021,
+    "CURVA | % Realizado": 0.7227962465160058
+   },
+   {
+    "categoria": "2026-10-01",
+    "COLUNA | % Baseline": 0.002120238229272986,
+    "CURVA | % Baseline": 1.0000000000000013,
+    "CURVA | % Reprogramado": 0.868078702258794,
+    "COLUNA | % Realizado": 0.015926943497610323,
+    "CURVA | % Realizado": 0.7387231900136162
+   },
+   {
+    "categoria": "2026-10-08",
+    "COLUNA | % Baseline": 0.0,
+    "CURVA | % Baseline": 1.0000000000000013,
+    "CURVA | % Reprogramado": 0.9847781074000472,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": 0.7386890140639136
+   },
+   {
+    "categoria": "2026-10-15",
+    "COLUNA | % Baseline": 0.0,
+    "CURVA | % Baseline": 1.0000000000000013,
+    "CURVA | % Reprogramado": 0.9997959674518757,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-10-22",
+    "COLUNA | % Baseline": 0.0,
+    "CURVA | % Baseline": 1.0000000000000013,
+    "CURVA | % Reprogramado": 1.0000000000000013,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   }
+  ]
+ },
+ "90": {
+  "ACC | % Realizado": 0.013888888888888888,
+  "ACC | % Planejado": 0.006944444444444444,
+  "BASE SEM | % Planejado": 0.006944444444444444,
+  "BASE SEM | % Realizado": 0.005952380555555557,
+  "ACC | % Desvio": 0.006944444444444444,
+  "BASE SEM | % Desvio": -0.0009920638888888875,
+  "PRAZO | Início Baseline": "2026-09-28T08:00:00",
+  "PRAZO | Início Reprogramado": "2026-10-07T08:00:00",
+  "PRAZO | Duração Baseline": 21,
+  "pontos": [
+   {
+    "categoria": "2026-10-01",
+    "CURVA | % Baseline": 0.4219907407407407,
+    "CURVA | % Reprogramado": 0.0,
+    "COLUNA | % Baseline": 0.0,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-10-08",
+    "CURVA | % Baseline": 0.8017255892255892,
+    "CURVA | % Reprogramado": 0.006944444444444444,
+    "COLUNA | % Baseline": 0.006944444444444444,
+    "COLUNA | % Realizado": 0.005952380555555557,
+    "CURVA | % Realizado": 0.013888888888888888
+   },
+   {
+    "categoria": "2026-10-15",
+    "CURVA | % Baseline": 0.9913888888888889,
+    "CURVA | % Reprogramado": 0.013888888888888888,
+    "COLUNA | % Baseline": 0.006944444444444444,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-10-22",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 0.38267195767195766,
+    "COLUNA | % Baseline": 0.36878306878306877,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-10-29",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 0.7628306878306877,
+    "COLUNA | % Baseline": 0.3801587301587301,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-11-05",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 0.9757671957671958,
+    "COLUNA | % Baseline": 0.21293650793650806,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   },
+   {
+    "categoria": "2026-11-12",
+    "CURVA | % Baseline": 1,
+    "CURVA | % Reprogramado": 1,
+    "COLUNA | % Baseline": 0.024232804232804186,
+    "COLUNA | % Realizado": null,
+    "CURVA | % Realizado": null
+   }
+  ]
+ }
+}

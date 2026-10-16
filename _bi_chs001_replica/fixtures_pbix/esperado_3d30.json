@@ -1,0 +1,71 @@
+{
+ "documentos3D": [
+  "CHS001-000-CVM-3D-001",
+  "CHS001-000-ELM-3D-001",
+  "CHS001-000-IAM-3D-001",
+  "CHS001-000-IHM-3D-001",
+  "CHS001-000-MEM-3D-001",
+  "CHS001-000-PIM-3D-001",
+  "CHS001-000-STM-3D-001"
+ ],
+ "tarefas3D": 4,
+ "trabLinhaBase": 504.0,
+ "trabalhoReal": 504.0,
+ "pontos": [
+  {
+   "categoria": "2026-06-18",
+   "3D | COLUNA | % Realizado": null,
+   "3D | CURVA | % Realizado": 0
+  },
+  {
+   "categoria": "2026-06-25",
+   "3D | COLUNA | % Realizado": null,
+   "3D | CURVA | % Realizado": 0
+  },
+  {
+   "categoria": "2026-07-02",
+   "3D | COLUNA | % Realizado": 0.11422619246031745,
+   "3D | CURVA | % Realizado": 0.11422619246031745
+  },
+  {
+   "categoria": "2026-07-09",
+   "3D | COLUNA | % Realizado": 0.2087225277777778,
+   "3D | CURVA | % Realizado": 0.32294872023809523
+  },
+  {
+   "categoria": "2026-07-16",
+   "3D | COLUNA | % Realizado": 0.17859564285714286,
+   "3D | CURVA | % Realizado": 0.5015443630952381
+  },
+  {
+   "categoria": "2026-07-23",
+   "3D | COLUNA | % Realizado": 0.16615187896825395,
+   "3D | CURVA | % Realizado": 0.6676962420634921
+  },
+  {
+   "categoria": "2026-07-30",
+   "3D | COLUNA | % Realizado": 0.16615187896825395,
+   "3D | CURVA | % Realizado": 0.833848121031746
+  },
+  {
+   "categoria": "2026-08-06",
+   "3D | COLUNA | % Realizado": 0.16615187896825395,
+   "3D | CURVA | % Realizado": 1
+  },
+  {
+   "categoria": "2026-08-13",
+   "3D | COLUNA | % Realizado": null,
+   "3D | CURVA | % Realizado": 1
+  },
+  {
+   "categoria": "2026-08-20",
+   "3D | COLUNA | % Realizado": null,
+   "3D | CURVA | % Realizado": 1
+  },
+  {
+   "categoria": "2026-08-27",
+   "3D | COLUNA | % Realizado": null,
+   "3D | CURVA | % Realizado": 1
+  }
+ ]
+}

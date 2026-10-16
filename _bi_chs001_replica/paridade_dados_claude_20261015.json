@@ -1,0 +1,1665 @@
+[
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "48adb2e2",
+  "tipo": "pivotTable",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "9f5e7fa9",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "bb4e1966",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "8d19da71",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "6d9c8b46",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "2fe2ff8d",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "c4668e5b",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "8c2e6dda",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "322c94e1",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "959cb0df",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "f7a2b922",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "4a4c60d0",
+  "tipo": "donutChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "3. Resumo 30%",
+  "visual": "ea13570f",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "8e01a472",
+  "tipo": "pivotTable",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "ae8c65ff",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "c859d8df",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "acd6bef2",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "1cb81bc0",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "df5ca39b",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "81e54c4b",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "c67b041d",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "68d2224d",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "288c0b00",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "c88d9bd5",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "b2955cba",
+  "tipo": "donutChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "4. Resumo 60%",
+  "visual": "2dbe2e24",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "485db311",
+  "tipo": "pivotTable",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "819db0fa",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "9a23de1b",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "bc7e47d1",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "4d42161a",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "b88b6d73",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "f07c5330",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "703423ed",
+  "tipo": "card",
+  "titulo": "% Planned",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "a5a78671",
+  "tipo": "card",
+  "titulo": "% Complete",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "ad4dde21",
+  "tipo": "card",
+  "titulo": "% Devation",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "be151583",
+  "tipo": "donutChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"WBX\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "b3c33a1f",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"KPI\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "5. Resumo 90%",
+  "visual": "05c37b73",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "ff5bdd78",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 4,
+   "primeira": {
+    "LDP (4).Fase 30%": "P",
+    "LDP (4).ITEM": 396,
+    "LDP (4).DISCIPLINE": "CIVIL",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-CVM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 30%": "APPROVED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 4,
+   "primeira": {
+    "LDP (4).Fase 30%": "P",
+    "LDP (4).ITEM": 400,
+    "LDP (4).DISCIPLINE": "CIVIL",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-CVM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 30%": "APPROVED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": false
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "52062bc8",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "APPROVED": 4
+  },
+  "banco": {
+   "APPROVED": 4
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "fc0e8e96",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 30%)": 4
+  },
+  "banco": {
+   "Min(LDP (4).Fase 30%)": 4
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "c48415c7",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.CANCELED 30": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.CANCELED 30": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "e84b2324",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.ISSUED 30": 4
+  },
+  "banco": {
+   "dFase Engenharia 30%.ISSUED 30": 4
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "4df3b18e",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "PIPING": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "MECHANICAL": 1
+  },
+  "banco": {
+   "MECHANICAL": 1,
+   "PIPING": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1
+  },
+  "igual": false
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "0669486e",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "ISSUED": 4
+  },
+  "banco": {
+   "ISSUED": 4
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "6308f22b",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.ADRESSING 15 1": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.ADRESSING 15 1": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "de52f632",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.CLIENT REVIEW 30": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.CLIENT REVIEW 30": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "8. LDP - 3D - 30%",
+  "visual": "59602fe3",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "c14d0b31",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 7,
+   "primeira": {
+    "LDP (4).Fase 60%": "FA",
+    "LDP (4).ITEM": 247,
+    "LDP (4).DISCIPLINE": "INSTRUMENTATION AND AUTOMATION",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-IAM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 60%": "CANCELED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 7,
+   "primeira": {
+    "LDP (4).Fase 60%": "FA",
+    "LDP (4).ITEM": 250,
+    "LDP (4).DISCIPLINE": "INSTRUMENTATION AND AUTOMATION",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-IAM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 60%": "ELABORATION",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": false
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "7c21c0ba",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "(Blank)": 4,
+   "CANCELED": 1,
+   "NOT STARTED": 1,
+   "INTERNAL": 1
+  },
+  "banco": {
+   "NOT STARTED": 4,
+   "ELABORATION": 3
+  },
+  "igual": false
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "4c907805",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 60%)": 7
+  },
+  "banco": {
+   "Min(LDP (4).Fase 60%)": 7
+  },
+  "igual": true
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "fcb7f8a4",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.CANCELED 60": 1
+  },
+  "banco": {
+   "dFase Engenharia 60%.CANCELED 60": null
+  },
+  "igual": false
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "c8ef976d",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.ISSUED 60": null
+  },
+  "banco": {
+   "dFase Engenharia 60%.ISSUED 60": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "e595d4cb",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "ELECTRICAL": 1,
+   "INFRASCTRUTURE": 1,
+   "PIPING": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "MECHANICAL": 1
+  },
+  "banco": {
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "MECHANICAL": 1,
+   "PIPING": 1,
+   "ELECTRICAL": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "INFRASTRUCTURE": 1
+  },
+  "igual": false
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "aa321e49",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "(Blank)": 4,
+   "CANCELED": 1,
+   "TO BE ISSUED": 1,
+   "NOT TO BE ISSUED": 1
+  },
+  "banco": {
+   "TO BE ISSUED": 7
+  },
+  "igual": false
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "a889a460",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.ADRESSING 60": null
+  },
+  "banco": {
+   "dFase Engenharia 60%.ADRESSING 60": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "e2df5cc8",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.CLIENT REVIEW 60": null
+  },
+  "banco": {
+   "dFase Engenharia 60%.CLIENT REVIEW 60": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "9. LDP - 3D - 60%",
+  "visual": "9bd852d7",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "51e521cc",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 7,
+   "primeira": {
+    "LDP (4).Fase 90%": "FD",
+    "LDP (4).ITEM": 247,
+    "LDP (4).DISCIPLINE": "INSTRUMENTATION AND AUTOMATION",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-IAM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 90%": "NOT STARTED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 7,
+   "primeira": {
+    "LDP (4).Fase 90%": "FD",
+    "LDP (4).ITEM": 250,
+    "LDP (4).DISCIPLINE": "INSTRUMENTATION AND AUTOMATION",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-IAM-3D-001",
+    "LDP (4).DOCUMENT TITLE": "3D Model",
+    "LDP (4).FORMAT": "3D",
+    "LDP (4).DOCUMENT STATUS 90%": "NOT STARTED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": false
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "2d376cb6",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "NOT STARTED": 7
+  },
+  "banco": {
+   "NOT STARTED": 7
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "a2dbaffe",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 90%)": 7
+  },
+  "banco": {
+   "Min(LDP (4).Fase 90%)": 7
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "947d01e9",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.CANCELED 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.CANCELED 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "291e9db4",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.ISSUED 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.ISSUED 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "5ac83aca",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "ELECTRICAL": 1,
+   "INFRASCTRUTURE": 1,
+   "DIGITAL SYSTEM": 1,
+   "CIVIL": 1,
+   "PIPING": 1,
+   "STEEL STRUCTURE": 1
+  },
+  "banco": {
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "PIPING": 1,
+   "ELECTRICAL": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "INFRASTRUCTURE": 1,
+   "DIGITAL SYSTEM": 1
+  },
+  "igual": false
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "f8355e32",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "TO BE ISSUED": 7
+  },
+  "banco": {
+   "TO BE ISSUED": 7
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "f476e3eb",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.CLIENT REVIEW 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.CLIENT REVIEW 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "c2ba931a",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.ADRESSING 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.ADRESSING 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "10. LDP - 3D - 90%",
+  "visual": "2c9e8683",
+  "tipo": "lineClusteredColumnComboChart",
+  "titulo": "",
+  "pbix": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "banco": {
+   "estado": "pendente",
+   "motivo": "Fonte N&A da entidade \"dCalendario\" ainda não mapeada com paridade verificada."
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "95a23f2f",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 181,
+   "primeira": {
+    "LDP (4).Fase 30%": "FA",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 30%": "APPROVED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 181,
+   "primeira": {
+    "LDP (4).Fase 30%": "FA",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 30%": "APPROVED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "c1d38717",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "APPROVED": 172,
+   "CANCELLED": 9
+  },
+  "banco": {
+   "APPROVED": 172,
+   "CANCELLED": 9
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "c76cb8f4",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 30%)": 181
+  },
+  "banco": {
+   "Min(LDP (4).Fase 30%)": 181
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "9aa32598",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.CANCELED 30": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.CANCELED 30": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "3ed78afe",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.ISSUED 30": 172
+  },
+  "banco": {
+   "dFase Engenharia 30%.ISSUED 30": 172
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "46c74ecd",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "PROCESS": 113,
+   "MECHANICAL": 55,
+   "ELECTRICAL": 4,
+   "PLANNING AND COORDINATION": 3,
+   "PIPING": 2,
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "INFRASCTRUTURE": 1
+  },
+  "banco": {
+   "PROCESS": 113,
+   "MECHANICAL": 55,
+   "ELECTRICAL": 4,
+   "PLANNING AND COORDINATION": 3,
+   "PIPING": 2,
+   "INSTRUMENTATION AND AUTOMATION": 1,
+   "CIVIL": 1,
+   "STEEL STRUCTURE": 1,
+   "INFRASTRUCTURE": 1
+  },
+  "igual": false
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "96cec642",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "ISSUED": 172,
+   "CANCELLED": 9
+  },
+  "banco": {
+   "ISSUED": 172,
+   "CANCELLED": 9
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "2d7506eb",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.ADRESSING 15 1": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.ADRESSING 15 1": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "12. LDP - Engineering - 30%",
+  "visual": "1c6e40b1",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 30%.CLIENT REVIEW 30": null
+  },
+  "banco": {
+   "dFase Engenharia 30%.CLIENT REVIEW 30": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "2b075837",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 357,
+   "primeira": {
+    "LDP (4).Fase 60%": "FD",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 60%": "CLIENT REVIEW",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 361,
+   "primeira": {
+    "LDP (4).Fase 60%": "FD",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 60%": "CLIENT REVIEW",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "b5eecab7",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "ELABORATION": 29,
+   "NOT STARTED": 12
+  },
+  "banco": {
+   "ELABORATION": 34,
+   "NOT STARTED": 16
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "609669a7",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 60%)": 357
+  },
+  "banco": {
+   "Min(LDP (4).Fase 60%)": 361
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "9b1eefcc",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.CANCELED 60": 75
+  },
+  "banco": {
+   "dFase Engenharia 60%.CANCELED 60": 81
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "c370079f",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.ISSUED 60": 129
+  },
+  "banco": {
+   "dFase Engenharia 60%.ISSUED 60": 129
+  },
+  "igual": true
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "ca62268a",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "PROCESS": 214,
+   "MECHANICAL": 87,
+   "INSTRUMENTATION AND AUTOMATION": 25,
+   "ELECTRICAL": 18,
+   "CIVIL": 4,
+   "PIPING": 3,
+   "STEEL STRUCTURE": 3,
+   "INFRASCTRUTURE": 2,
+   "DIGITAL SYSTEM": 1
+  },
+  "banco": {
+   "PROCESS": 217,
+   "MECHANICAL": 87,
+   "INSTRUMENTATION AND AUTOMATION": 25,
+   "ELECTRICAL": 18,
+   "PIPING": 4,
+   "CIVIL": 4,
+   "STEEL STRUCTURE": 3,
+   "INFRASTRUCTURE": 2,
+   "DIGITAL SYSTEM": 1
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "671006ee",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "ISSUED": 129,
+   "TO BE ISSUED": 87,
+   "CANCELED": 75,
+   "NOT TO BE ISSUED": 43
+  },
+  "banco": {
+   "ISSUED": 129,
+   "TO BE ISSUED": 97,
+   "CANCELED": 81,
+   "NOT TO BE ISSUED": 54
+  },
+  "igual": false
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "e807f67b",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.ADRESSING 60": null
+  },
+  "banco": {
+   "dFase Engenharia 60%.ADRESSING 60": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "13. LDP - Engineering - 60%",
+  "visual": "67a267ff",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 60%.CLIENT REVIEW 60": 129
+  },
+  "banco": {
+   "dFase Engenharia 60%.CLIENT REVIEW 60": 129
+  },
+  "igual": true
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "8e1b7156",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 166,
+   "primeira": {
+    "LDP (4).Fase 90%": "FA",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 90%": "NOT STARTED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "banco": {
+   "linhas": 170,
+   "primeira": {
+    "LDP (4).Fase 90%": "FA",
+    "LDP (4).ITEM": 1,
+    "LDP (4).DISCIPLINE": "PROCESS",
+    "LDP (4).N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "LDP (4).DOCUMENT TITLE": "Process Design Criteria",
+    "LDP (4).FORMAT": "A",
+    "LDP (4).DOCUMENT STATUS 90%": "NOT STARTED",
+    "LDP (4).STATUS IN THE FLOW": null
+   }
+  },
+  "igual": false
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "58c53714",
+  "tipo": "clusteredColumnChart",
+  "titulo": "STATUS",
+  "pbix": {
+   "NOT STARTED": 146,
+   "CANCELLED": 6
+  },
+  "banco": {
+   "NOT STARTED": 150,
+   "CANCELLED": 6
+  },
+  "igual": false
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "e5ed0bbe",
+  "tipo": "cardVisual",
+  "titulo": "Total",
+  "pbix": {
+   "Min(LDP (4).Fase 90%)": 166
+  },
+  "banco": {
+   "Min(LDP (4).Fase 90%)": 170
+  },
+  "igual": false
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "14ff715b",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.CANCELED 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.CANCELED 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "b8a28b51",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.ISSUED 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.ISSUED 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "4513d60a",
+  "tipo": "clusteredBarChart",
+  "titulo": "DOCUMENTS BY DISCIPLINE",
+  "pbix": {
+   "PROCESS": 70,
+   "INSTRUMENTATION AND AUTOMATION": 27,
+   "ELECTRICAL": 26,
+   "PIPING": 19,
+   "CIVIL": 10,
+   "STEEL STRUCTURE": 9,
+   "INFRASCTRUTURE": 5
+  },
+  "banco": {
+   "PROCESS": 73,
+   "INSTRUMENTATION AND AUTOMATION": 27,
+   "ELECTRICAL": 26,
+   "PIPING": 20,
+   "CIVIL": 10,
+   "STEEL STRUCTURE": 9,
+   "INFRASTRUCTURE": 5
+  },
+  "igual": false
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "8d8358a8",
+  "tipo": "clusteredColumnChart",
+  "titulo": "SITUATION",
+  "pbix": {
+   "TO BE ISSUED": 160,
+   "CANCELLED": 6
+  },
+  "banco": {
+   "TO BE ISSUED": 164,
+   "CANCELLED": 6
+  },
+  "igual": false
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "6aa4cb19",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.CLIENT REVIEW 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.CLIENT REVIEW 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "14. LDP - Engineering - 90%",
+  "visual": "f4021156",
+  "tipo": "cardVisual",
+  "titulo": "",
+  "pbix": {
+   "dFase Engenharia 90%.ADRESSING 90": null
+  },
+  "banco": {
+   "dFase Engenharia 90%.ADRESSING 90": null
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "4f0d9cb4",
+  "tipo": "tableEx",
+  "titulo": "",
+  "pbix": {
+   "linhas": 103,
+   "primeira": {
+    "Planilha1.ITEM": 1,
+    "Planilha1.PHASE": "0.6",
+    "Planilha1.DISCIPLINE": "PROCESS",
+    "Planilha1.N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "Planilha1.DOCUMENT TITLE": "Process Design Criteria",
+    "Planilha1.DOCUMENT STATUS": "VERIFICATION",
+    "Planilha1.BASELINE DATE": "07/09/2026",
+    "Planilha1.REPLANNED DATE": "05/10/2026"
+   }
+  },
+  "banco": {
+   "linhas": 103,
+   "primeira": {
+    "Planilha1.ITEM": 1,
+    "Planilha1.PHASE": "0.6",
+    "Planilha1.DISCIPLINE": "PROCESS",
+    "Planilha1.N&A DOCUMENT NUMBER": "CHS001-000-PC6-TS-001",
+    "Planilha1.DOCUMENT TITLE": "Process Design Criteria",
+    "Planilha1.DOCUMENT STATUS": "VERIFICATION",
+    "Planilha1.BASELINE DATE": "07/09/2026",
+    "Planilha1.REPLANNED DATE": "05/10/2026"
+   }
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "d2c0e0e9",
+  "tipo": "cardVisual",
+  "titulo": "ACTIVITIES",
+  "pbix": {
+   "Sum(Planilha1.ITEM)": 108
+  },
+  "banco": {
+   "Sum(Planilha1.ITEM)": 108
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "c9849695",
+  "tipo": "cardVisual",
+  "titulo": "ELABORATION",
+  "pbix": {
+   "Min(Planilha1.DOCUMENT STATUS)": 26
+  },
+  "banco": {
+   "Min(Planilha1.DOCUMENT STATUS)": 26
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "bfc7392a",
+  "tipo": "cardVisual",
+  "titulo": "NOT STARTED",
+  "pbix": {
+   "Min(Planilha1.DOCUMENT STATUS)": 28
+  },
+  "banco": {
+   "Min(Planilha1.DOCUMENT STATUS)": 28
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "fdc15852",
+  "tipo": "cardVisual",
+  "titulo": "ISSUANCE FLOW",
+  "pbix": {
+   "Min(Planilha1.DOCUMENT STATUS)": 5
+  },
+  "banco": {
+   "Min(Planilha1.DOCUMENT STATUS)": 5
+  },
+  "igual": true
+ },
+ {
+  "pagina": "17. Programação",
+  "visual": "bfc533e4",
+  "tipo": "clusteredColumnChart",
+  "titulo": "DOCUMENTOS/ATIVIDADES POR DISCIPLINA",
+  "pbix": {
+   "MECHANICAL": 48,
+   "INSTRUMENTATION AND AUTOMATION": 18,
+   "PROCESS": 15,
+   "ELECTRICAL": 8,
+   "CIVIL": 5,
+   "STEEL STRUCTURE": 4,
+   "PIPING": 2,
+   "INFRASTRUCTURE": 2,
+   "DIGITAL SYSTEM": 1
+  },
+  "banco": {
+   "MECHANICAL": 48,
+   "INSTRUMENTATION AND AUTOMATION": 18,
+   "PROCESS": 15,
+   "ELECTRICAL": 8,
+   "CIVIL": 5,
+   "STEEL STRUCTURE": 4,
+   "PIPING": 2,
+   "INFRASTRUCTURE": 2,
+   "DIGITAL SYSTEM": 1
+  },
+  "igual": true
+ }
+]

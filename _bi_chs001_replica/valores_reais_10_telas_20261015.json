@@ -1,0 +1,2736 @@
+{
+ "p03": {
+  "nome": "Resumo 30%",
+  "dataCorte": "2026-10-08",
+  "visuais": [
+   {
+    "id": "48adb2e2",
+    "tipo": "pivotTable",
+    "real": {
+     "raizes": [
+      "Engineering - 30%"
+     ],
+     "filhosRaiz": 9,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.5.1.1.1",
+      "KPI.KPI 30 | PRAZO | Início Baseline": "2026-06-19T08:02:00",
+      "KPI.KPI 30 | PRAZO | Término Baseline": "2026-08-11T17:00:00",
+      "KPI.KPI 30 | PRAZO | Início Reprogramado": "2026-06-19T08:02:00",
+      "KPI.KPI 30 | PRAZO | Término Reprogramado": "2026-08-24T17:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "pbix": {
+     "raizes": [
+      "Engineering - 30%"
+     ],
+     "filhosRaiz": 9,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.5.1.1.1",
+      "KPI.KPI 30 | PRAZO | Início Baseline": "2026-06-19T08:02:00",
+      "KPI.KPI 30 | PRAZO | Término Baseline": "2026-08-11T17:00:00",
+      "KPI.KPI 30 | PRAZO | Início Reprogramado": "2026-06-19T08:02:00",
+      "KPI.KPI 30 | PRAZO | Término Reprogramado": "2026-08-24T17:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "9f5e7fa9",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "bb4e1966",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Duração Baseline": 53,
+      "KPI.KPI 30 | PRAZO | Dias Restantes": 0
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Duração Baseline": 53,
+      "KPI.KPI 30 | PRAZO | Dias Restantes": 0
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "8d19da71",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Desvio": 13
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Desvio": 13
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "6d9c8b46",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Término Reprogramado": "2026-08-24T17:00:00",
+      "KPI.KPI 30 | PRAZO | Término Baseline": "2026-08-11T17:00:00"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | PRAZO | Término Reprogramado": "2026-08-24T17:00:00",
+      "KPI.KPI 30 | PRAZO | Término Baseline": "2026-08-11T17:00:00"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "2fe2ff8d",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Planejado": 0
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Planejado": 0
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "c4668e5b",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Realizado": 0
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Realizado": 0
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "8c2e6dda",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Desvio": 0
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | BASE SEM | % Desvio": 0
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "322c94e1",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Planejado": 1
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Planejado": 1
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "959cb0df",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Realizado": 1
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Realizado": 1
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "f7a2b922",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Desvio": 0
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 30 | ACC | % Desvio": 0
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "4a4c60d0",
+    "tipo": "donutChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "Concluded",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "Concluded",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 190
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 6
+      }
+     },
+     "total": 196
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "Concluded",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "Concluded",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 190
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 6
+      }
+     },
+     "total": 196
+    },
+    "iguais": true
+   },
+   {
+    "id": "ea13570f",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 11,
+     "categorias": [
+      "2026-06-18",
+      "2026-06-25",
+      "2026-07-02",
+      "2026-07-09",
+      "2026-07-16",
+      "2026-07-23",
+      "2026-07-30",
+      "2026-08-06",
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27"
+     ],
+     "primeiro": {
+      "categoria": "2026-06-18",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.0003643858390553301,
+       "KPI.KPI 30 | COLUNA | % Realizado": 0.0004082260103166745,
+       "KPI.KPI 30 | CURVA | % Baseline": 0.0005856200984817805,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 0.0003643858390553301,
+       "KPI.KPI 30 | CURVA | % Realizado": 0.0004082260103166745
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-08-27",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.01254005252839233,
+       "KPI.KPI 30 | COLUNA | % Realizado": 0.0072751979639941325,
+       "KPI.KPI 30 | CURVA | % Baseline": 1,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 30 | CURVA | % Realizado": 0.999999840467327
+      }
+     },
+     "total": 18.844153810696668
+    },
+    "pbix": {
+     "pontos": 11,
+     "categorias": [
+      "2026-06-18",
+      "2026-06-25",
+      "2026-07-02",
+      "2026-07-09",
+      "2026-07-16",
+      "2026-07-23",
+      "2026-07-30",
+      "2026-08-06",
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27"
+     ],
+     "primeiro": {
+      "categoria": "2026-06-18",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.0003643567943185567,
+       "KPI.KPI 30 | COLUNA | % Realizado": 0.0004082260103166746,
+       "KPI.KPI 30 | CURVA | % Baseline": 0.0005855734194405376,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 0.0003643567943185567,
+       "KPI.KPI 30 | CURVA | % Realizado": 0.0004082260103166746
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-08-27",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.012539418513030002,
+       "KPI.KPI 30 | COLUNA | % Realizado": 0.007275241348683097,
+       "KPI.KPI 30 | CURVA | % Baseline": 1,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 30 | CURVA | % Realizado": 1
+      }
+     },
+     "total": 18.84425169032685
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p04": {
+  "nome": "Resumo 60%",
+  "dataCorte": "2026-10-08",
+  "visuais": [
+   {
+    "id": "8e01a472",
+    "tipo": "pivotTable",
+    "real": {
+     "raizes": [
+      "Engineering - 60%"
+     ],
+     "filhosRaiz": 9,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.6.1.1.1",
+      "KPI.KPI 60 | PRAZO | Início Baseline": "2026-08-12T08:00:00",
+      "KPI.KPI 60 | PRAZO | Término Baseline": "2026-09-28T17:00:00",
+      "KPI.KPI 60 | PRAZO | Início Reprogramado": "2026-08-25T08:00:00",
+      "KPI.KPI 60 | PRAZO | Término Reprogramado": "2026-10-19T12:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "pbix": {
+     "raizes": [
+      "Engineering - 60%"
+     ],
+     "filhosRaiz": 9,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.6.1.1.1",
+      "KPI.KPI 60 | PRAZO | Início Baseline": "2026-08-12T08:00:00",
+      "KPI.KPI 60 | PRAZO | Término Baseline": "2026-09-28T17:00:00",
+      "KPI.KPI 60 | PRAZO | Início Reprogramado": "2026-08-25T08:00:00",
+      "KPI.KPI 60 | PRAZO | Término Reprogramado": "2026-10-19T12:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "ae8c65ff",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "c859d8df",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Duração Baseline": 47,
+      "KPI.KPI 60 | PRAZO | Dias Restantes": 11
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Duração Baseline": 47,
+      "KPI.KPI 60 | PRAZO | Dias Restantes": 11
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "acd6bef2",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Desvio": 21
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Desvio": 21
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "1cb81bc0",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Término Reprogramado": "2026-10-19T12:00:00",
+      "KPI.KPI 60 | PRAZO | Término Baseline": "2026-09-28T17:00:00"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | PRAZO | Término Reprogramado": "2026-10-19T12:00:00",
+      "KPI.KPI 60 | PRAZO | Término Baseline": "2026-09-28T17:00:00"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "df5ca39b",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Planejado": 0.1166991175210137
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Planejado": 0.11669940514125465
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "81e54c4b",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Realizado": 0.020001431433042255
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Realizado": 0
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "c67b041d",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Desvio": -0.09669768608797144
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | BASE SEM | % Desvio": -0.11669940514125465
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "68d2224d",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Planejado": 0.9847791043220179
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Planejado": 0.9847781074000388
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "288c0b00",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Realizado": 0.7911997572851045
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Realizado": 0.7386890140639142
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "c88d9bd5",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Desvio": -0.19357934703691337
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 60 | ACC | % Desvio": -0.2460890933361246
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "b2955cba",
+    "tipo": "donutChart",
+    "real": {
+     "pontos": 3,
+     "categorias": [
+      "Concluded",
+      "Overdue",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "Concluded",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 159
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 82
+      }
+     },
+     "total": 347
+    },
+    "pbix": {
+     "pontos": 3,
+     "categorias": [
+      "Overdue",
+      "Concluded",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "Overdue",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 152
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 82
+      }
+     },
+     "total": 347
+    },
+    "iguais": false
+   },
+   {
+    "id": "2dbe2e24",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 11,
+     "categorias": [
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27",
+      "2026-09-03",
+      "2026-09-10",
+      "2026-09-17",
+      "2026-09-24",
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22"
+     ],
+     "primeiro": {
+      "categoria": "2026-08-13",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0.08214778315519627,
+       "KPI.KPI 60 | COLUNA | % Realizado": 0,
+       "KPI.KPI 60 | CURVA | % Baseline": 0.08214778315519627,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 60 | CURVA | % Realizado": 0
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-10-22",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 1,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "total": 19.484658094847987
+    },
+    "pbix": {
+     "pontos": 11,
+     "categorias": [
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27",
+      "2026-09-03",
+      "2026-09-10",
+      "2026-09-17",
+      "2026-09-24",
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22"
+     ],
+     "primeiro": {
+      "categoria": "2026-08-13",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0.08215313874573407,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 0.08215313874573407,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-10-22",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 1,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "total": 19.347531936039612
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p05": {
+  "nome": "Resumo 90%",
+  "dataCorte": "2026-10-08",
+  "visuais": [
+   {
+    "id": "485db311",
+    "tipo": "pivotTable",
+    "real": {
+     "raizes": [
+      "Engineering - 90%"
+     ],
+     "filhosRaiz": 8,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.6.1.1.1",
+      "KPI.KPI 90 | PRAZO | Início Baseline": "2026-09-28T08:00:00",
+      "KPI.KPI 90 | PRAZO | Término Baseline": "2026-10-19T17:00:00",
+      "KPI.KPI 90 | PRAZO | Início Reprogramado": "2026-10-07T08:00:00",
+      "KPI.KPI 90 | PRAZO | Término Reprogramado": "2026-11-10T12:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "pbix": {
+     "raizes": [
+      "Engineering - 90%"
+     ],
+     "filhosRaiz": 8,
+     "valoresRaiz": {
+      "Min(WBX.EDT)": "1.6.1.1.1",
+      "KPI.KPI 90 | PRAZO | Início Baseline": "2026-09-28T08:00:00",
+      "KPI.KPI 90 | PRAZO | Término Baseline": "2026-10-19T17:00:00",
+      "KPI.KPI 90 | PRAZO | Início Reprogramado": "2026-10-07T08:00:00",
+      "KPI.KPI 90 | PRAZO | Término Reprogramado": "2026-11-10T12:00:00",
+      "Min(WBX.Status1)": "Canceled"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "819db0fa",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Duração Baseline": 21,
+      "KPI.KPI 90 | PRAZO | Dias Restantes": 33
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Duração Baseline": 21,
+      "KPI.KPI 90 | PRAZO | Dias Restantes": 33
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "9a23de1b",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Desvio": 22
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Desvio": 22
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "bc7e47d1",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Término Reprogramado": "2026-11-10T12:00:00",
+      "KPI.KPI 90 | PRAZO | Término Baseline": "2026-10-19T17:00:00"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | PRAZO | Término Reprogramado": "2026-11-10T12:00:00",
+      "KPI.KPI 90 | PRAZO | Término Baseline": "2026-10-19T17:00:00"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "4d42161a",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | BASE SEM | % Planejado": 0.006944444444444444
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | BASE SEM | % Planejado": 0.006944444444444444
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "b88b6d73",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | CARD | Weekly Complete": "0,60%"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | CARD | Weekly Complete": "0,60%"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "f07c5330",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | CARD | Weekly Deviation": "-0,10%"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | CARD | Weekly Deviation": "-0,10%"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "703423ed",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Planejado": 0.006944444444444444
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Planejado": 0.006944444444444444
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "a5a78671",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Realizado": 0.013888888888888888
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Realizado": 0.013888888888888888
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "ad4dde21",
+    "tipo": "card",
+    "real": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Desvio": 0.006944444444444444
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.KPI 90 | ACC | % Desvio": 0.006944444444444444
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "be151583",
+    "tipo": "donutChart",
+    "real": {
+     "pontos": 3,
+     "categorias": [
+      "On Time",
+      "Overdue",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "On Time",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 88
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 16
+      }
+     },
+     "total": 190
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "On Time",
+      "Canceled"
+     ],
+     "primeiro": {
+      "categoria": "On Time",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 174
+      }
+     },
+     "ultimo": {
+      "categoria": "Canceled",
+      "valores": {
+       "CountNonNull(WBX.TaskID)": 16
+      }
+     },
+     "total": 190
+    },
+    "iguais": false
+   },
+   {
+    "id": "b3c33a1f",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "pbix": {
+     "valores": {
+      "KPI.Activity Title": "Week - 02/10 to 08/10"
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "05c37b73",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 7,
+     "categorias": [
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22",
+      "2026-10-29",
+      "2026-11-05",
+      "2026-11-12"
+     ],
+     "primeiro": {
+      "categoria": "2026-10-01",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0,
+       "KPI.KPI 90 | COLUNA | % Realizado": 0,
+       "KPI.KPI 90 | CURVA | % Baseline": 0.4219907407407407,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 90 | CURVA | % Realizado": 0
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-11-12",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0.024232804232804186,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 1,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 90 | CURVA | % Realizado": null
+      }
+     },
+     "total": 10.377049663597282
+    },
+    "pbix": {
+     "pontos": 7,
+     "categorias": [
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22",
+      "2026-10-29",
+      "2026-11-05",
+      "2026-11-12"
+     ],
+     "primeiro": {
+      "categoria": "2026-10-01",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 0.4219907407407407,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 90 | CURVA | % Realizado": null
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-11-12",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0.024232804232804345,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 1,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 90 | CURVA | % Realizado": null
+      }
+     },
+     "total": 10.377049662902838
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p12": {
+  "nome": "LDP - Engineering - 30%",
+  "dataCorte": null,
+  "visuais": [
+   {
+    "id": "95a23f2f",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 181
+    },
+    "pbix": {
+     "linhas": 181
+    },
+    "iguais": true
+   },
+   {
+    "id": "c1d38717",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "APPROVED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 172
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 9
+      }
+     },
+     "total": 181
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "APPROVED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 172
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 9
+      }
+     },
+     "total": 181
+    },
+    "iguais": true
+   },
+   {
+    "id": "c76cb8f4",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 30%)": 181
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 30%)": 181
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "9aa32598",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.CANCELED 30": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.CANCELED 30": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "3ed78afe",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.ISSUED 30": 172
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.ISSUED 30": 172
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "46c74ecd",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 9,
+     "categorias": [
+      "PROCESS",
+      "MECHANICAL",
+      "ELECTRICAL",
+      "PLANNING AND COORDINATION",
+      "PIPING",
+      "INSTRUMENTATION AND AUTOMATION",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASTRUCTURE"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 113
+      }
+     },
+     "ultimo": {
+      "categoria": "INFRASTRUCTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "total": 181
+    },
+    "pbix": {
+     "pontos": 9,
+     "categorias": [
+      "PROCESS",
+      "MECHANICAL",
+      "ELECTRICAL",
+      "PLANNING AND COORDINATION",
+      "PIPING",
+      "INSTRUMENTATION AND AUTOMATION",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASCTRUTURE"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 113
+      }
+     },
+     "ultimo": {
+      "categoria": "INFRASCTRUTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "total": 181
+    },
+    "iguais": false
+   },
+   {
+    "id": "96cec642",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "ISSUED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 172
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 9
+      }
+     },
+     "total": 181
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "ISSUED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 172
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 9
+      }
+     },
+     "total": 181
+    },
+    "iguais": true
+   },
+   {
+    "id": "2d7506eb",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.ADRESSING 15 1": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.ADRESSING 15 1": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "1c6e40b1",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.CLIENT REVIEW 30": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.CLIENT REVIEW 30": null
+     }
+    },
+    "iguais": true
+   }
+  ]
+ },
+ "p13": {
+  "nome": "LDP - Engineering - 60%",
+  "dataCorte": null,
+  "visuais": [
+   {
+    "id": "2b075837",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 361
+    },
+    "pbix": {
+     "linhas": 357
+    },
+    "iguais": false
+   },
+   {
+    "id": "b5eecab7",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "ELABORATION",
+      "NOT STARTED"
+     ],
+     "primeiro": {
+      "categoria": "ELABORATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 34
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 16
+      }
+     },
+     "total": 50
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "ELABORATION",
+      "NOT STARTED"
+     ],
+     "primeiro": {
+      "categoria": "ELABORATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 29
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 12
+      }
+     },
+     "total": 41
+    },
+    "iguais": false
+   },
+   {
+    "id": "609669a7",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 60%)": 361
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 60%)": 357
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "9b1eefcc",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.CANCELED 60": 81
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.CANCELED 60": 75
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "c370079f",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.ISSUED 60": 129
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.ISSUED 60": 129
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "ca62268a",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 9,
+     "categorias": [
+      "PROCESS",
+      "MECHANICAL",
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASTRUCTURE",
+      "DIGITAL SYSTEM"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 217
+      }
+     },
+     "ultimo": {
+      "categoria": "DIGITAL SYSTEM",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 361
+    },
+    "pbix": {
+     "pontos": 9,
+     "categorias": [
+      "PROCESS",
+      "MECHANICAL",
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "CIVIL",
+      "PIPING",
+      "STEEL STRUCTURE",
+      "INFRASCTRUTURE",
+      "DIGITAL SYSTEM"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 214
+      }
+     },
+     "ultimo": {
+      "categoria": "DIGITAL SYSTEM",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 357
+    },
+    "iguais": false
+   },
+   {
+    "id": "671006ee",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 4,
+     "categorias": [
+      "ISSUED",
+      "TO BE ISSUED",
+      "CANCELED",
+      "NOT TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 129
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 54
+      }
+     },
+     "total": 361
+    },
+    "pbix": {
+     "pontos": 4,
+     "categorias": [
+      "ISSUED",
+      "TO BE ISSUED",
+      "CANCELED",
+      "NOT TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 129
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 43
+      }
+     },
+     "total": 334
+    },
+    "iguais": false
+   },
+   {
+    "id": "e807f67b",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.ADRESSING 60": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.ADRESSING 60": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "67a267ff",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.CLIENT REVIEW 60": 129
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.CLIENT REVIEW 60": 129
+     }
+    },
+    "iguais": true
+   }
+  ]
+ },
+ "p14": {
+  "nome": "LDP - Engineering - 90%",
+  "dataCorte": null,
+  "visuais": [
+   {
+    "id": "8e1b7156",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 170
+    },
+    "pbix": {
+     "linhas": 166
+    },
+    "iguais": false
+   },
+   {
+    "id": "58c53714",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "NOT STARTED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 150
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 6
+      }
+     },
+     "total": 156
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "NOT STARTED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 146
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 6
+      }
+     },
+     "total": 152
+    },
+    "iguais": false
+   },
+   {
+    "id": "e5ed0bbe",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 90%)": 170
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 90%)": 166
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "14ff715b",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.CANCELED 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.CANCELED 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "b8a28b51",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.ISSUED 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.ISSUED 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "4513d60a",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 7,
+     "categorias": [
+      "PROCESS",
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASTRUCTURE"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 73
+      }
+     },
+     "ultimo": {
+      "categoria": "INFRASTRUCTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 5
+      }
+     },
+     "total": 170
+    },
+    "pbix": {
+     "pontos": 7,
+     "categorias": [
+      "PROCESS",
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASCTRUTURE"
+     ],
+     "primeiro": {
+      "categoria": "PROCESS",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 70
+      }
+     },
+     "ultimo": {
+      "categoria": "INFRASCTRUTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 5
+      }
+     },
+     "total": 166
+    },
+    "iguais": false
+   },
+   {
+    "id": "8d8358a8",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "TO BE ISSUED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 164
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 6
+      }
+     },
+     "total": 170
+    },
+    "pbix": {
+     "pontos": 2,
+     "categorias": [
+      "TO BE ISSUED",
+      "CANCELLED"
+     ],
+     "primeiro": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 160
+      }
+     },
+     "ultimo": {
+      "categoria": "CANCELLED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 6
+      }
+     },
+     "total": 166
+    },
+    "iguais": false
+   },
+   {
+    "id": "6aa4cb19",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.CLIENT REVIEW 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.CLIENT REVIEW 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "f4021156",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.ADRESSING 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.ADRESSING 90": null
+     }
+    },
+    "iguais": true
+   }
+  ]
+ },
+ "p08": {
+  "nome": "LDP - 3D - 30%",
+  "dataCorte": "2026-10-01",
+  "visuais": [
+   {
+    "id": "ff5bdd78",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 4
+    },
+    "pbix": {
+     "linhas": 4
+    },
+    "iguais": true
+   },
+   {
+    "id": "52062bc8",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 1,
+     "categorias": [
+      "APPROVED"
+     ],
+     "primeiro": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).ITEM)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).ITEM)": 4
+      }
+     },
+     "total": 4
+    },
+    "pbix": {
+     "pontos": 1,
+     "categorias": [
+      "APPROVED"
+     ],
+     "primeiro": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).ITEM)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "APPROVED",
+      "valores": {
+       "CountNonNull(LDP (4).ITEM)": 4
+      }
+     },
+     "total": 4
+    },
+    "iguais": true
+   },
+   {
+    "id": "fc0e8e96",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 30%)": 4
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 30%)": 4
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "c48415c7",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.CANCELED 30": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.CANCELED 30": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "e84b2324",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.ISSUED 30": 4
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.ISSUED 30": 4
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "4df3b18e",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 4,
+     "categorias": [
+      "MECHANICAL",
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE"
+     ],
+     "primeiro": {
+      "categoria": "MECHANICAL",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "STEEL STRUCTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "total": 4
+    },
+    "pbix": {
+     "pontos": 4,
+     "categorias": [
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "MECHANICAL"
+     ],
+     "primeiro": {
+      "categoria": "PIPING",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "MECHANICAL",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 1
+      }
+     },
+     "total": 4
+    },
+    "iguais": false
+   },
+   {
+    "id": "0669486e",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 1,
+     "categorias": [
+      "ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 4
+      }
+     },
+     "total": 4
+    },
+    "pbix": {
+     "pontos": 1,
+     "categorias": [
+      "ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 30%)": 4
+      }
+     },
+     "total": 4
+    },
+    "iguais": true
+   },
+   {
+    "id": "6308f22b",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.ADRESSING 15 1": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.ADRESSING 15 1": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "de52f632",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 30%.CLIENT REVIEW 30": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 30%.CLIENT REVIEW 30": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "59602fe3",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 11,
+     "categorias": [
+      "2026-06-18",
+      "2026-06-25",
+      "2026-07-02",
+      "2026-07-09",
+      "2026-07-16",
+      "2026-07-23",
+      "2026-07-30",
+      "2026-08-06",
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27"
+     ],
+     "primeiro": {
+      "categoria": "2026-06-18",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.0003643858390553301,
+       "KPI.KPI 30 | 3D | COLUNA | % Realizado": null,
+       "KPI.KPI 30 | CURVA | % Baseline": 0.0005856200984817805,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 0.0003643858390553301,
+       "KPI.KPI 30 | 3D | CURVA | % Realizado": 0
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-08-27",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.01254005252839233,
+       "KPI.KPI 30 | 3D | COLUNA | % Realizado": null,
+       "KPI.KPI 30 | CURVA | % Baseline": 1,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 30 | 3D | CURVA | % Realizado": 0.9999999801587299
+      }
+     },
+     "total": 20.47509619881604
+    },
+    "pbix": {
+     "pontos": 11,
+     "categorias": [
+      "2026-06-18",
+      "2026-06-25",
+      "2026-07-02",
+      "2026-07-09",
+      "2026-07-16",
+      "2026-07-23",
+      "2026-07-30",
+      "2026-08-06",
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27"
+     ],
+     "primeiro": {
+      "categoria": "2026-06-18",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.0003643567943185567,
+       "KPI.KPI 30 | 3D | COLUNA | % Realizado": null,
+       "KPI.KPI 30 | CURVA | % Baseline": 0.0005855734194405376,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 0.0003643567943185567,
+       "KPI.KPI 30 | 3D | CURVA | % Realizado": 0
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-08-27",
+      "valores": {
+       "KPI.KPI 30 | COLUNA | % Baseline": 0.012539418513030002,
+       "KPI.KPI 30 | 3D | COLUNA | % Realizado": null,
+       "KPI.KPI 30 | CURVA | % Baseline": 1,
+       "KPI.KPI 30 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 30 | 3D | CURVA | % Realizado": 1
+      }
+     },
+     "total": 20.475193730472867
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p09": {
+  "nome": "LDP - 3D - 60%",
+  "dataCorte": "2026-10-01",
+  "visuais": [
+   {
+    "id": "c14d0b31",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 7
+    },
+    "pbix": {
+     "linhas": 7
+    },
+    "iguais": true
+   },
+   {
+    "id": "7c21c0ba",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 2,
+     "categorias": [
+      "NOT STARTED",
+      "ELABORATION"
+     ],
+     "primeiro": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "ELABORATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 3
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 4,
+     "categorias": [
+      "(Blank)",
+      "CANCELED",
+      "NOT STARTED",
+      "INTERNAL"
+     ],
+     "primeiro": {
+      "categoria": "(Blank)",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "INTERNAL",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 7
+    },
+    "iguais": false
+   },
+   {
+    "id": "4c907805",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 60%)": 7
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 60%)": 7
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "fcb7f8a4",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.CANCELED 60": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.CANCELED 60": 1
+     }
+    },
+    "iguais": false
+   },
+   {
+    "id": "c8ef976d",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.ISSUED 60": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.ISSUED 60": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "e595d4cb",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 7,
+     "categorias": [
+      "INSTRUMENTATION AND AUTOMATION",
+      "MECHANICAL",
+      "PIPING",
+      "ELECTRICAL",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASTRUCTURE"
+     ],
+     "primeiro": {
+      "categoria": "INSTRUMENTATION AND AUTOMATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "INFRASTRUCTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 7,
+     "categorias": [
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "INFRASCTRUTURE",
+      "PIPING",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "MECHANICAL"
+     ],
+     "primeiro": {
+      "categoria": "INSTRUMENTATION AND AUTOMATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "MECHANICAL",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 7
+    },
+    "iguais": false
+   },
+   {
+    "id": "aa321e49",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 1,
+     "categorias": [
+      "TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 7
+      }
+     },
+     "ultimo": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 7
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 4,
+     "categorias": [
+      "(Blank)",
+      "CANCELED",
+      "TO BE ISSUED",
+      "NOT TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "(Blank)",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 4
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 60%)": 1
+      }
+     },
+     "total": 7
+    },
+    "iguais": false
+   },
+   {
+    "id": "a889a460",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.ADRESSING 60": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.ADRESSING 60": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "e2df5cc8",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 60%.CLIENT REVIEW 60": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 60%.CLIENT REVIEW 60": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "9bd852d7",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 11,
+     "categorias": [
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27",
+      "2026-09-03",
+      "2026-09-10",
+      "2026-09-17",
+      "2026-09-24",
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22"
+     ],
+     "primeiro": {
+      "categoria": "2026-08-13",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0.08214778315519627,
+       "KPI.KPI 60 | COLUNA | % Realizado": 0,
+       "KPI.KPI 60 | CURVA | % Baseline": 0.08214778315519627,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 60 | CURVA | % Realizado": 0
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-10-22",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 1,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "total": 18.693614732223153
+    },
+    "pbix": {
+     "pontos": 11,
+     "categorias": [
+      "2026-08-13",
+      "2026-08-20",
+      "2026-08-27",
+      "2026-09-03",
+      "2026-09-10",
+      "2026-09-17",
+      "2026-09-24",
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22"
+     ],
+     "primeiro": {
+      "categoria": "2026-08-13",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0.08215313874573407,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 0.08215313874573407,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-10-22",
+      "valores": {
+       "KPI.KPI 60 | COLUNA | % Baseline": 0,
+       "KPI.KPI 60 | COLUNA | % Realizado": null,
+       "KPI.KPI 60 | CURVA | % Baseline": 1,
+       "KPI.KPI 60 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 60 | CURVA | % Realizado": null
+      }
+     },
+     "total": 18.608808746025996
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p10": {
+  "nome": "LDP - 3D - 90%",
+  "dataCorte": "2026-10-01",
+  "visuais": [
+   {
+    "id": "51e521cc",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 7
+    },
+    "pbix": {
+     "linhas": 7
+    },
+    "iguais": true
+   },
+   {
+    "id": "2d376cb6",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 1,
+     "categorias": [
+      "NOT STARTED"
+     ],
+     "primeiro": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 1,
+     "categorias": [
+      "NOT STARTED"
+     ],
+     "primeiro": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "ultimo": {
+      "categoria": "NOT STARTED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "total": 7
+    },
+    "iguais": true
+   },
+   {
+    "id": "a2dbaffe",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(LDP (4).Fase 90%)": 7
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(LDP (4).Fase 90%)": 7
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "947d01e9",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.CANCELED 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.CANCELED 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "291e9db4",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.ISSUED 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.ISSUED 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "5ac83aca",
+    "tipo": "clusteredBarChart",
+    "real": {
+     "pontos": 7,
+     "categorias": [
+      "INSTRUMENTATION AND AUTOMATION",
+      "PIPING",
+      "ELECTRICAL",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "INFRASTRUCTURE",
+      "DIGITAL SYSTEM"
+     ],
+     "primeiro": {
+      "categoria": "INSTRUMENTATION AND AUTOMATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "DIGITAL SYSTEM",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 1
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 7,
+     "categorias": [
+      "INSTRUMENTATION AND AUTOMATION",
+      "ELECTRICAL",
+      "INFRASCTRUTURE",
+      "DIGITAL SYSTEM",
+      "CIVIL",
+      "PIPING",
+      "STEEL STRUCTURE"
+     ],
+     "primeiro": {
+      "categoria": "INSTRUMENTATION AND AUTOMATION",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 1
+      }
+     },
+     "ultimo": {
+      "categoria": "STEEL STRUCTURE",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 1
+      }
+     },
+     "total": 7
+    },
+    "iguais": false
+   },
+   {
+    "id": "f8355e32",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 1,
+     "categorias": [
+      "TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "ultimo": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "total": 7
+    },
+    "pbix": {
+     "pontos": 1,
+     "categorias": [
+      "TO BE ISSUED"
+     ],
+     "primeiro": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "ultimo": {
+      "categoria": "TO BE ISSUED",
+      "valores": {
+       "CountNonNull(LDP (4).Fase 90%)": 7
+      }
+     },
+     "total": 7
+    },
+    "iguais": true
+   },
+   {
+    "id": "f476e3eb",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.CLIENT REVIEW 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.CLIENT REVIEW 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "c2ba931a",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "dFase Engenharia 90%.ADRESSING 90": null
+     }
+    },
+    "pbix": {
+     "valores": {
+      "dFase Engenharia 90%.ADRESSING 90": null
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "2c9e8683",
+    "tipo": "lineClusteredColumnComboChart",
+    "real": {
+     "pontos": 7,
+     "categorias": [
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22",
+      "2026-10-29",
+      "2026-11-05",
+      "2026-11-12"
+     ],
+     "primeiro": {
+      "categoria": "2026-10-01",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0,
+       "KPI.KPI 90 | COLUNA | % Realizado": 0,
+       "KPI.KPI 90 | CURVA | % Baseline": 0.4219907407407407,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 90 | CURVA | % Realizado": 0.013888888888888888
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-11-12",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0.024232804232804186,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 1,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 90 | CURVA | % Realizado": null
+      }
+     },
+     "total": 10.371097282347282
+    },
+    "pbix": {
+     "pontos": 7,
+     "categorias": [
+      "2026-10-01",
+      "2026-10-08",
+      "2026-10-15",
+      "2026-10-22",
+      "2026-10-29",
+      "2026-11-05",
+      "2026-11-12"
+     ],
+     "primeiro": {
+      "categoria": "2026-10-01",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 0.4219907407407407,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 0,
+       "KPI.KPI 90 | CURVA | % Realizado": 0.013888888888888888
+      }
+     },
+     "ultimo": {
+      "categoria": "2026-11-12",
+      "valores": {
+       "KPI.KPI 90 | COLUNA | % Baseline": 0.024232804232804345,
+       "KPI.KPI 90 | COLUNA | % Realizado": null,
+       "KPI.KPI 90 | CURVA | % Baseline": 1,
+       "KPI.KPI 90 | CURVA | % Reprogramado": 1,
+       "KPI.KPI 90 | CURVA | % Realizado": null
+      }
+     },
+     "total": 10.371097282347282
+    },
+    "iguais": false
+   }
+  ]
+ },
+ "p17": {
+  "nome": "Programação",
+  "dataCorte": null,
+  "visuais": [
+   {
+    "id": "4f0d9cb4",
+    "tipo": "tableEx",
+    "real": {
+     "linhas": 103
+    },
+    "pbix": {
+     "linhas": 103
+    },
+    "iguais": true
+   },
+   {
+    "id": "d2c0e0e9",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Sum(Planilha1.ITEM)": 108
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Sum(Planilha1.ITEM)": 108
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "c9849695",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 26
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 26
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "bfc7392a",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 28
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 28
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "fdc15852",
+    "tipo": "cardVisual",
+    "real": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 5
+     }
+    },
+    "pbix": {
+     "valores": {
+      "Min(Planilha1.DOCUMENT STATUS)": 5
+     }
+    },
+    "iguais": true
+   },
+   {
+    "id": "bfc533e4",
+    "tipo": "clusteredColumnChart",
+    "real": {
+     "pontos": 9,
+     "categorias": [
+      "MECHANICAL",
+      "INSTRUMENTATION AND AUTOMATION",
+      "PROCESS",
+      "ELECTRICAL",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "PIPING",
+      "INFRASTRUCTURE",
+      "DIGITAL SYSTEM"
+     ],
+     "primeiro": {
+      "categoria": "MECHANICAL",
+      "valores": {
+       "CountNonNull(Planilha1.DISCIPLINE)": 48
+      }
+     },
+     "ultimo": {
+      "categoria": "DIGITAL SYSTEM",
+      "valores": {
+       "CountNonNull(Planilha1.DISCIPLINE)": 1
+      }
+     },
+     "total": 103
+    },
+    "pbix": {
+     "pontos": 9,
+     "categorias": [
+      "MECHANICAL",
+      "INSTRUMENTATION AND AUTOMATION",
+      "PROCESS",
+      "ELECTRICAL",
+      "CIVIL",
+      "STEEL STRUCTURE",
+      "PIPING",
+      "INFRASTRUCTURE",
+      "DIGITAL SYSTEM"
+     ],
+     "primeiro": {
+      "categoria": "MECHANICAL",
+      "valores": {
+       "CountNonNull(Planilha1.DISCIPLINE)": 48
+      }
+     },
+     "ultimo": {
+      "categoria": "DIGITAL SYSTEM",
+      "valores": {
+       "CountNonNull(Planilha1.DISCIPLINE)": 1
+      }
+     },
+     "total": 103
+    },
+    "iguais": true
+   }
+  ]
+ }
+}

@@ -1,0 +1,1443 @@
+== dFase Engenharia 30% | Documents 30
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    NOT ISBLANK('LDP (4)'[DOCUMENT STATUS 30%])
+)
+== dFase Engenharia 30% | ISSUED 30
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 30%] = "Issued"
+)
+== dFase Engenharia 30% | CANCELED 30
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 30%] = "Canceled"
+)
+== dFase Engenharia 30% | CLIENT REVIEW 30
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 30%] = "CLIENT REVIEW"
+)
+== dFase Engenharia 30% | ADRESSING 30
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 30%] = "ADRESSING COMMENTS"
+)
+== dFase Engenharia 60% | Documents 60
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    NOT ISBLANK('LDP (4)'[DOCUMENT STATUS 60%])
+)
+== dFase Engenharia 60% | ISSUED 60
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 60%] = "Issued"
+)
+== dFase Engenharia 60% | CANCELED 60
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 60%] = "Canceled"
+)
+== dFase Engenharia 60% | CLIENT REVIEW 60
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 60%] = "CLIENT REVIEW"
+)
+== dFase Engenharia 60% | ADRESSING 60
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 60%] = "ADRESSING COMMENTS"
+)
+== dFase Engenharia 90% | Documents 90
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    NOT ISBLANK('LDP (4)'[DOCUMENT STATUS 90%])
+)
+== dFase Engenharia 90% | ISSUED 90
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 90%] = "Issued"
+)
+== dFase Engenharia 90% | CANCELED 90
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[SITUATION 90%] = "Canceled"
+)
+== dFase Engenharia 90% | CLIENT REVIEW 90
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 90%] = "CLIENT REVIEW"
+)
+== dFase Engenharia 90% | ADRESSING 90
+
+CALCULATE(
+    COUNTROWS('LDP (4)'),
+    'LDP (4)'[DOCUMENT STATUS 90%] = "ADRESSING COMMENTS"
+)
+== KPI | KPI | BASE | Trabalho Real
+
+SUM(
+    'AssignmentByDay'[Trabalho Real]
+)
+
+== KPI | KPI | BASE | Trabalho Tendência
+
+SUM(
+    'AssignmentByDay'[Trabalho]
+)
+
+== KPI | KPI | BASE | Trabalho Linha Base
+
+SUM(
+    'AssignmentByDay'[Trab Linha de Base]
+)
+
+== KPI | KPI | BASE | HH Total Tendência
+
+CALCULATE(
+    [KPI | BASE | Trabalho Tendência],
+    REMOVEFILTERS('dCalendario'),
+    REMOVEFILTERS('dSemana')
+)
+
+== KPI | KPI | BASE | HH Total Linha Base
+
+CALCULATE(
+    [KPI | BASE | Trabalho Linha Base],
+    REMOVEFILTERS('dCalendario'),
+    REMOVEFILTERS('dSemana')
+)
+
+== KPI | KPI | CORTE | Data Corte
+
+CALCULATE(
+    SELECTEDVALUE('dSemana'[Data]),
+    REMOVEFILTERS('dCalendario')
+)
+
+== KPI | KPI | ACC | % Baseline
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioLB =
+    CALCULATE(
+        MIN('WBX'[Início da Linha de Base]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR TerminoLB =
+    CALCULATE(
+        MAX('WBX'[Término da Linha de Base]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR DataLimite =
+    MIN(
+        DataCorte,
+        TerminoLB
+    )
+
+VAR DiasTotais =
+    COUNTROWS(
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] >= InicioLB &&
+            'dCalendario'[Data] <= TerminoLB &&
+            WEEKDAY('dCalendario'[Data], 2) <= 5
+        )
+    )
+
+VAR DiasAteCorte =
+    COUNTROWS(
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] >= InicioLB &&
+            'dCalendario'[Data] <= DataLimite &&
+            WEEKDAY('dCalendario'[Data], 2) <= 5
+        )
+    )
+
+RETURN
+SWITCH(
+    TRUE(),
+    ISBLANK(DataCorte), BLANK
+== KPI | KPI | ACC | % Planejado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR Corte =
+    INT(DataCorte) + TIME(17, 0, 0)
+
+VAR Atividades =
+    CALCULATETABLE(
+        FILTER(
+            'WBX',
+            'WBX'[É Resumo] = FALSE()
+        ),
+        REMOVEFILTERS('dCalendario'),
+        REMOVEFILTERS('dSemana')
+    )
+
+VAR Invalidas =
+    COUNTROWS(
+        FILTER(
+            Atividades,
+            'WBX'[Trabalho] < 0
+                ||
+            (
+                'WBX'[Trabalho] > 0
+                    &&
+                (
+                    ISBLANK('WBX'[Início])
+                        ||
+                    ISBLANK('WBX'[Término])
+                        ||
+                    'WBX'[Término] < 'WBX'[Início]
+                )
+            )
+        )
+    )
+
+VAR TrabalhoTotal =
+    SUMX(
+        Atividades,
+        'WBX'[Trabalho]
+    )
+
+VAR TrabalhoPlanejado =
+    SUMX(
+        Atividades,
+
+        VAR I
+== KPI | KPI | ACC | % Reprogramado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR Inicio =
+    CALCULATE(
+        MIN('WBX'[Início]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR Termino =
+    CALCULATE(
+        MAX('WBX'[Término]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR DataLimite =
+    MIN(
+        DataCorte,
+        Termino
+    )
+
+VAR DiasTotais =
+    COUNTROWS(
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] >= Inicio &&
+            'dCalendario'[Data] <= Termino &&
+            WEEKDAY('dCalendario'[Data], 2) <= 5
+        )
+    )
+
+VAR DiasAteCorte =
+    COUNTROWS(
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] >= Inicio &&
+            'dCalendario'[Data] <= DataLimite &&
+            WEEKDAY('dCalendario'[Data], 2) <= 5
+        )
+    )
+
+RETURN
+SWITCH(
+    TRUE(),
+    ISBLANK(DataCorte), BLANK(),
+    DataCorte < Inicio, 0,
+    DataCorte >
+== KPI | KPI | ACC | % Realizado
+
+VAR TrabalhoReal =
+    CALCULATE(
+        SUM('WBX'[Trabalho Real]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+RETURN
+MIN(
+    1,
+    DIVIDE(
+        TrabalhoReal,
+        [KPI | BASE | HH Total Tendência],
+        0
+    )
+)
+
+== KPI | KPI | ACC | % Desvio
+
+VAR Planejado =
+    [KPI | ACC | % Planejado]
+
+VAR Realizado =
+    [KPI | ACC | % Realizado]
+
+RETURN
+IF(
+    ISBLANK(Planejado) ||
+    ISBLANK(Realizado),
+    BLANK(),
+    Realizado - Planejado
+)
+
+== KPI | KPI | BASE SEM | % Planejado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TrabalhoSemana =
+    CALCULATE(
+        [KPI | BASE | Trabalho Linha Base],
+        REMOVEFILTERS('dCalendario'),
+        TREATAS(
+            { DataCorte },
+            'dCalendario'[Data Corte]
+        )
+    )
+
+RETURN
+IF(
+    ISBLANK(DataCorte),
+    BLANK(),
+    DIVIDE(
+        TrabalhoSemana,
+        [KPI | BASE | HH Total Linha Base],
+        0
+    )
+)
+
+== KPI | KPI | BASE SEM | % Realizado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioSemana =
+    CALCULATE(
+        MAX('dCalendario'[Início da Semana]),
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] = DataCorte
+        )
+    )
+
+VAR TrabalhoTotal =
+    CALCULATE(
+        SUM('WBX'[Trabalho]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR RealAteCorte =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] <= DataCorte
+        )
+    )
+
+VAR RealAntesSemana =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] < InicioSemana
+        )
+    )
+
+VAR TrabalhoSemana =
+    RealAteCorte - Re
+== KPI | KPI | BASE SEM | % Desvio
+
+VAR Planejado =
+    [KPI | BASE SEM | % Planejado]
+
+VAR Realizado =
+    [KPI | BASE SEM | % Realizado]
+
+RETURN
+IF(
+    ISBLANK(Planejado) ||
+    ISBLANK(Realizado),
+    BLANK(),
+    Realizado - Planejado
+)
+
+== KPI | KPI | COLUNA | % Baseline
+
+DIVIDE(
+    [KPI | BASE | Trabalho Linha Base],
+    [KPI | BASE | HH Total Linha Base],
+    0
+)
+
+== KPI | KPI | COLUNA | % Realizado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR DataSemana =
+    MAX('dCalendario'[Data Corte])
+
+VAR RealSemana =
+    [KPI | BASE | Trabalho Real]
+
+VAR RealFuturo =
+    CALCULATE(
+        [KPI | BASE | Trabalho Real],
+        FILTER(
+            ALL('dCalendario'[Data]),
+            'dCalendario'[Data] > DataCorte
+        )
+    )
+
+RETURN
+SWITCH(
+    TRUE(),
+
+    ISBLANK(DataCorte),
+        BLANK(),
+
+    DataSemana > DataCorte,
+        BLANK(),
+
+    DataSemana = DataCorte,
+        DIVIDE(
+            RealSemana + RealFuturo,
+            [KPI | BASE | HH Total Tendência],
+            0
+        ),
+
+    DIVIDE(
+        RealSemana,
+        [KPI | BASE | HH Total Tendência],
+        0
+    )
+)
+
+== KPI | KPI | CURVA | % Baseline
+
+VAR DataEixo =
+    MAX('dCalendario'[Início da Semana]) + 7
+
+VAR DataMax =
+    MAXX(
+        ALLSELECTED('WBX'),
+        'WBX'[Término da Linha de Base]
+    )
+
+VAR DataAtual =
+    MIN(
+        DataEixo,
+        DataMax
+    )
+
+VAR TrabalhoTotal =
+    SUMX(
+        ALLSELECTED('WBX'),
+        'WBX'[Trabalho]
+    )
+
+VAR TrabalhoAcumulado =
+    SUMX(
+        ALLSELECTED('WBX'),
+
+        VAR Inicio =
+            'WBX'[Início da Linha de Base]
+
+        VAR Termino =
+            'WBX'[Término da Linha de Base]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+                DAY
+            )
+
+        VAR Avanco =
+            SWITCH(
+                TRUE(),
+
+                ISBLANK(Inicio) ||
+                ISBLANK(Termino),
+                    0,
+
+                DataAtual < Inicio,
+                  
+== KPI | KPI | CURVA | % Reprogramado
+
+VAR DataEixo =
+    SELECTEDVALUE('dCalendario'[Data Corte])
+
+VAR Corte =
+    INT(DataEixo) + TIME(17, 0, 0)
+
+VAR Atividades =
+    CALCULATETABLE(
+        FILTER(
+            'WBX',
+            'WBX'[É Resumo] = FALSE()
+        ),
+        REMOVEFILTERS('dCalendario'),
+        REMOVEFILTERS('dSemana')
+    )
+
+VAR Invalidas =
+    COUNTROWS(
+        FILTER(
+            Atividades,
+            'WBX'[Trabalho] < 0
+                ||
+            (
+                'WBX'[Trabalho] > 0
+                    &&
+                (
+                    ISBLANK('WBX'[Início])
+                        ||
+                    ISBLANK('WBX'[Término])
+                        ||
+                    'WBX'[Término] < 'WBX'[Início]
+                )
+            )
+        )
+    )
+
+VAR Total =
+    SUMX(
+        Atividades,
+        'WBX'[Trabalho]
+    )
+
+VAR Previsto =
+    SUMX(
+        Atividades,
+
+        VAR Inicio
+== KPI | KPI | CURVA | % Realizado
+
+VAR DataEixo =
+    MAX('dCalendario'[Início da Semana]) + 6
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TrabalhoTotal =
+    CALCULATE(
+        SUM('WBX'[Trabalho]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR TrabalhoRealAcumulado =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] <= DataEixo
+        )
+    )
+
+VAR RealizadoHistorico =
+    DIVIDE(
+        TrabalhoRealAcumulado,
+        TrabalhoTotal,
+        0
+    )
+
+VAR SemanaDoCorte =
+    DataEixo >= DataCorte &&
+    DataEixo - 6 <= DataCorte
+
+RETURN
+SWITCH(
+    TRUE(),
+
+    ISBLANK(DataCorte),
+        BLANK(),
+
+    DataEixo < DataCorte,
+        RealizadoHistorico,
+
+    SemanaDoCorte,
+        [KPI | ACC | % Realizado],
+
+    BLANK()
+)
+== KPI | KPI | CURVA | Mostrar Período
+
+VAR DataSemana =
+    MAX('dCalendario'[Início da Semana])
+
+VAR InicioBaseline =
+    CALCULATE(
+        MIN('WBX'[Início da Linha de Base]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR InicioReprogramado =
+    CALCULATE(
+        MIN('WBX'[Início]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR TerminoBaseline =
+    CALCULATE(
+        MAX('WBX'[Término da Linha de Base]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR TerminoReprogramado =
+    CALCULATE(
+        MAX('WBX'[Término]),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR DataMin =
+    MIN(
+        InicioBaseline,
+        InicioReprogramado
+    )
+
+VAR DataMax =
+    MAX(
+        TerminoBaseline,
+        TerminoReprogramado
+    )
+
+RETURN
+IF(
+    DataSemana + 6 >= DataMin &&
+    DataSemana <= DataMax,
+    1,
+    0
+)
+
+== KPI | KPI | PRAZO | Início Baseline
+
+MIN(
+    'WBX'[Início da Linha de Base]
+)
+
+== KPI | KPI | PRAZO | Início Reprogramado
+
+MIN(
+    'WBX'[Início]
+)
+
+== KPI | KPI | PRAZO | Término Baseline
+
+MAX(
+    'WBX'[Término da Linha de Base]
+)
+
+== KPI | KPI | PRAZO | Término Reprogramado
+
+MAX(
+    'WBX'[Término]
+)
+
+== KPI | KPI | PRAZO | Desvio
+
+VAR TerminoBaseline =
+    [KPI | PRAZO | Término Baseline]
+
+VAR TerminoReprogramado =
+    [KPI | PRAZO | Término Reprogramado]
+
+RETURN
+IF(
+    ISBLANK(TerminoBaseline) ||
+    ISBLANK(TerminoReprogramado),
+    BLANK(),
+    DATEDIFF(
+        TerminoBaseline,
+        TerminoReprogramado,
+        DAY
+    )
+)
+
+== KPI | KPI | PRAZO | Duração Baseline
+
+VAR InicioBaseline =
+    [KPI | PRAZO | Início Baseline]
+
+VAR TerminoBaseline =
+    [KPI | PRAZO | Término Baseline]
+
+RETURN
+IF(
+    ISBLANK(InicioBaseline) ||
+    ISBLANK(TerminoBaseline),
+    BLANK(),
+    DATEDIFF(
+        InicioBaseline,
+        TerminoBaseline,
+        DAY
+    )
+)
+
+== KPI | KPI | PRAZO | Dias Restantes
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TerminoReprogramado =
+    [KPI | PRAZO | Término Reprogramado]
+
+RETURN
+IF(
+    ISBLANK(DataCorte) ||
+    ISBLANK(TerminoReprogramado),
+    BLANK(),
+    MAX(
+        0,
+        DATEDIFF(
+            DataCorte,
+            TerminoReprogramado,
+            DAY
+        )
+    )
+)
+== KPI | KPI 30 | BASE | Trabalho Linha Base
+
+CALCULATE(
+    SUM('WBX'[Trab Linha de Base]),
+    KEEPFILTERS(
+        'WBX'[Level 4] = "Engineering - 30%"
+    ),
+    REMOVEFILTERS('dCalendario')
+)
+
+== KPI | KPI 30 | BASE | Trabalho Real
+
+CALCULATE(
+    SUM('WBX'[Trabalho Real]),
+    KEEPFILTERS(
+        'WBX'[Level 4] = "Engineering - 30%"
+    ),
+    REMOVEFILTERS('dCalendario')
+)
+
+== KPI | KPI 30 | BASE | Trabalho Tendência
+
+CALCULATE(
+    SUM('WBX'[Trabalho]),
+    KEEPFILTERS(
+        'WBX'[Level 4] = "Engineering - 30%"
+    ),
+    REMOVEFILTERS('dCalendario')
+)
+
+== KPI | KPI 30 | ACC | % Realizado
+
+VAR TrabalhoReal30 =
+    [KPI 30 | BASE | Trabalho Real]
+
+VAR TrabalhoLinhaBase30 =
+    [KPI 30 | BASE | Trabalho Linha Base]
+
+RETURN
+IF(
+    ISBLANK(TrabalhoLinhaBase30)
+        || TrabalhoLinhaBase30 = 0,
+    BLANK(),
+    MIN(
+        1,
+        DIVIDE(
+            TrabalhoReal30,
+            TrabalhoLinhaBase30,
+            0
+        )
+    )
+)
+
+== KPI | KPI 30 | ACC | % Planejado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioSemana =
+    CALCULATE(
+        MAX('dCalendario'[Início da Semana]),
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] = DataCorte
+        )
+    )
+
+VAR DataAvaliacao =
+    InicioSemana + 7
+
+VAR TrabalhoTotal30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Trabalho]
+    )
+
+VAR TrabalhoAcumulado30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+
+        VAR Inicio =
+            'WBX'[Início]
+
+        VAR Termino =
+            'WBX'[Término]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+                DAY
+            )
+
+        VAR Avanco =
+         
+== KPI | KPI 30 | ACC | % Desvio
+
+VAR Planejado =
+    [KPI 30 | ACC | % Planejado]
+
+VAR Realizado =
+    [KPI 30 | ACC | % Realizado]
+
+RETURN
+IF(
+    ISBLANK(Planejado)
+        || ISBLANK(Realizado),
+    BLANK(),
+    Realizado - Planejado
+)
+
+== KPI | KPI 30 | PRAZO | Início Baseline
+
+CALCULATE(
+    MIN('WBX'[Início da Linha de Base]),
+    FILTER(
+        ALLSELECTED('WBX'),
+        'WBX'[Level 4] = "Engineering - 30%"
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Início Reprogramado
+
+CALCULATE(
+    MIN('WBX'[Início]),
+    FILTER(
+        ALLSELECTED('WBX'),
+        'WBX'[Level 4] = "Engineering - 30%"
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Término Baseline
+
+CALCULATE(
+    MAX('WBX'[Término da Linha de Base]),
+    FILTER(
+        ALLSELECTED('WBX'),
+        'WBX'[Level 4] = "Engineering - 30%"
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Término Reprogramado
+
+CALCULATE(
+    MAX('WBX'[Término]),
+    FILTER(
+        ALLSELECTED('WBX'),
+        'WBX'[Level 4] = "Engineering - 30%"
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Desvio
+
+VAR TerminoBaseline =
+    [KPI 30 | PRAZO | Término Baseline]
+
+VAR TerminoReprogramado =
+    [KPI 30 | PRAZO | Término Reprogramado]
+
+RETURN
+IF(
+    ISBLANK(TerminoBaseline)
+        || ISBLANK(TerminoReprogramado),
+    BLANK(),
+    DATEDIFF(
+        TerminoBaseline,
+        TerminoReprogramado,
+        DAY
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Duração Baseline
+
+VAR InicioBaseline =
+    [KPI 30 | PRAZO | Início Baseline]
+
+VAR TerminoBaseline =
+    [KPI 30 | PRAZO | Término Baseline]
+
+RETURN
+IF(
+    ISBLANK(InicioBaseline)
+        || ISBLANK(TerminoBaseline),
+    BLANK(),
+    DATEDIFF(
+        InicioBaseline,
+        TerminoBaseline,
+        DAY
+    )
+)
+
+== KPI | KPI 30 | PRAZO | Dias Restantes
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TerminoReprogramado =
+    [KPI 30 | PRAZO | Término Reprogramado]
+
+RETURN
+IF(
+    ISBLANK(DataCorte)
+        || ISBLANK(TerminoReprogramado),
+    BLANK(),
+    MAX(
+        0,
+        DATEDIFF(
+            DataCorte,
+            TerminoReprogramado,
+            DAY
+        )
+    )
+)
+
+== KPI | KPI 30 | BASE SEM | % Planejado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioSemana =
+    CALCULATE(
+        MAX('dCalendario'[Início da Semana]),
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] = DataCorte
+        )
+    )
+
+VAR FimSemana =
+    InicioSemana + 7
+
+VAR TrabalhoTotal30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Trabalho]
+    )
+
+VAR PlanejadoAteFimSemana =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+
+        VAR Inicio =
+            'WBX'[Início]
+
+        VAR Termino =
+            'WBX'[Término]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+                DAY
+            )
+
+        VAR Avanco =
+           
+== KPI | KPI 30 | BASE SEM | % Realizado
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioSemana =
+    CALCULATE(
+        MAX('dCalendario'[Início da Semana]),
+        FILTER(
+            ALL('dCalendario'),
+            'dCalendario'[Data] = DataCorte
+        )
+    )
+
+VAR TrabalhoLinhaBase30 =
+    CALCULATE(
+        SUM('WBX'[Trab Linha de Base]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR RealAteCorte =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] <= DataCorte
+        )
+    )
+
+VAR RealAntesSemana =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'
+== KPI | KPI 30 | BASE SEM | % Desvio
+
+VAR Planejado =
+    [KPI 30 | BASE SEM | % Planejado]
+
+VAR Realizado =
+    [KPI 30 | BASE SEM | % Realizado]
+
+RETURN
+IF(
+    ISBLANK(Planejado)
+        || ISBLANK(Realizado),
+    BLANK(),
+    Realizado - Planejado
+)
+
+== KPI | KPI 30 | COLUNA | % Baseline
+
+VAR InicioSemana =
+    MAX('dCalendario'[Início da Semana])
+
+VAR FimSemana =
+    InicioSemana + 7
+
+VAR TrabalhoTotal30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Trabalho]
+    )
+
+VAR PlanejadoAteFimSemana =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+
+        VAR Inicio =
+            'WBX'[Início]
+
+        VAR Termino =
+            'WBX'[Término]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+                DAY
+            )
+
+        VAR Avanco =
+            SWITCH(
+                TRUE(),
+                ISBLANK(Inicio) || ISBLANK(Termino), 0,
+                FimSemana < Inicio, 0,
+                FimSemana >= Termino, 1,
+       
+== KPI | KPI 30 | COLUNA | % Realizado
+
+VAR InicioSemana =
+    MAX('dCalendario'[Início da Semana])
+
+VAR FimSemana =
+    InicioSemana + 6
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TrabalhoLinhaBase30 =
+    CALCULATE(
+        SUM('WBX'[Trab Linha de Base]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR LimiteReal =
+    MIN(
+        FimSemana,
+        DataCorte
+    )
+
+VAR TrabalhoRealSemana =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] >= InicioSemana
+                && 'AssignmentByDay'[TimeByDay] <= LimiteReal
+        )
+    )
+
+RETURN
+IF(
+    ISBLANK(DataCorte)
+        || InicioSemana > DataCorte
+ 
+== KPI | KPI 30 | CURVA | % Baseline
+
+VAR DataEixo =
+    MAX('dCalendario'[Início da Semana]) + 7
+
+VAR DataMax =
+    MAXX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Término da Linha de Base]
+    )
+
+VAR DataAtual =
+    MIN(
+        DataEixo,
+        DataMax
+    )
+
+VAR TrabalhoTotal30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Trabalho]
+    )
+
+VAR TrabalhoAcumulado30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+
+        VAR Inicio =
+            'WBX'[Início da Linha de Base]
+
+        VAR Termino =
+            'WBX'[Término da Linha de Base]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+    
+== KPI | KPI 30 | CURVA | % Reprogramado
+
+VAR DataEixo =
+    MAX('dCalendario'[Início da Semana]) + 7
+
+VAR DataMax =
+    MAXX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Término]
+    )
+
+VAR DataAtual =
+    MIN(
+        DataEixo,
+        DataMax
+    )
+
+VAR TrabalhoTotal30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        'WBX'[Trabalho]
+    )
+
+VAR TrabalhoAcumulado30 =
+    SUMX(
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+
+        VAR Inicio =
+            'WBX'[Início]
+
+        VAR Termino =
+            'WBX'[Término]
+
+        VAR Peso =
+            'WBX'[Trabalho]
+
+        VAR Duracao =
+            DATEDIFF(
+                Inicio,
+                Termino,
+                DAY
+            )
+
+        VAR Avanco =
+== KPI | KPI 30 | CURVA | % Realizado
+
+VAR DataEixo =
+    MAX('dCalendario'[Início da Semana]) + 6
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR TrabalhoLinhaBase30 =
+    CALCULATE(
+        SUM('WBX'[Trab Linha de Base]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario')
+    )
+
+VAR DataLimite =
+    MIN(
+        DataEixo,
+        DataCorte
+    )
+
+VAR TrabalhoRealAcumulado30 =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        REMOVEFILTERS('dCalendario'),
+        FILTER(
+            ALL('AssignmentByDay'[TimeByDay]),
+            'AssignmentByDay'[TimeByDay] <= DataLimite
+        )
+    )
+
+VAR RealizadoHistorico =
+    DIVIDE(
+        TrabalhoRealAcumulado30,
+        TrabalhoLinhaBase30,
+        0
+    )
+
+VAR SemanaDoCorte =
+    DataEixo >= DataCorte
+       
+== KPI | KPI 30 | CURVA | Mostrar Período
+
+VAR DataSemana =
+    MAX('dCalendario'[Início da Semana])
+
+VAR InicioBaseline =
+    CALCULATE(
+        MIN('WBX'[Início da Linha de Base]),
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        )
+    )
+
+VAR InicioReprogramado =
+    CALCULATE(
+        MIN('WBX'[Início]),
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        )
+    )
+
+VAR TerminoBaseline =
+    CALCULATE(
+        MAX('WBX'[Término da Linha de Base]),
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        )
+    )
+
+VAR TerminoReprogramado =
+    CALCULATE(
+        MAX('WBX'[Término]),
+        FILTER(
+            ALLSELECTED('WBX'),
+            'WBX'[Level 4] = "Engineering - 30%"
+        )
+    )
+
+VAR DataMin =
+    MIN(
+        InicioBaseline,
+        InicioReprogramado
+    )
+
+V
+== LDP (4) | TOTAL EMITIDOS 60%
+
+CALCULATE(
+    DISTINCTCOUNT('LDP (4)'[N&A DOCUMENT NUMBER]),
+    'LDP (4)'[SITUATION 60%] = "ISSUED"
+)
+== KPI | KPI 30 | 3D | COLUNA | % Realizado
+
+VAR DataEixo =
+    SELECTEDVALUE('dCalendario'[Data Corte])
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR InicioSemana =
+    DataEixo - 6
+
+VAR Documentos3D =
+    CALCULATETABLE(
+        VALUES('LDP (4)'[N&A DOCUMENT NUMBER]),
+        KEEPFILTERS(
+            'LDP (4)'[FORMAT] = "3D"
+        )
+    )
+
+VAR TrabalhoLinhaBase3D30 =
+    CALCULATE(
+        SUM('WBX'[Trab Linha de Base]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        KEEPFILTERS(
+            'WBX'[É Resumo] = FALSE()
+        ),
+        TREATAS(
+            Documentos3D,
+            'WBX'[NA DOCUMENT NUMBER]
+        ),
+        REMOVEFILTERS('dCalendario'),
+        REMOVEFILTERS('dSemana')
+    )
+
+VAR TrabalhoRealSemanaNormal3D30 =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        K
+== KPI | KPI 30 | 3D | CURVA | % Realizado
+
+VAR DataEixo =
+    SELECTEDVALUE('dCalendario'[Data Corte])
+
+VAR DataCorte =
+    [KPI | CORTE | Data Corte]
+
+VAR Documentos3D =
+    CALCULATETABLE(
+        VALUES('LDP (4)'[N&A DOCUMENT NUMBER]),
+        KEEPFILTERS(
+            'LDP (4)'[FORMAT] = "3D"
+        )
+    )
+
+VAR TrabalhoLinhaBase3D30 =
+    CALCULATE(
+        SUM('WBX'[Trab Linha de Base]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        KEEPFILTERS(
+            'WBX'[É Resumo] = FALSE()
+        ),
+        TREATAS(
+            Documentos3D,
+            'WBX'[NA DOCUMENT NUMBER]
+        ),
+        REMOVEFILTERS('dCalendario'),
+        REMOVEFILTERS('dSemana')
+    )
+
+VAR TrabalhoRealHistorico3D30 =
+    CALCULATE(
+        SUM('AssignmentByDay'[Trabalho Real]),
+        KEEPFILTERS(
+            'WBX'[Level 4] = "Engineering - 30%"
+        ),
+        KEEPFILTERS(
+            'WBX'[É Resumo] 
