@@ -18,7 +18,7 @@ try {
     # 1) Jobs/robô: nada crítico rodando (tarefas agendadas e escrita recente de log de execução do robô).
     $jobs = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Running' -and $_.TaskName -match 'Planejamento|GRD|ACC|Rob[oô]|Sincronizar' -and $_.TaskName -notmatch 'Cloudflare' })
     if ($jobs.Count -gt 0) { throw 'Job agendado crítico em execução' }
-    $logsRobo = Get-ChildItem (Join-Path $root 'Logs') -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $logsRobo = @(Get-ChildItem (Join-Path $root 'Logs'), 'C:\Robo_NA_Connect\Logs_Historico' -File -ErrorAction SilentlyContinue) | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($logsRobo -and $logsRobo.LastWriteTime -gt (Get-Date).AddMinutes(-5)) { throw "Log do robô gravado há menos de 5 min ($($logsRobo.Name)) — possível ciclo em andamento" }
     # 2) Porta 5277: um único dono, o executável do bin vivo.
     $listeners = @(Get-NetTCPConnection -LocalPort 5277 -State Listen -ErrorAction SilentlyContinue)

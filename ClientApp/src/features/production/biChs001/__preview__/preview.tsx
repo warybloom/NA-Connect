@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { BiChs001Canvas } from "../BiChs001Canvas";
 import { VisualBi } from "../pbi/VisualBi";
 import { dadosDoVisual, segmentacaoNaoReproduzida, type FonteCarregada } from "../dados/motor";
-import { avisosDeFonte } from "../dados/avisos";
+import { avisosDeFonte, infoFonte } from "../dados/avisos";
 import { converterLinhas } from "../dados/entidades";
 import type { PaginaPbi, VisualPbi } from "../pbi/modelo";
 import "../biChs001.css";
@@ -24,7 +24,10 @@ const fontes: Record<string, FonteCarregada> = PBIX ? {
 } : {
   "LDP (4)": { estado: "ok" as const, linhas: converterLinhas("LDP (4)", linhas("./fixture-ldp.json")) },
   "Programação Semanal": { estado: "ok" as const, linhas: converterLinhas("Programação Semanal", linhas("./fixture-prog.json")) },
-  WBX: { estado: "ok" as const, linhas: converterLinhas("WBX", linhas("./fixture-crono.json")) },
+  WBX: { estado: "ok" as const, linhas: converterLinhas("WBX", linhas("./fixture-crono.json")),
+    versaoId: (FIXTURES["./fixture-meta.json"]?.default as unknown as { versaoId?: number } | undefined)?.versaoId },
+  // Série do cronograma isolado (linhas de /api/bi-chs001/schedule/trabalho-diario), se copiada.
+  ...(FIXTURES["./fixture-diario.json"] ? { AssignmentByDay: { estado: "ok" as const, linhas: converterLinhas("AssignmentByDay", linhas("./fixture-diario.json")) } } : {}),
 };
 function App() {
   const id = new URLSearchParams(location.search).get("p") ?? "p12";
@@ -35,6 +38,7 @@ function App() {
     : v.type === "slicer" ? { estado: "pendente" as const, motivo: segmentacaoNaoReproduzida(v) ?? "preview" } : dadosDoVisual(v, { pagina: pg, fontes, segmentacoes: {} });
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", gap: 4 }}>
+      {infoFonte(fontes).map((a) => <div key={a} className="bi-info-fonte">{a}</div>)}
       {avisosDeFonte(pg, fontes).map((a) => <div key={a} className="bi-aviso-fonte">{a}</div>)}
       <div style={{ flex: 1, minHeight: 0 }}><BiChs001Canvas pagina={pg}>{pg.visuais.map((v) => <VisualBi key={v.id} v={v} dados={dados(v)} />)}</BiChs001Canvas></div>
     </div>
