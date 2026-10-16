@@ -122,9 +122,6 @@ IF NOT EXISTS (SELECT 1 FROM bi_chs001.Alias_Rotulo WHERE Project_ID_ACC = N'b.f
     VALUES (N'b.fcdb7ebd-1b23-440d-a04b-90391098522e', N'Nome', N'Emgineering - 30%', N'Engineering - 30%', 1, 1,
             N'CHS001: EDT 1.5 do .mpp oficial grafada "Emgineering - 30%"; o PBIX filtra WBX[Level 4] = "Engineering - 30%" (Resumo 30%) e exclui esse valor nos Resumos 60%/90%. Correspondência só no BI CHS001; .mpp e importador Tipo 2 inalterados. Autorizado pelo usuário em 15/10/2026 (DIRETRIZ_ISOLAMENTO_OBRIGATORIA_20261015.md).');
 
-IF NOT EXISTS (SELECT 1 FROM bi_chs001.Migracao WHERE Versao = N'001')
-    INSERT INTO bi_chs001.Migracao (Versao, Descricao) VALUES (N'001', N'Schema isolado do BI CHS001: versões, tarefas, trabalho diário, alias de rótulo e views.');
-
 COMMIT TRANSACTION;
 GO
 
@@ -165,4 +162,12 @@ SELECT D.Versao_Id, D.Project_ID_ACC, D.UID_Tarefa,
        COUNT(*) AS Dias
 FROM bi_chs001.Trabalho_Tarefa_Dia AS D
 GROUP BY D.Versao_Id, D.Project_ID_ACC, D.UID_Tarefa, CONVERT(date, DATEADD(DAY, (DATEDIFF(DAY, '19000107', D.Data) / 7) * 7, '19000107'));
+GO
+
+/* Registro da migração SÓ depois de tabelas E views existirem: a API (SchemaExisteAsync) exige este registro, então uma
+   instalação interrompida no meio nunca é considerada pronta. */
+IF OBJECT_ID(N'bi_chs001.VW_Tarefa', N'V') IS NOT NULL AND OBJECT_ID(N'bi_chs001.VW_Versao_Atual', N'V') IS NOT NULL
+   AND OBJECT_ID(N'bi_chs001.VW_Trabalho_Semana', N'V') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM bi_chs001.Migracao WHERE Versao = N'001')
+    INSERT INTO bi_chs001.Migracao (Versao, Descricao) VALUES (N'001', N'Schema isolado do BI CHS001: versões, tarefas, trabalho diário, alias de rótulo e views.');
 GO

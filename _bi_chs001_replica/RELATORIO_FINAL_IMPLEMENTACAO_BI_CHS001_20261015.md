@@ -13,7 +13,7 @@ Sessão: `BI_CHS001_IMPL_ISOLADO_20261015` (Claude). Instrução executada: `EXE
 7. **Testes**: TS 46/46, .NET dedicados 22/22, `tsc` 0 erros, `vite build` ok, backend 0 erros.
 8. **⚠ Deploy do BACKEND NÃO executado**: o classificador de segurança do Claude Code bloqueou a troca do DLL/reinício (categoria "Production Deploy"). Script pronto, testado em preflight lógico, com rollback → **comando na §9**. Até lá, a tela usa automaticamente a fonte legada (sem regressão).
 9. **⚠ Build do checkout principal está quebrado** por arquivos em `_bi_chs001_replica` (ver §8.1) — não afeta o binário em execução, afeta o próximo `dotnet run`.
-10. Validação visual: sem sessão autenticada no navegador (não digitei senha). Capturas feitas na pré-visualização de dev com as linhas reais exportadas pelo mesmo SQL da API (§6). Auditoria Codex lançada em modo somente leitura (§10).
+10. Validação visual: sem sessão autenticada no navegador (não digitei senha). Capturas feitas na pré-visualização de dev com as linhas reais exportadas pelo mesmo SQL da API (§6). Auditoria Codex somente leitura **concluída** (isolamento aprovado; achados tratados na §12).
 
 ## 1. Status real das 10 telas (dados reais = versão 1 do bi_chs001, .mpp v47)
 
@@ -141,8 +141,27 @@ Diferenças MPP × PBIX explicadas: `Trabalho` 519 exatos / 641 a 0,005 h (marco
 
 ## 10. Revisão Codex
 
-Lançada às ~23:36 via `codex exec -s read-only` (sem permissão de escrita), com o prompt `PROMPT_CODEX_VALIDACAO_FINAL.md`. Resultado: ver `CODEX_VALIDACAO_FINAL_ISOLAMENTO.md` (salvo a partir da mensagem final do Codex) — estado registrado no adendo abaixo.
+**Auditada.** `codex exec -s read-only` 23:36–23:42 com `PROMPT_CODEX_VALIDACAO_FINAL.md`; parecer integral em `CODEX_VALIDACAO_FINAL_ISOLAMENTO.md`.
+Resumo do parecer: **isolamento APROVADO**; schema/versão 1 aprovado com ressalvas; tarefas e gates APROVADOS; série/curvas "não aprovado" (A01/A02); deploy não executado (C01). O Codex não conseguiu executar processos no sandbox dele (testes/SQL não reexecutados por ele) — baseou-se em código e artefatos. Respostas na §12. Nova rodada de verificação do Codex não foi lançada após as correções.
 
 ## 11. Git
 
-Trabalho versionado no worktree `.claude/worktrees/bi-chs001-isolado`, branch `worktree-bi-chs001-isolado` (sem remoto). O branch parte de `origin/main` e **não compila sozinho**: o módulo depende de arquivos ainda não versionados do checkout principal (rotas, sidebar). Nada foi commitado no checkout principal.
+Branch `worktree-bi-chs001-isolado` (worktree `.claude/worktrees/bi-chs001-isolado`), publicado em `origin` (PR possível: https://github.com/warybloom/NA-Connect/pull/new/worktree-bi-chs001-isolado — não aberto). O branch parte de `origin/main` e **não compila sozinho**: o módulo depende de arquivos ainda não versionados do checkout principal (rotas, sidebar). Nada foi commitado no checkout principal.
+
+## 12. Achados do Codex × ação tomada (23:43–23:50)
+
+| Achado | Ação / resposta | Estado |
+|---|---|---|
+| C01 backend vivo antigo | Correto. Deploy bloqueado pelo classificador; comando na §9 | **Pendente (usuário)** |
+| A01 série de LB +605 h (220 folhas) | Fato já registrado. Conferido no DAX: nenhuma medida das 10 telas usa a série de LB (curvas de LB usam datas da LB + `WBX[Trabalho]`; realizado usa a série de **Trabalho Real**, que fecha com as tarefas: 0 folhas divergentes). O leitor agora **gera aviso explícito** (B01). Causa raiz no MPXJ/arquivo não investigada | Mitigado (aviso); causa raiz pendente, sem impacto nas medidas |
+| A02 219 pares semanais extras × PBIX | **Explicado com evidência:** os 219 pares estão só nas semanas de 27/09, 04/10 e 11/10, somam 287,12 h = trabalho real a mais nas 113 tarefas cujo `ActualWork` no .mpp > cache do PBIX; nenhum par extra antes de 27/09. O PBIX foi atualizado antes desses lançamentos. Os 2.010 pares do PBIX batem a 2 casas. **3 pares em 11/10 são trabalho real após a data de status (08/10)** — as medidas do PBIX com corte 08/10 não os contam | Explicado; não é erro do leitor |
+| A03 build quebrado (`mpp_probe`) | Concordo; não editei arquivos do Codex nem o csproj compartilhado (§8.1) | **Pendente (decisão)** |
+| M01 migração registrava antes das views | Corrigido: registro `001` só depois das 3 views; `SchemaExisteAsync` exige tabelas + views + registro. Reaplicado: clone DOWN/UP/UP e produção UP (idempotente, exit 0, versão 1 preservada) | Corrigido |
+| M02 índice do alias > 1700 bytes | Já corrigido antes da produção (colunas `nvarchar(400)` → 1.100 bytes; o aviso citado é do 1º teste no clone) | Corrigido |
+| M03 POST sem tratamento | `SqlException` → 503; schema ausente → 503; falha ACC/MPXJ → 502 com motivo | Corrigido |
+| M04 fallback em 502 | Fallback para o legado agora **só em 404** (rota não publicada); 502/503 aparecem como erro | Corrigido |
+| M05 VERIFYONLY/HEADERONLY | Executados 23:43 e arquivados em `inventario\backup_verifyonly_headeronly.txt` ("O conjunto de backup no arquivo 1 é válido"; COPY_ONLY, checksums) | Corrigido |
+| B01 avisos de divergência | Adicionados (real e LB). Obs.: a versão 1 de produção foi gravada antes disso — seu `Diagnostico_JSON` tem `Avisos: []` mas os contadores (220) estão lá; a próxima versão já terá o texto | Corrigido |
+| B02 testes presos à v47 | Aceito como teste de aceitação da v47 no clone; documentado | Mantido |
+
+Depois das correções: `dotnet test NA_Connect.BiChs001.Tests` **22/22**, `testar.mjs` **46/46**, `tsc` **0**, backend composto **0 erros** (o candidato do deploy foi recompilado com elas). Arquivos corrigidos copiados para o checkout principal (log `copia_para_main.log`).

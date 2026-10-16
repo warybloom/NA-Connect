@@ -141,6 +141,11 @@ public static class BiChs001MppReader
         if (diag.TotalAtribuicoes == 0) diag.Avisos.Add("O .mpp não tem atribuições de recurso: não há série timephased (AssignmentByDay) a extrair.");
         if (diag.FolhasComTrabalhoRealSemSerie > 0)
             diag.Avisos.Add($"{diag.FolhasComTrabalhoRealSemSerie} folha(s) com Trabalho Real > 0 sem série diária (trabalho real lançado sem atribuição/timephased).");
+        if (diag.FolhasComSerieDivergenteDoTotalReal > 0)
+            diag.Avisos.Add($"{diag.FolhasComSerieDivergenteDoTotalReal} folha(s) com série de trabalho real diferente do Trabalho Real da tarefa (> {Tolerancia} h); série {diag.SomaSerieReal:0.##} h × tarefas {diag.SomaTrabalhoRealFolhas:0.##} h.");
+        if (diag.FolhasComSerieDivergenteDoTotalLinhaBase > 0)
+            diag.Avisos.Add($"{diag.FolhasComSerieDivergenteDoTotalLinhaBase} folha(s) com série timephased de LINHA DE BASE diferente do Trabalho LB da tarefa; série {diag.SomaSerieLinhaBase:0.##} h × tarefas {diag.SomaTrabalhoLinhaBaseFolhas:0.##} h. "
+                + "As medidas do PBIX não usam essa série (usam WBX[Trab Linha de Base] e só a série de Trabalho Real); gravada apenas para auditoria.");
         if (diag.BlocosSemHoraUtil > 0)
             diag.Avisos.Add($"{diag.BlocosSemHoraUtil} bloco(s) timephased sem hora útil no calendário efetivo: horas lançadas no dia de início do bloco.");
         return leitura;

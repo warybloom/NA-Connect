@@ -81,9 +81,17 @@ public sealed class BiChs001ScheduleController(IProjectAccessService projectAcce
     {
         var bloqueio = await Validar(projectId, KeysSincronizar, ct);
         if (bloqueio is not null) return bloqueio;
-        var servico = new BiChs001ScheduleSyncService(autodeskApi, new BiChs001ScheduleRepository(ConnectionString), logger);
-        var r = await servico.SincronizarDoAccAsync(projectId, User?.Identity?.Name ?? "api", gravar: true, ct);
-        return r.Sucesso ? Ok(r) : StatusCode(502, r);
+        try
+        {
+            var repo = new BiChs001ScheduleRepository(ConnectionString);
+            if (!await repo.SchemaExisteAsync(ct))
+                return StatusCode(503, new { message = "Schema bi_chs001 não instalado (Migrations/BiChs001/001_bi_chs001_UP.sql)." });
+            var servico = new BiChs001ScheduleSyncService(autodeskApi, repo, logger);
+            var r = await servico.SincronizarDoAccAsync(projectId, User?.Identity?.Name ?? "api", gravar: true, ct);
+            // Falha ao localizar/baixar/ler/gravar o .mpp (ACC ou arquivo) = dependência externa → 502 com o motivo.
+            return r.Sucesso ? Ok(r) : StatusCode(502, r);
+        }
+        catch (SqlException ex) { return Falha("schedule-sincronizar", ex); }
     }
 
     private async Task<IActionResult> LerVersao(string projectId, int? versao, string sql, string fonte, CancellationToken ct)

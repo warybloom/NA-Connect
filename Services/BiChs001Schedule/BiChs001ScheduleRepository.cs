@@ -11,15 +11,22 @@ namespace APS.WebApp.Services.BiChs001Schedule;
 /// </summary>
 public sealed class BiChs001ScheduleRepository(string connectionString)
 {
-    public const string SchemaObrigatorio = "bi_chs001.Versao_Cronograma";
-
+    /// <summary>Instalação completa = migração 001 registrada (o UP só a registra depois de criar tabelas E views).</summary>
     public async Task<bool> SchemaExisteAsync(CancellationToken ct)
     {
         await using var cn = new SqlConnection(connectionString);
         await cn.OpenAsync(ct);
-        await using var cmd = new SqlCommand("SELECT CASE WHEN OBJECT_ID(@o, 'U') IS NULL THEN 0 ELSE 1 END", cn);
-        cmd.Parameters.Add("@o", SqlDbType.NVarChar, 256).Value = SchemaObrigatorio;
-        return (int)(await cmd.ExecuteScalarAsync(ct))! == 1;
+        await using var cmd = new SqlCommand("""
+            SELECT CASE WHEN OBJECT_ID(N'bi_chs001.Migracao', 'U') IS NOT NULL
+                         AND OBJECT_ID(N'bi_chs001.Versao_Cronograma', 'U') IS NOT NULL AND OBJECT_ID(N'bi_chs001.Tarefa_Snapshot', 'U') IS NOT NULL
+                         AND OBJECT_ID(N'bi_chs001.Trabalho_Tarefa_Dia', 'U') IS NOT NULL AND OBJECT_ID(N'bi_chs001.Alias_Rotulo', 'U') IS NOT NULL
+                         AND OBJECT_ID(N'bi_chs001.VW_Tarefa', 'V') IS NOT NULL AND OBJECT_ID(N'bi_chs001.VW_Trabalho_Semana', 'V') IS NOT NULL
+                         AND OBJECT_ID(N'bi_chs001.VW_Versao_Atual', 'V') IS NOT NULL
+                    THEN 1 ELSE 0 END
+            """, cn);
+        if ((int)(await cmd.ExecuteScalarAsync(ct))! != 1) return false;
+        await using var mig = new SqlCommand("SELECT COUNT(*) FROM bi_chs001.Migracao WHERE Versao = N'001'", cn);
+        return (int)(await mig.ExecuteScalarAsync(ct))! == 1;
     }
 
     public async Task<string?> ObterHubAsync(string projectId, CancellationToken ct)

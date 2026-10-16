@@ -12,11 +12,14 @@ const cache = new Map<string, Promise<FonteCarregada>>();
 
 type Resposta = { linhas: Record<string, unknown>[]; indisponivel?: string | null; versaoId?: number | null };
 
-/** 404 numa rota NOVA do BI isolado = backend ainda sem o controlador publicado → tratado como "indisponível" (usa o legado). */
+/**
+ * 404 numa rota NOVA do BI isolado = backend ainda sem o controlador publicado → "indisponível" (usa o legado).
+ * 502/503 NÃO caem no legado: a rota existe e a falha é mostrada (não mascarar erro da fonte isolada).
+ */
 async function lerFonte(url: string, permitir404: boolean): Promise<Resposta> {
   try { return await getJson<Resposta>(url); }
   catch (e) {
-    if (permitir404 && e instanceof ApiError && (e.status === 404 || e.status === 502))
+    if (permitir404 && e instanceof ApiError && e.status === 404)
       return { linhas: [], indisponivel: "endpoint do cronograma isolado do BI ainda não publicado no backend" };
     throw e;
   }
