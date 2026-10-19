@@ -157,7 +157,10 @@ test("02 Programação semanal: semana vazia oferece a semana anterior/seguinte 
  const pagina=readFileSync(path.resolve(process.cwd(),"src/features/production/analytics/GestaoVistaJamilePage.tsx"),"utf8");
  assert.match(pagina,/programacao:"PROGRAMAÇÃO SEMANAL"/);
  assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end,screen==="programacao"\)/);   // uma consulta por projeto para a semana inteira
- assert.match(pagina,/\["DIA","DISCIPLINA","CÓDIGO DO DOCUMENTO","ELABORADOR","VERIFICADOR","APROVADOR","SITUAÇÃO","HH PREVISTO"\]/);
+ // Item 3 (19/10/2026): a tabela "Semana Completa" é o componente isolado do Codex, montado pelo contêiner.
+ assert.match(pagina,/<GerenciaEngenhariaItem3/);
+ const item3=readFileSync(path.resolve(process.cwd(),"src/features/production/analytics/item3/GerenciaEngenhariaItem3.tsx"),"utf8");
+ assert.match(item3,/"DIA", "DISCIPLINA", "CÓDIGO DO DOCUMENTO", "TÍTULO DO DOCUMENTO",\s*"ELABORADOR", "VERIFICADOR", "APROVADOR", "SITUAÇÃO", "HH PREVISTO"/);
 });
 
 /* ------------------------------------------------------------------ CONSOLIDADO (vários projetos no mesmo slide) */
@@ -223,7 +226,8 @@ test("Consolidado: falha em QUALQUER projeto bloqueia os números (sem total par
  const pagina=readFileSync(path.resolve(raiz,"src/features/production/analytics/GestaoVistaJamilePage.tsx"),"utf8");
  assert.match(pagina,/const \{reports,falhas,loading,error,retry\}=usePmoReports/);
  assert.match(pagina,/else if\(falhasTela\.length>0\)content=<ConsolidacaoIncompleta/);
- assert.match(pagina,/criarCatalogo\(normas\.normas,selection\)/);
+ // Catálogo com TODOS os projetos da seleção (o 3º argumento opcional é o Normalizador de Siglas do consolidado).
+ assert.match(pagina,/criarCatalogo\(normas\.normas,selection(,normalizador)?\)/);
  assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end/);
  const disc=readFileSync(path.resolve(raiz,"src/features/production/analytics/GestaoVistaDisciplinasPage.tsx"),"utf8");
  assert.match(disc,/if\(falhas\.length>0\)return <ReportState title=\{`Consolidação incompleta/);

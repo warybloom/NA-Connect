@@ -352,6 +352,9 @@ builder.Services.AddScoped<APS.WebApp.Services.Tv.ITvProjetosElegiveisRepository
 builder.Services.AddSingleton(sp => new APS.WebApp.Services.Tv.TvConfigurationStore(
     Path.Combine(sp.GetRequiredService<IConfiguration>()["TvConfiguration:Directory"] ??
         Path.Combine(sp.GetRequiredService<IHostEnvironment>().ContentRootPath, "App_Data"), "tv-configuration.json")));
+// Configurações → Normalizador de Siglas (schema próprio normalizador.*; migração manual em Migrations/Normalizador).
+builder.Services.AddScoped<APS.WebApp.Services.DisciplineAlias.ISiglaDisciplinaStore, APS.WebApp.Services.DisciplineAlias.SqlSiglaDisciplinaStore>();
+builder.Services.AddScoped<APS.WebApp.Services.DisciplineAlias.SiglaDisciplinaService>();
 // Envio de documentos governado pela LDP: configuração de pastas por projeto e log em App_Data (sem DDL).
 builder.Services.AddSingleton(sp => new APS.WebApp.Services.UploadGovernado.PastasDocumentosStore(
     Path.Combine(sp.GetRequiredService<IHostEnvironment>().ContentRootPath, "App_Data", "document-folders.json")));

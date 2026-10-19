@@ -56,6 +56,7 @@ import CdePage from "./pages/cde/CdePage";
 import CdeProjetoPage from "./pages/cde/CdeProjetoPage";
 import ControleProducaoPage, { ControleProducaoIndex } from "./features/production/ControleProducaoPage";
 import TelasTvConfigPage from "./features/settings/TelasTvConfigPage";
+import NormalizadorSiglasPage from "./features/settings/normalizador-siglas/NormalizadorSiglasPage";
 import TemplateConfigPage from "./features/settings/TemplateConfigPage";
 import { PermissionProvider } from "./features/permissions/PermissionProvider";
 import PermissionRouteGuard, { RotaInicialPermitida } from "./features/permissions/PermissionRouteGuard";
@@ -226,6 +227,8 @@ const App: React.FC = () => {
 
             {/* Configurações → Configuração de Telas para TV e Configuração de Templates (um editor por tipo). */}
             <Route path="/configuracoes/telas-tv" element={<TelasTvConfigPage />} />
+            {/* Configurações → Normalizador de Siglas (agregação de disciplinas nos painéis multiprojeto). */}
+            <Route path="/configuracoes/normalizador-siglas" element={<NormalizadorSiglasPage />} />
             <Route path="/configuracoes/templates/:tipo" element={<TemplateConfigPage />} />
             <Route path="/configuracoes/templates/auditoria-documental" element={<OCRManager />} />
 

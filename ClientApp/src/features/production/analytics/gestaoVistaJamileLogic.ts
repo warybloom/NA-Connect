@@ -3,6 +3,7 @@ import type { PmoDocument } from "@/components/pmo/pmoData";
 import { consumption, projectFacts } from "@/components/pmo/pmoFacts";
 import { somaConhecida } from "@/components/pmo/pmoMultiCore";
 import type { LdpProjeto } from "./resumoLogic";
+import { chave as chaveSigla, type FonteDisciplina, type NormalizadorSiglas } from "@/features/disciplinas/normalizadorSiglas";
 
 export const FASES = [30,60,90] as const;
 export type Fase = typeof FASES[number];
@@ -103,6 +104,11 @@ export interface CatalogoDisciplinas{
  porCanonica:Map<string,Map<string,string>>;
  rotulos:Map<string,Set<string>>;
  normas:DisciplinasNorma[];
+ /**
+  * Normalizador de Siglas (Configurações): SÓ no consolidado (>1 projeto). Siglas diferentes com o mesmo nome canônico
+  * PT-BR passam a somar na mesma linha ("S:<nome>"); sem regra, conflito ou 1 projeto → classificação original intacta.
+  */
+ normalizador?:NormalizadorSiglas|null;
 }
 /** Código curto do projeto ("CHS001 - ETHANOL PLANT" → "CHS001") para rotular disciplinas separadas por projeto. */
 const codigoDoProjeto=(nome:string|undefined,id:string)=>{const m=/^\s*([A-Z]{2,5}\d{2,4}(?:\.\d{1,3})*)\s*[-–—]/i.exec(nome??"");return m?m[1].toUpperCase():(nome?.trim()||id);};
@@ -114,7 +120,8 @@ const rotuloLocal=(cat:Pick<CatalogoDisciplinas,"projetos">,projectId:string,nom
  consolidado(cat)?`${nome.trim()} (${codigoDoProjeto(cat.projetos.get(projectId),projectId)})`:nome.trim();
 
 /** projetos = projetos da análise (id + nome); com mais de um, o catálogo trabalha no modo consolidado. */
-export function criarCatalogo(normas:readonly DisciplinasNorma[],projetos:readonly {id:string;name?:string}[]=[]):CatalogoDisciplinas{
+export function criarCatalogo(normas:readonly DisciplinasNorma[],projetos:readonly {id:string;name?:string}[]=[],
+ normalizador?:NormalizadorSiglas|null):CatalogoDisciplinas{
  const base={projetos:new Map(projetos.map(p=>[p.id,p.name??p.id]))};
  const porNome=new Map<string,Map<string,string>>(),porCanonica=new Map<string,Map<string,string>>(),rotulos=new Map<string,Set<string>>();
  for(const n of normas){
@@ -128,11 +135,25 @@ export function criarCatalogo(normas:readonly DisciplinasNorma[],projetos:readon
   }
   porNome.set(n.projectId,nomes);porCanonica.set(n.projectId,canonicas);
  }
- return {...base,porNome,porCanonica,rotulos,normas:[...normas]};
+ return {...base,porNome,porCanonica,rotulos,normas:[...normas],normalizador:consolidado(base)&&normalizador?.ativo?normalizador:null};
 }
 export interface Classificacao{chave:string;motivo:string|null}
 /** Documento da LDP: o nome da Norma já vem resolvido do backend pelo DOC3 (`disciplinaNorma`). */
-export function classificarDocumento(cat:CatalogoDisciplinas,doc:{projectId:string;disciplinaNorma?:string|null;disciplinaCanonica?:string|null;siglaDoc3?:string|null;fonteDisciplinaNorma?:string|null;codigo:string|null}):Classificacao{
+type DocClassificavel={projectId:string;disciplinaNorma?:string|null;disciplinaCanonica?:string|null;siglaDoc3?:string|null;fonteDisciplinaNorma?:string|null;codigo:string|null};
+/** Aplica o Normalizador de Siglas (só existe no catálogo consolidado). Cada item cai em UMA chave: sem dupla contagem. */
+function normalizarClassificacao(cat:CatalogoDisciplinas,c:Classificacao,projectId:string,fonte:FonteDisciplina,sigla:string|null|undefined,rotuloOriginal:string|null|undefined):Classificacao{
+ if(!cat.normalizador||c.chave===SEM_DISCIPLINA||!rotuloOriginal?.trim())return c;
+ const r=cat.normalizador.resolver({projectId,projectName:cat.projetos.get(projectId),fonte,sigla,rotulo:rotuloOriginal});
+ if(r.conflito)return {chave:c.chave,motivo:c.motivo??r.conflito};
+ if(r.origem==="Original")return c;
+ const chave="S:"+chaveSigla(r.nome);
+ if(!cat.rotulos.get(chave)?.size)cat.rotulos.set(chave,new Set([r.nome]));
+ return {chave,motivo:c.motivo};
+}
+export function classificarDocumento(cat:CatalogoDisciplinas,doc:DocClassificavel,fonte:FonteDisciplina="LDP"):Classificacao{
+ return normalizarClassificacao(cat,classificarDocumentoOriginal(cat,doc),doc.projectId,fonte,doc.siglaDoc3,doc.disciplinaNorma??doc.disciplinaCanonica);
+}
+function classificarDocumentoOriginal(cat:CatalogoDisciplinas,doc:DocClassificavel):Classificacao{
  const nome=doc.disciplinaNorma?.trim();
  if(nome){
   // Catálogo da Norma indisponível para o projeto: usa o canônico OFICIAL que o backend resolveu para o mesmo DOC3
@@ -153,6 +174,9 @@ export function classificarDocumento(cat:CatalogoDisciplinas,doc:{projectId:stri
 }
 /** Realizado oficial: o backend agrupa por canônico global da sigla. Volta ao nome da Norma do mesmo projeto. */
 export function classificarRealizado(cat:CatalogoDisciplinas,projectId:string,disciplina:string|null):Classificacao{
+ return normalizarClassificacao(cat,classificarRealizadoOriginal(cat,projectId,disciplina),projectId,"TIMESHEET",null,disciplina);
+}
+function classificarRealizadoOriginal(cat:CatalogoDisciplinas,projectId:string,disciplina:string|null):Classificacao{
  const nome=(disciplina??"").trim();
  if(SEM_DISCIPLINA_BACKEND.includes(normalize(nome)))return {chave:SEM_DISCIPLINA,motivo:"Lançamento sem DOC3 cadastrado na Norma"};
  const k=normalize(nome);
@@ -279,7 +303,7 @@ export function recursosDistintos(linhas:readonly ProgramacaoLinha[]){
  return s.size;
 }
 export function classificarProgramacao(cat:CatalogoDisciplinas,projectId:string,l:ProgramacaoLinha):Classificacao{
- return classificarDocumento(cat,{projectId,disciplinaNorma:l.disciplinaNorma,disciplinaCanonica:l.disciplinaCanonica,siglaDoc3:l.siglaDoc3,codigo:l.documento});
+ return classificarDocumento(cat,{projectId,disciplinaNorma:l.disciplinaNorma,disciplinaCanonica:l.disciplinaCanonica,siglaDoc3:l.siglaDoc3,codigo:l.documento},"PROGRAMACAO");
 }
 
 /* ----------------------------------------------------------------------------------------------

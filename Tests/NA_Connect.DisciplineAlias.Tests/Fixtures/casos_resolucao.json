@@ -1,0 +1,38 @@
+{
+  "_aviso": "FIXTURE EXCLUSIVA DE TESTE. Siglas/nomes sintéticos (prefixo X/T, 'Teste'); NÃO são aliases reais e não devem ser importados. Lida pelos testes C# (SiglaNormalizer) e TS (normalizadorSiglas.ts) para garantir a mesma regra nos dois lados.",
+  "regras": [
+    { "id": 1, "sigla": "XA", "disciplina": "Disciplina Teste Ãlfa", "contextoTipo": null, "contextoValor": null, "ativo": true },
+    { "id": 2, "sigla": "T 1", "disciplina": "Disciplina Teste Ãlfa", "contextoTipo": null, "contextoValor": null, "ativo": true },
+    { "id": 3, "sigla": "XB", "disciplina": "Teste Beta", "contextoTipo": null, "contextoValor": null, "ativo": true },
+    { "id": 4, "sigla": "XB", "disciplina": "Teste Gama", "contextoTipo": "PROJETO", "contextoValor": "TST901", "ativo": true },
+    { "id": 5, "sigla": "XC", "disciplina": "Teste Delta", "contextoTipo": "FONTE", "contextoValor": "TIMESHEET", "ativo": true },
+    { "id": 6, "sigla": "XD", "disciplina": "Teste Inativa", "contextoTipo": null, "contextoValor": null, "ativo": false },
+    { "id": 7, "sigla": "XE", "disciplina": "Teste Épsilon", "contextoTipo": "PROJETO", "contextoValor": "TST901", "ativo": true },
+    { "id": 8, "sigla": "XE", "disciplina": "Teste Zeta", "contextoTipo": "FONTE", "contextoValor": "LDP", "ativo": true },
+    { "id": 9, "sigla": "Nome Teste Rótulo", "disciplina": "Teste Eta", "contextoTipo": null, "contextoValor": null, "ativo": true }
+  ],
+  "casos": [
+    { "nome": "global pela sigla", "candidatos": ["XA"], "rotulo": "ORIGINAL XA", "projetos": ["TST902"], "fonte": "LDP",
+      "esperado": { "nome": "Disciplina Teste Ãlfa", "origem": "Global", "conflito": false } },
+    { "nome": "duas siglas com o mesmo nome PT-BR agregam juntas (espaços/caixa)", "candidatos": ["  t   1 "], "rotulo": "ORIGINAL T1", "projetos": [], "fonte": null,
+      "esperado": { "nome": "Disciplina Teste Ãlfa", "origem": "Global", "conflito": false } },
+    { "nome": "contexto de projeto tem prioridade sobre global", "candidatos": ["xb"], "rotulo": "ORIGINAL XB", "projetos": ["b.00000000-0000-0000-0000-000000000001", "TST901"], "fonte": "LDP",
+      "esperado": { "nome": "Teste Gama", "origem": "Contexto", "conflito": false } },
+    { "nome": "fora do contexto cai na global", "candidatos": ["XB"], "rotulo": "ORIGINAL XB", "projetos": ["TST902"], "fonte": "LDP",
+      "esperado": { "nome": "Teste Beta", "origem": "Global", "conflito": false } },
+    { "nome": "contexto de fonte", "candidatos": ["XC"], "rotulo": "ORIGINAL XC", "projetos": ["TST902"], "fonte": "TIMESHEET",
+      "esperado": { "nome": "Teste Delta", "origem": "Contexto", "conflito": false } },
+    { "nome": "fonte diferente e sem global mantém rótulo original", "candidatos": ["XC"], "rotulo": "  Original   XC ", "projetos": ["TST902"], "fonte": "LDP",
+      "esperado": { "nome": "Original XC", "origem": "Original", "conflito": false } },
+    { "nome": "regra inativa é ignorada", "candidatos": ["XD"], "rotulo": "ORIGINAL XD", "projetos": [], "fonte": null,
+      "esperado": { "nome": "ORIGINAL XD", "origem": "Original", "conflito": false } },
+    { "nome": "conflito no mesmo nível não é resolvido em silêncio", "candidatos": ["XE"], "rotulo": "ORIGINAL XE", "projetos": ["TST901"], "fonte": "LDP",
+      "esperado": { "nome": "ORIGINAL XE", "origem": "Original", "conflito": true } },
+    { "nome": "segundo candidato (nome da disciplina) quando a sigla não tem regra", "candidatos": ["SEM-REGRA", "nome teste rótulo"], "rotulo": "Nome Teste Rótulo", "projetos": [], "fonte": null,
+      "esperado": { "nome": "Teste Eta", "origem": "Global", "conflito": false } },
+    { "nome": "acento não é removido na comparação", "candidatos": ["Nome Teste Rotulo"], "rotulo": "Nome Teste Rotulo", "projetos": [], "fonte": null,
+      "esperado": { "nome": "Nome Teste Rotulo", "origem": "Original", "conflito": false } },
+    { "nome": "sem candidatos", "candidatos": [null, ""], "rotulo": "SEM DISCIPLINA", "projetos": [], "fonte": null,
+      "esperado": { "nome": "SEM DISCIPLINA", "origem": "Original", "conflito": false } }
+  ]
+}

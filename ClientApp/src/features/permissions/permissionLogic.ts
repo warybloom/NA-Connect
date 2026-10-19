@@ -151,6 +151,7 @@ export const ROUTE_PERMISSIONS: readonly RotaPermissao[] = [
   { pattern: "/configuracoes/sidebar", keys: ["permissions.manage"] },
   { pattern: "/configuracoes/permissoes", keys: ["permissions.manage"] },
   { pattern: "/configuracoes/identidade-visual", keys: ["settings.projects.view"] },
+  { pattern: "/configuracoes/normalizador-siglas", keys: ["settings.projects.view"] },
 
   // Player da Gestão à Vista (TV) — acessado por Configuração de Telas para TV; não é mais item raiz do sidebar.
   { pattern: "/gestao-a-vista", keys: ["tv.view", "settings.tv.configure"] },

@@ -1758,9 +1758,24 @@ public static partial class SidebarRules { public const string CatalogJson = """
     "group": false
   },
   {
-    "id": "page:/agendamento",
+    "id": "page:/configuracoes/normalizador-siglas",
     "parentId": "group:Configurações",
     "order": 5,
+    "label": "Normalizador de Siglas",
+    "icon": "Languages",
+    "hidden": false,
+    "to": "/configuracoes/normalizador-siglas",
+    "permissionKeys": [
+      "settings.projects.view"
+    ],
+    "badgeInline": null,
+    "badgeAbaixo": null,
+    "group": false
+  },
+  {
+    "id": "page:/agendamento",
+    "parentId": "group:Configurações",
+    "order": 6,
     "label": "Agendador do Robô",
     "icon": "Timer",
     "hidden": false,
@@ -1775,7 +1790,7 @@ public static partial class SidebarRules { public const string CatalogJson = """
   {
     "id": "page:/automacao/configuracao-robo",
     "parentId": "group:Configurações",
-    "order": 6,
+    "order": 7,
     "label": "Configurações do Robô",
     "icon": "Bot",
     "hidden": false,

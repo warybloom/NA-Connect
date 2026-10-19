@@ -203,6 +203,7 @@ export const NAVEGACAO: NavNode[] = [
         ],
       },
       { label: "Identidade Visual dos Projetos", icon: Palette, to: "/configuracoes/identidade-visual", permissionKey: "settings.projects.view" },
+      { label: "Normalizador de Siglas", icon: Languages, to: "/configuracoes/normalizador-siglas", permissionKey: "settings.projects.view" },
       { label: "Agendador do Robô", icon: Timer, to: "/agendamento", permissionKey: "robot.schedule.view" },
       { label: "Configurações do Robô", icon: Bot, to: "/automacao/configuracao-robo", permissionKey: "robot.view" },
     ],

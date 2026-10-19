@@ -20,6 +20,12 @@ import {
 } from "./gestaoVistaJamileLogic";
 import "./gestaoVistaJamile.css";
 import { NA_LOGO } from "@/features/theme/brandAssets";
+import ProjetoFaseAgrupamento,{SeletorVisaoMultiprojeto,type VisaoMultiprojeto} from "./projetoFase/ProjetoFaseAgrupamento";
+import {agruparDocumentacao,agruparEntregas,agruparIndicadores,agruparProgramacao} from "./projetoFase/projetoFaseLogic";
+import {useRegrasSiglasAtivas} from "@/features/disciplinas/useRegrasSiglasAtivas";
+import {criarNormalizador} from "@/features/disciplinas/normalizadorSiglas";
+import {GerenciaEngenhariaItem3} from "./item3/GerenciaEngenhariaItem3";
+import {criarIndiceTitulosDocumentos,obterTituloDocumentoOficial} from "./item3/documentTitleIndex";
 
 export type JamileScreen="visao-geral"|"programacao"|"documentacao"|"indicadores";
 const SCREENS:{slug:JamileScreen;number:string;title:string}[]=[
@@ -172,61 +178,48 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana}:{re
  const linhas:ProgLinha[]=filtrarDia(semanaDedup.linhas,dia);
  // Fallback (fonte detalhada indisponível): datas da LDP, sem responsáveis — nunca inventados.
  const ldp=erro?enrichDocuments(reports).filter(d=>!d.isActivity&&!d.cancelado&&noPeriodo(d.dataAlvo?.slice(0,10))):[];
+ // Item 3 (Codex): título OFICIAL do documento (LdpAtual.Document_Title) por projeto + código; a tarefa nunca é usada como título.
+ const indiceTitulos=criarIndiceTitulosDocumentos(reports);
  const itens=(linhas.length?linhas.map(l=>({key:`${l.projectId}:${l.idRegistro}`,chave:classificarProgramacao(cat,l.projectId,l).chave,codigo:l.documento,
    elaborador:l.elaborador,verificador:l.verificador,aprovador:l.aprovador,hh:hhLinha(l),status:l.status,data:l.dataAtividade.slice(0,10),
-   titulo:`${l.tarefa??""}${l.siglaDoc3?` · DOC3 ${l.siglaDoc3}`:""} · HH elab. ${fmt2(l.hhElaboracao)} + verif. ${fmt2(l.hhVerificacao)} + aprov. ${fmt2(l.hhAprovacao)}`}))
+   titulo:`${l.tarefa??""}${l.siglaDoc3?` · DOC3 ${l.siglaDoc3}`:""} · HH elab. ${fmt2(l.hhElaboracao)} + verif. ${fmt2(l.hhVerificacao)} + aprov. ${fmt2(l.hhAprovacao)}`,
+   tituloDocumento:obterTituloDocumentoOficial(indiceTitulos,l.projectId,l.documento)}))
   :ldp.map(d=>({key:d.rowId,chave:classificarDocumento(cat,d).chave,codigo:d.codigo,elaborador:null,verificador:null,aprovador:null,hh:d.hhPrevisto,
-   status:d.statusInterno,data:d.dataAlvo!.slice(0,10),titulo:d.titulo??""})))
+   status:d.statusInterno,data:d.dataAlvo!.slice(0,10),titulo:d.titulo??"",tituloDocumento:obterTituloDocumentoOficial(indiceTitulos,d.projectId,d.codigo)})))
   // Ordem: dia → disciplina → documento (agrupamento por dia usa a mesma ordem).
   .sort((a,b)=>a.data.localeCompare(b.data)||rotulo(cat,a.chave).localeCompare(rotulo(cat,b.chave),"pt-BR")||(a.codigo??"").localeCompare(b.codigo??"","pt-BR"));
  const grupos=[...agrupar(itens,x=>x.chave)].map(([k,xs])=>({key:k,name:rotulo(cat,k),planned:xs.length,actual:0,
   hh:xs.reduce((s,x)=>s+(x.hh??0),0)})).sort((a,b)=>b.planned-a.planned||a.name.localeCompare(b.name,"pt-BR"));
- const hhMax=Math.max(1,...grupos.map(x=>x.hh));
  const totalHh=itens.some(x=>x.hh!==null)?itens.reduce((s,x)=>s+(x.hh??0),0):null;
  const vizinhas=semanasVizinhasComProgramacao(dados.flatMap(d=>d.datasComProgramacao.map(x=>x.data)),semana);
  const registros=dados.reduce((s,d)=>s+d.registrosProjeto,0);
- const porDia=agrupar(itens,x=>x.data);
  const periodo=dia?`${diaDaSemanaCurto(dia)} ${br(dia)}`:`a semana de ${br(semana.start)} a ${br(semana.end)}`;
- return <div className="gv-program">
-  <div className="gv-program-left">
-   <div className="gv-kpis gv-three">
-    <Tile title="ENTREGÁVEIS" value={String(itens.length)}/>
-    <Tile title="HH PLANEJADO" value={fmt2(totalHh)}/>
-    <Tile title="RECURSOS" value={linhas.length?String(recursosDistintos(linhas)):"—"}/>
-   </div>
-   <Section title="ENTREGÁVEIS POR DISCIPLINA" cls="gv-program-disc">
-    {grupos.length?<HBars rows={grupos} realizado={false} max={Math.max(1,...grupos.map(x=>x.planned))}/>:<Empty>—</Empty>}
-   </Section>
-   <Section title="HH POR DISCIPLINA" cls="gv-program-hh">
-    {grupos.length?<div className="gv-columns gv-columns-single">{grupos.map(x=><div key={x.key} className="gv-col" title={`${x.name}: ${fmt2(x.hh)} h`}>
-      <div className="gv-col-bars"><span className="gv-bar-steel" style={{height:`${x.hh/hhMax*100}%`}}><b>{new Intl.NumberFormat("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1}).format(x.hh)}</b></span></div>
-      <small>{x.name}</small></div>)}</div>:<Empty>—</Empty>}
-   </Section>
+ // Item 3 (Codex): Semana Completa no topo (largura total, com título do documento) e, abaixo, Entregáveis × HH por disciplina.
+ return <div className="gv-program-item3" style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,gap:"1em"}}>
+  <div className="gv-kpis gv-three">
+   <Tile title="ENTREGÁVEIS" value={String(itens.length)}/>
+   <Tile title="HH PLANEJADO" value={fmt2(totalHh)}/>
+   <Tile title="RECURSOS" value={linhas.length?String(recursosDistintos(linhas)):"—"}/>
   </div>
-  <section className="gv-program-table">
-   <div className="gv-program-tools">
-    <span>{dia?`Filtro: ${diaDaSemanaCurto(dia)} ${br(dia)}`:"Semana completa"} · {itens.length} atividade(s)</span>
-    <label><input type="checkbox" checked={agruparDia} onChange={e=>setAgruparDia(e.target.checked)}/> AGRUPAR POR DIA</label>
-   </div>
-   <div className="gv-table-scroll">
-    <table><thead><tr>{["DIA","DISCIPLINA","CÓDIGO DO DOCUMENTO","ELABORADOR","VERIFICADOR","APROVADOR","SITUAÇÃO","HH PREVISTO"].map(x=><th key={x}>{x}</th>)}</tr></thead>
-     <tbody>{(agruparDia?[...porDia]:[["",itens] as const]).flatMap(([data,xs])=>[
-      ...(agruparDia?[<tr key={"dia-"+data} className="gv-day-row"><td colSpan={8}>{diaDaSemanaCurto(data)} {br(data)} · {xs.length} atividade(s) · {fmt2(xs.some(x=>x.hh!==null)?xs.reduce((s,x)=>s+(x.hh??0),0):null)} h</td></tr>]:[]),
-      ...xs.map(x=><tr key={x.key} title={x.titulo}><td>{diaDaSemanaCurto(x.data)} {brCurta(x.data).slice(0,5)}</td><td>{rotulo(cat,x.chave)}</td><td>{x.codigo??"—"}</td><td>{x.elaborador??"—"}</td>
-       <td>{x.verificador??"—"}</td><td>{x.aprovador??"—"}</td><td>{x.status??"—"}</td><td>{fmt2(x.hh)}</td></tr>)])}
-     </tbody></table>
-    {carregando&&<Empty>Consultando a programação…</Empty>}
-    {!carregando&&!itens.length&&<Empty>
-     {registros?`Nenhuma atividade programada para ${periodo} (${registros} registro(s) na programação do projeto).`:"O projeto não possui programação semanal importada."}
-     {vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
-     {vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}
-    </Empty>}
-   </div>
-   {erro&&<p className="gv-warning">Programação detalhada indisponível ({erro}); exibindo datas-alvo da LDP, sem responsáveis.</p>}
-   {!erro&&dados.length>0&&<p className="gv-rule">Fonte: programação semanal (data da atividade = Reprogramada › Baseline), semana domingo a sábado. HH previsto = elaboração + verificação + aprovação. TBD não conta como recurso.
+  <GerenciaEngenhariaItem3
+   itens={itens.map(x=>({key:x.key,data:x.data,dia:`${diaDaSemanaCurto(x.data)} ${brCurta(x.data).slice(0,5)}`,disciplina:rotulo(cat,x.chave),
+    codigoDocumento:x.codigo,tituloDocumento:x.tituloDocumento,elaborador:x.elaborador,verificador:x.verificador,aprovador:x.aprovador,situacao:x.status,hhPrevisto:x.hh}))}
+   grupos={grupos.map(x=>({key:x.key,nome:x.name,entregaveis:x.planned,hh:x.hh}))}
+   agruparPorDia={agruparDia}
+   onAgruparPorDia={setAgruparDia}
+   descricaoPeriodo={dia?`Filtro: ${diaDaSemanaCurto(dia)} ${br(dia)}`:`${br(semana.start)} a ${br(semana.end)}`}
+   carregando={carregando}
+   mensagemVazia={<Empty>
+    {registros?`Nenhuma atividade programada para ${periodo} (${registros} registro(s) na programação do projeto).`:"O projeto não possui programação semanal importada."}
+    {vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
+    {vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}
+   </Empty>}
+   aviso={erro?<p className="gv-warning">Programação detalhada indisponível ({erro}); exibindo datas-alvo da LDP, sem responsáveis.</p>:undefined}
+   rodape={!erro&&dados.length>0?<p className="gv-rule">Fonte: programação semanal (data da atividade = Reprogramada › Baseline), semana domingo a sábado. HH previsto = elaboração + verificação + aprovação. TBD não conta como recurso.
     {semanaDedup.repetidos>0&&<> {semanaDedup.repetidos} registro(s) repetido(s) (mesmo documento, tarefa, fase e dia) contado(s) uma vez.</>}
-    {linhas.length>0&&<> Preenchimento na planilha semanal: elaborador {cobertura(linhas,l=>l.elaborador)}, verificador {cobertura(linhas,l=>l.verificador)}, aprovador {cobertura(linhas,l=>l.aprovador)}, situação {cobertura(linhas,l=>l.status)}. "—" = campo vazio na fonte (Recurso / Weekly_Responsible_Verification / Weekly_Responsible_Approval / Weekly_Progress_Status).</>}</p>}
-  </section>
+    {linhas.length>0&&<> Preenchimento na planilha semanal: elaborador {cobertura(linhas,l=>l.elaborador)}, verificador {cobertura(linhas,l=>l.verificador)}, aprovador {cobertura(linhas,l=>l.aprovador)}, situação {cobertura(linhas,l=>l.status)}. "—" = campo vazio na fonte (Recurso / Weekly_Responsible_Verification / Weekly_Responsible_Approval / Weekly_Progress_Status).</>}
+    {" "}Título do documento = LDP (Document_Title) do mesmo projeto e código; "—" = sem título na LDP.</p>:undefined}
+  />
  </div>;
 }
 
@@ -367,10 +360,16 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
  const [diaFiltro,setDiaFiltro]=useState<string|null>(null);
  const dia=diaFiltro&&diaFiltro>=week.start&&diaFiltro<=week.end?diaFiltro:null;
  const irParaSemana=(data:string)=>{setCutoff(data);setDiaFiltro(null);};
- const cat=useMemo(()=>criarCatalogo(normas.normas,selection),[normas.normas,selection]);
- const name=selection.map(x=>x.name).join(" · ");
  // Consolidado: TODOS os projetos do slide participam; qualquer fonte que falhe em um deles bloqueia os números da tela.
  const consolidado=selection.length>1;
+ // Multiprojeto: padrão = PROJETO → FASE → disciplina (nada misturado); "consolidado" = telas originais somadas, com o
+ // Normalizador de Siglas unindo siglas diferentes de mesmo nome canônico PT-BR (só aqui; 1 projeto nunca normaliza).
+ const [visaoMulti,setVisaoMulti]=useState<VisaoMultiprojeto>("projeto-fase");
+ const porProjetoFase=consolidado&&visaoMulti==="projeto-fase";
+ const siglas=useRegrasSiglasAtivas(consolidado);
+ const normalizador=useMemo(()=>consolidado?criarNormalizador(siglas.regras):null,[consolidado,siglas.regras]);
+ const cat=useMemo(()=>criarCatalogo(normas.normas,selection,normalizador),[normas.normas,selection,normalizador]);
+ const name=selection.map(x=>x.name).join(" · ");
  const falhasTela:FalhaProjeto[]=[
   ...falhas,
   ...(screen==="programacao"&&prog.falhas.length<selection.length?prog.falhas:[]),
@@ -380,9 +379,23 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
  // No player de TV o menu só salta entre slides DA apresentação (nunca sai para /controle-producao); fora dele, rotas normais.
  const navTv=useNavegacaoTv();
  let content:ReactNode;
- if(loading||normas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
+ if(loading||normas.carregando||siglas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
  else if(error)content=<ReportState title={error} error><button className="gv-link" onClick={retry}>Tentar novamente</button></ReportState>;
  else if(falhasTela.length>0)content=<ConsolidacaoIncompleta falhas={falhasTela} total={selection.length} onRetry={()=>{retry();prog.retry();}}/>;
+ else if(porProjetoFase){
+  const fr=reports as FactsReport[];
+  const titulo=`${SUBTITLE[screen]} — POR PROJETO E FASE`;
+  content=<>
+   {screen==="visao-geral"&&<ProjetoFaseAgrupamento idBase="pf-entregas" titulo={`ENTREGAS DA SEMANA ${br(week.start)} A ${br(week.end)} — POR PROJETO E FASE`} agrupamento={agruparEntregas(fr,cat,valid)}/>}
+   {screen==="programacao"&&(prog.carregando?<ReportState title="Consultando a programação…">Programação semanal dos projetos selecionados.</ReportState>
+    :prog.erro?<ReportState title={`Programação detalhada indisponível (${prog.erro})`} error><button className="gv-link" onClick={prog.retry}>Tentar novamente</button></ReportState>
+    :<ProjetoFaseAgrupamento idBase="pf-programacao" detalheFase="programacao" titulo={`${titulo} · ${dia?`${diaDaSemanaCurto(dia)} ${br(dia)}`:`SEMANA ${br(week.start)} A ${br(week.end)}`}`}
+      agrupamento={agruparProgramacao(selection,prog.dados,cat,dia)}/>)}
+   {screen==="documentacao"&&<ProjetoFaseAgrupamento idBase="pf-documentos" titulo={titulo} agrupamento={agruparDocumentacao(fr,cat)}/>}
+   {screen==="indicadores"&&<ProjetoFaseAgrupamento idBase="pf-indicadores" titulo={titulo} agrupamento={agruparIndicadores(fr,cat)}/>}
+   <DiagnosticoNorma normas={normas.normas} erro={normas.erro}/>
+  </>;
+ }
  else{
   const fr=reports as FactsReport[];
   content=<>
@@ -390,6 +403,9 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
    {screen==="programacao"&&<Programming reports={fr} semana={week} dia={dia} cat={cat} dados={prog.dados} erro={prog.erro} carregando={prog.carregando} onSemana={irParaSemana}/>}
    {screen==="documentacao"&&<Documentation reports={fr} ldp={ldp} cat={cat}/>}
    {screen==="indicadores"&&<Indicators reports={fr} cutoff={valid} ldp={ldp} cat={cat}/>}
+   {consolidado&&<p className="gv-rule" data-testid="gv-normalizador">{siglas.aviso??(normalizador?.ativo
+    ?`Consolidado: disciplinas agregadas pelo nome canônico PT-BR do Normalizador de Siglas (${siglas.regras.length} regra(s) ativa(s)); sem regra, vale o nome original.`
+    :"Consolidado: nenhuma regra ativa no Normalizador de Siglas — disciplinas pelo nome original.")}</p>}
    <DiagnosticoNorma normas={normas.normas} erro={normas.erro}/>
   </>;
  }
@@ -404,7 +420,8 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
   </aside>
   <div className="gv-main">
    <header className="gv-page-header">
-    <div className="gv-header-text"><b>GERÊNCIA DA ENGENHARIA</b><h1>{SUBTITLE[screen]}</h1><small title={consolidado?selection.map(x=>x.name).join("\n"):name} data-testid="gv-escopo">{consolidado?`CONSOLIDADO — ${selection.length} PROJETOS: ${name}`:name}</small></div>
+    <div className="gv-header-text"><b>GERÊNCIA DA ENGENHARIA</b><h1>{SUBTITLE[screen]}</h1><small title={consolidado?selection.map(x=>x.name).join("\n"):name} data-testid="gv-escopo">{consolidado?`${porProjetoFase?"POR PROJETO E FASE":"CONSOLIDADO"} — ${selection.length} PROJETOS: ${name}`:name}</small>
+     {consolidado&&<SeletorVisaoMultiprojeto valor={visaoMulti} onChange={setVisaoMulti}/>}</div>
     {screen==="programacao"&&<div className="gv-date gv-date-semana">
      <CalendarDays className="gv-date-icon" aria-hidden/>
      <div><small>SEMANA</small>
