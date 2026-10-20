@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <Using Include="Xunit" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Controllers/SidebarController.cs" Link="SidebarController.cs" />
+    <Compile Include="../../Services/Sidebar/SidebarRules.cs" Link="SidebarRules.cs" />
+    <Compile Include="../../Services/Sidebar/SidebarCatalog.Generated.cs" Link="SidebarCatalog.Generated.cs" />
+    <Compile Include="../../Services/Permissions/PermissionContracts.cs" Link="PermissionContracts.cs" />
+    <Compile Include="../../Services/Permissions/PermissionResolver.cs" Link="PermissionResolver.cs" />
+    <Compile Include="../../Services/Permissions/PermissionCatalog.cs" Link="PermissionCatalog.cs" />
+    <Compile Include="../../Services/Permissions/RequirePermissionAttribute.cs" Link="RequirePermissionAttribute.cs" />
+    <Compile Include="../NA_Connect.Workflow.Tests/SidebarSecurityTests.cs" Link="SidebarSecurityTests.cs" />
+  </ItemGroup>
+</Project>

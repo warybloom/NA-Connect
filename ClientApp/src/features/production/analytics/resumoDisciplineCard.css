@@ -1,0 +1,17 @@
+.resumo-discipline-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr));gap:14px}
+.resumo-discipline-card{min-width:0;border:1px solid hsl(var(--border));border-top:3px solid #f97316;border-radius:10px;background:hsl(var(--card));padding:12px}
+.resumo-discipline-card header{margin-bottom:8px}.resumo-discipline-card h3{font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
+.resumo-discipline-card header small{display:block;font-size:11px;opacity:.65;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resumo-discipline-card table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;line-height:1.45;font-variant-numeric:tabular-nums}
+.resumo-discipline-card th:first-child{width:32%;text-align:left}.resumo-discipline-card th{font-weight:600}
+.resumo-discipline-card th,.resumo-discipline-card td{padding:3px 2px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resumo-discipline-card thead{color:#f97316}.resumo-discipline-card tbody tr{border-bottom:1px solid #94a3b822}
+.resumo-discipline-card tbody tr:nth-child(4),.resumo-discipline-card tbody tr:nth-child(10){border-bottom:1px solid #94a3b866}
+.resumo-discipline-card footer{font-size:11px;opacity:.75;margin-top:7px}.resumo-discipline-card footer span{display:block}
+.resumo-negative{color:#f43f5e}.resumo-phase-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:5px}
+.resumo-phase-strip>span{text-align:center;border-left:1px solid #94a3b844;font-variant-numeric:tabular-nums;min-width:0}
+.resumo-phase-strip>span:first-child{border:0}.resumo-phase-strip small{display:block;font-size:11px;opacity:.7}.resumo-phase-strip b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resumo-discipline-tv{color:var(--tv-ink,#eef2f8);border-color:var(--tv-surface-border,#455573);background:var(--tv-surface,#172336);padding:8px;overflow:hidden}
+.resumo-discipline-tv h3{font-size:clamp(13px,.85vw,24px)}.resumo-discipline-tv header{margin-bottom:4px}
+.resumo-discipline-tv table{font-size:clamp(12px,.72vw,20px);line-height:1.2}
+.resumo-discipline-tv th,.resumo-discipline-tv td{padding:2px 3px}

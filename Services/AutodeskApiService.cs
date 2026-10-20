@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using APS.WebApp.Models;
@@ -15,6 +16,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using NA_Connect.Services;
 
 
 
@@ -61,23 +63,24 @@ namespace APS.WebApp.Services
     }
     #endregion
 
-    public class AutodeskApiService
+    public partial class AutodeskApiService
     {
         private static int _totalCalls = 0;
-        private static string _lastRateLimit = "N/A";       
+private static string _lastRateLimit = "N/A";       
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AutodeskApiService> _logger;
         private readonly TokenManager _tokenManager;
-        private readonly SemaphoreSlim _throttleGate = new SemaphoreSlim(5);
-        
+        private readonly DocumentMatchingService _documentMatching;
 
-        public AutodeskApiService(HttpClient httpClient, TokenManager tokenManager, IConfiguration configuration, ILogger<AutodeskApiService> logger) // <-- ADICIONE ', ILogger<AutodeskApiService> logger' AQUI
+
+        public AutodeskApiService(HttpClient httpClient, TokenManager tokenManager, IConfiguration configuration, ILogger<AutodeskApiService> logger, DocumentMatchingService documentMatching)
         {
             _httpClient = httpClient;
             _configuration = configuration;
-            _logger = logger; 
+            _logger = logger;
             _tokenManager = tokenManager;
+            _documentMatching = documentMatching;
         }
 
 
@@ -93,60 +96,15 @@ namespace APS.WebApp.Services
                 _lastRateLimit = values.FirstOrDefault() ?? "N/A";
             }
         }
-
-
-private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> requestFactory, int maxRetries = 5)
-{
-    await _throttleGate.WaitAsync();
-    try
-    {
-        int attempt = 0;
-        while (true)
-        {
-            attempt++;
-            using var request = requestFactory();
-            var response = await _httpClient.SendAsync(request);
-            TraceApiHeaders(response);
-            if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests)
-            {
-                if (int.TryParse(_lastRateLimit, out int remaining) && remaining < 5)
-                {
-                    await Task.Delay(500);
-                }
-                return response;
-            }
-            if (attempt > maxRetries)
-            {
-                _logger.LogError("🚫 429 persistente após {Attempts} tentativas.", attempt);
-                return response;
-            }
-            TimeSpan delay = response.Headers.RetryAfter?.Delta
-                ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
-            await Task.Delay(delay);
-        }
-    }
-    finally
-    {
-        _throttleGate.Release();
-    }
-}
-
-        #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
-        // ... resto do arquivo continua igual
-
-
         
         #region MÉTODOS DE ADMINISTRAÇÃO DA CONTA
         
         public async Task<List<AccAccountRole>> GetAccountRolesAsync(string accountId, string accessToken)
         {
             var requestUrl = $"https://developer.api.autodesk.com/construction/admin/v1/accounts/{accountId}/roles";
-            var response = await SendWithRetryAsync(() =>
-            {
             var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            return request;
-            });
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var responseStream = await response.Content.ReadAsStreamAsync();
             var rolesResponse = await JsonSerializer.DeserializeAsync<JsonElement>(responseStream);
@@ -268,6 +226,33 @@ private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessa
             }
         }
 
+        /// <summary>
+        /// TODOS os membros de um projeto ACC (Admin API, paginado). Qualquer falha HTTP LANÇA — quem chama nunca deve
+        /// interpretar erro como "projeto sem membros". Retorna os elementos JSON brutos de "results".
+        /// </summary>
+        public async Task<IReadOnlyList<JsonElement>> GetProjectUsersAsync(string projectId, string accessToken, CancellationToken ct = default)
+        {
+            var id = projectId.StartsWith("b.", StringComparison.Ordinal) ? projectId[2..] : projectId;
+            const int limite = 200;
+            var todos = new List<JsonElement>();
+            for (int offset = 0; ; offset += limite)
+            {
+                var url = $"https://developer.api.autodesk.com/construction/admin/v1/projects/{id}/users?limit={limite}&offset={offset}";
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                using var response = await _httpClient.SendAsync(request, ct);
+                response.EnsureSuccessStatusCode();
+                var pagina = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct)).RootElement.Clone();
+                if (!pagina.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
+                    throw new InvalidOperationException("Resposta da Admin API sem 'results'.");
+                int n = 0;
+                foreach (var u in results.EnumerateArray()) { todos.Add(u.Clone()); n++; }
+                int total = pagina.TryGetProperty("pagination", out var pag) && pag.TryGetProperty("totalResults", out var t) && t.TryGetInt32(out var tt) ? tt : -1;
+                if (n == 0 || n < limite || (total >= 0 && offset + n >= total)) break;
+            }
+            return todos;
+        }
+
         public async Task<AccProjectUser?> GetProjectUserByEmailAsync(string projectId, string userEmail, string accessToken)
         {
             var requestUrl = $"https://developer.api.autodesk.com/construction/admin/v1/projects/{projectId}/users?filter[email]={Uri.EscapeDataString(userEmail)}";
@@ -299,14 +284,20 @@ private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessa
             return projectId.StartsWith("b.") ? projectId : $"b.{projectId}";
         }
 
-        public async Task<string> GetUserNameAsync(string accessToken)
+        /// <summary>
+        /// UserInfo OIDC da Autodesk (Authentication API atual): GET https://api.userprofile.autodesk.com/userinfo.
+        /// Exige o scope user-profile:read no token 3-legged. Substitui o endpoint legado "userprofile v1 users @me" (410 Gone —
+        /// removido pela Autodesk, sem fallback). Use via ICurrentUserAccessor (fonte única, cacheada na sessão).
+        /// </summary>
+        public async Task<APS.WebApp.Services.Identity.AutodeskUserInfo> GetUserInfoAsync(string accessToken, CancellationToken ct = default)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://developer.api.autodesk.com/userprofile/v1/users/@me");
+            var request = new HttpRequestMessage(HttpMethod.Get, APS.WebApp.Services.Identity.AutodeskUserInfoParser.Endpoint);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            var userProfile = await JsonSerializer.DeserializeAsync<JsonElement>(await response.Content.ReadAsStreamAsync());
-            return $"{userProfile.GetProperty("firstName").GetString()} {userProfile.GetProperty("lastName").GetString()}";
+            using var response = await _httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+                throw new APS.WebApp.Services.Identity.AutodeskUserInfoException((int)response.StatusCode);
+            var corpo = await JsonSerializer.DeserializeAsync<JsonElement>(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            return APS.WebApp.Services.Identity.AutodeskUserInfoParser.Parse(corpo);
         }
 
         public async Task<JsonElement> GetHubsAsync(string accessToken)
@@ -450,19 +441,44 @@ public async Task<(string FileId, string FileName)> GetFirstExcelInFolderAsync(s
         
         var items = doc.RootElement.GetProperty("data").EnumerateArray();
 
+        // [DISCOVERY][EXCEL_CANDIDATE] Diagnóstico somente-leitura: o valor devolvido continua sendo
+        // exatamente o PRIMEIRO .xlsx/.xlsm encontrado (mesma regra de sempre) — só adiamos o
+        // "return" para dentro do loop até o fim, para poder logar cada candidato visto (aceito ou
+        // rejeitado), sem mudar qual arquivo acaba sendo escolhido.
+        (string FileId, string FileName) aceito = (null, null);
+
         foreach (var item in items)
         {
             var attributes = item.GetProperty("attributes");
             string fileName = attributes.GetProperty("displayName").GetString();
-            
+            string itemType = item.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : "(desconhecido)";
+            string itemId = item.GetProperty("id").GetString();
+
             // Verifica se é um arquivo e se a extensão é Excel
-            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || 
-                fileName.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase))
+            bool ehExcelAceito = fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+                fileName.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase);
+
+            if (ehExcelAceito && aceito.FileId == null)
             {
-                string fileId = item.GetProperty("id").GetString();
-                return (fileId, fileName);
+                aceito = (itemId, fileName);
+                _logger.LogInformation(
+                    "[DISCOVERY][EXCEL_CANDIDATE] Name={Name} | ItemId={ItemId} | Folder={Folder} | Accepted=YES | Reason=extension accepted",
+                    fileName, itemId, folderId);
+            }
+            else
+            {
+                string motivo = ehExcelAceito
+                    ? "already accepted an earlier candidate in this folder (first match wins)"
+                    : (fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
+                        ? "different file type (.xls not accepted — only .xlsx/.xlsm)"
+                        : (itemType == "folders" ? "not a file (folder)" : "different file type"));
+                _logger.LogInformation(
+                    "[DISCOVERY][EXCEL_CANDIDATE] Name={Name} | ItemId={ItemId} | Folder={Folder} | Accepted=NO | Reason={Reason}",
+                    fileName, itemId, folderId, motivo);
             }
         }
+
+        if (aceito.FileId != null) return aceito;
     }
     catch (Exception ex)
     {
@@ -470,6 +486,82 @@ public async Task<(string FileId, string FileName)> GetFirstExcelInFolderAsync(s
     }
     return (null, null);
 }
+
+// Um candidato a arquivo de origem para os módulos de coluna dinâmica (Planning Control/Qualidade
+// — seção 12 do pedido "colunas dinâmicas"): ao contrário de GetFirstExcelInFolderAsync (que devolve
+// só o primeiro Excel encontrado e é usado pelas etapas legadas), este método enumera TODOS os
+// arquivos .xlsx/.xlsm/.xls da pasta para que o chamador valide a assinatura de abas de cada um antes
+// de escolher, e para que um arquivo .xls "sozinho na pasta" possa ser reportado como exigindo
+// conversão manual em vez de ser silenciosamente ignorado.
+public class ArquivoCandidato
+{
+    public string FileId { get; set; }
+    public string FileName { get; set; }
+    public DateTime? LastModifiedUtc { get; set; }
+    public bool EhXlsxOuXlsm { get; set; }
+    public bool EhXls { get; set; }
+}
+
+public async Task<List<ArquivoCandidato>> ListarArquivosDaPastaAsync(string projectId, string folderId, string token)
+{
+    var candidatos = new List<ArquivoCandidato>();
+
+    try
+    {
+        string url = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/folders/{folderId}/contents";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await _httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode) return candidatos;
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+
+        var items = doc.RootElement.GetProperty("data").EnumerateArray();
+
+        foreach (var item in items)
+        {
+            var attributes = item.GetProperty("attributes");
+            string fileName = attributes.GetProperty("displayName").GetString();
+
+            // Ignora arquivos temporários do Office (seção 12, passo 2: "ignorar arquivos temporários
+            // iniciados por ~$") e qualquer item que não seja planilha.
+            if (string.IsNullOrEmpty(fileName) || fileName.StartsWith("~$", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            bool ehXlsxOuXlsm = fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase);
+            bool ehXls = fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase);
+
+            if (!ehXlsxOuXlsm && !ehXls) continue;
+
+            DateTime? lastModified = null;
+            if (attributes.TryGetProperty("lastModifiedTime", out var lastModifiedProp) &&
+                lastModifiedProp.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(lastModifiedProp.GetString(), out var parsed))
+            {
+                lastModified = parsed.ToUniversalTime();
+            }
+
+            candidatos.Add(new ArquivoCandidato
+            {
+                FileId = item.GetProperty("id").GetString(),
+                FileName = fileName,
+                LastModifiedUtc = lastModified,
+                EhXlsxOuXlsm = ehXlsxOuXlsm,
+                EhXls = ehXls
+            });
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError($"❌ Erro ao listar candidatos de arquivo da pasta: {ex.Message}");
+    }
+
+    return candidatos;
+}
+
 public class ItemDetails
 {
     public string ItemId { get; set; }
@@ -607,11 +699,12 @@ public class ItemDetails
             return signedUrlData.TryGetProperty("url", out var urlProp) ? urlProp.GetString() : null;
         }
 
-        public async Task<JsonElement?> CreateNewVersionAsync(string projectId, string itemId, string folderId, string fileName, Stream fileStream, string accessToken)
+        /// <summary>
+        /// Etapas 1 a 4 do upload no Data Management (storage na pasta → URL assinada S3 → PUT → completar). Extraído SEM
+        /// mudança de CreateNewVersionAsync para ser reaproveitado pelo envio governado (UploadArquivoNaPastaAsync).
+        /// </summary>
+        private async Task<string> EnviarConteudoParaStorageAsync(string dataManagementProjectId, string folderId, string fileName, Stream fileStream, string accessToken)
         {
-            string dataManagementProjectId = ToDataManagementProjectId(projectId);
-
-            // ETAPAS 1 a 4 (Permanecem iguais e estão a funcionar)
             var createStorageUrl = $"https://developer.api.autodesk.com/data/v1/projects/{dataManagementProjectId}/storage";
             var storagePayload = new { jsonapi = new { version = "1.0" }, data = new { type = "objects", attributes = new { name = fileName }, relationships = new { target = new { data = new { type = "folders", id = folderId } } } } };
             var storageJsonPayload = JsonSerializer.Serialize(storagePayload);
@@ -657,6 +750,16 @@ public class ItemDetails
             var completeResponse = await _httpClient.SendAsync(completeRequest);
             if (!completeResponse.IsSuccessStatusCode) { var err = await completeResponse.Content.ReadAsStringAsync(); throw new HttpRequestException($"Erro ao completar upload: {err}"); }
 
+            return objectId;
+        }
+
+        public async Task<JsonElement?> CreateNewVersionAsync(string projectId, string itemId, string folderId, string fileName, Stream fileStream, string accessToken)
+        {
+            string dataManagementProjectId = ToDataManagementProjectId(projectId);
+
+            // ETAPAS 1 a 4 (Permanecem iguais e estão a funcionar) — agora em EnviarConteudoParaStorageAsync.
+            var objectId = await EnviarConteudoParaStorageAsync(dataManagementProjectId, folderId, fileName, fileStream, accessToken);
+
             // ETAPA 5: Criar a nova "versão"
             // ▼▼▼ A CORREÇÃO FINAL ESTÁ AQUI ▼▼▼
             // Alinhando o endpoint EXATAMENTE com o Passo 8 da documentação
@@ -683,6 +786,64 @@ public class ItemDetails
 
 
 
+
+        /// <summary>Resultado do envio de um arquivo para uma pasta do ACC.</summary>
+        public sealed record UploadNaPastaResultado(string ItemId, string? VersionId, bool NovaVersao);
+
+        /// <summary>
+        /// Envia um arquivo para a pasta do ACC: se já existe um item com o MESMO nome na pasta, cria nova versão
+        /// (CreateNewVersionAsync, fluxo existente); senão cria o primeiro arquivo (POST /items com a 1ª versão).
+        /// Usado pelo Envio de Documentos governado pela LDP — a validação de LDP/pasta acontece ANTES, no chamador.
+        /// </summary>
+        public async Task<UploadNaPastaResultado> UploadArquivoNaPastaAsync(string projectId, string folderId, string fileName, Stream fileStream, string accessToken, CancellationToken ct = default)
+        {
+            string dataManagementProjectId = ToDataManagementProjectId(projectId);
+            var existentes = await GetFolderContentsAllPagesAsync(projectId, folderId, accessToken, ct);
+            var mesmo = existentes.FirstOrDefault(i => i.Type == "items" && string.Equals(i.Name, fileName, StringComparison.OrdinalIgnoreCase));
+            if (mesmo != null)
+            {
+                var versao = await CreateNewVersionAsync(projectId, mesmo.Id, folderId, fileName, fileStream, accessToken);
+                string? versionId = versao is { } v && v.TryGetProperty("data", out var d) && d.TryGetProperty("id", out var id) ? id.GetString() : null;
+                return new UploadNaPastaResultado(mesmo.Id, versionId, true);
+            }
+
+            var objectId = await EnviarConteudoParaStorageAsync(dataManagementProjectId, folderId, fileName, fileStream, accessToken);
+            var itemPayload = new
+            {
+                jsonapi = new { version = "1.0" },
+                data = new
+                {
+                    type = "items",
+                    attributes = new { displayName = fileName, extension = new { type = "items:autodesk.bim360:File", version = "1.0" } },
+                    relationships = new
+                    {
+                        tip = new { data = new { type = "versions", id = "1" } },
+                        parent = new { data = new { type = "folders", id = folderId } },
+                    },
+                },
+                included = new[]
+                {
+                    new
+                    {
+                        type = "versions", id = "1",
+                        attributes = new { name = fileName, extension = new { type = "versions:autodesk.bim360:File", version = "1.0" } },
+                        relationships = new { storage = new { data = new { type = "objects", id = objectId } } },
+                    },
+                },
+            };
+            using var itemRequest = new HttpRequestMessage(HttpMethod.Post, $"https://developer.api.autodesk.com/data/v1/projects/{dataManagementProjectId}/items");
+            itemRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            itemRequest.Content = new StringContent(JsonSerializer.Serialize(itemPayload), Encoding.UTF8);
+            itemRequest.Content.Headers.ContentType = null;
+            itemRequest.Content.Headers.TryAddWithoutValidation("Content-Type", "application/vnd.api+json");
+            var itemResponse = await _httpClient.SendAsync(itemRequest, ct);
+            if (!itemResponse.IsSuccessStatusCode) { var err = await itemResponse.Content.ReadAsStringAsync(ct); throw new HttpRequestException($"Erro ao criar o arquivo na pasta: {err}"); }
+            var criado = JsonDocument.Parse(await itemResponse.Content.ReadAsStringAsync(ct)).RootElement;
+            string itemId = criado.GetProperty("data").GetProperty("id").GetString() ?? "";
+            string? novaVersao = criado.TryGetProperty("included", out var inc) && inc.ValueKind == JsonValueKind.Array && inc.GetArrayLength() > 0
+                && inc[0].TryGetProperty("id", out var vid) ? vid.GetString() : null;
+            return new UploadNaPastaResultado(itemId, novaVersao, false);
+        }
 
         #endregion
 
@@ -747,6 +908,187 @@ public async Task<List<AccFolderItem>> GetFolderContentsSimpleAsync(string proje
             }
 
             return items;
+        }
+
+        /// <summary>
+        /// Versão paginada de <see cref="GetFolderContentsSimpleAsync"/> — mesma estrutura de retorno
+        /// (List&lt;AccFolderItem&gt;), mas percorre TODAS as páginas via links.next.href em vez de ler só a
+        /// primeira. Usada exclusivamente pelos pontos de COLETA DE ARQUIVOS da Etapa 7 (ver
+        /// LdpUpdateService) — a resolução de estrutura de pastas (pasta principal / disciplinas) continua
+        /// usando GetFolderContentsSimpleAsync, que não muda.
+        ///
+        /// Nunca retorna uma lista parcial: qualquer falha (rede, HTTP, loop de URL, limite de segurança de
+        /// páginas) lança exceção — o chamador decide como tratar (ver ColetarArquivosDaPastaRecursivoAsync
+        /// / ClassificarViaPastaPrincipalAlternativaAsync), nunca esta função finge sucesso com dados
+        /// incompletos.
+        ///
+        /// configuracaoParaLog/pastaParaLog são só para os logs [ETAPA7][ACC][PAGINACAO][...] — quando
+        /// omitidos, usa o próprio FolderId (resumido) como identificação da pasta no log.
+        /// </summary>
+        public async Task<List<AccFolderItem>> GetFolderContentsAllPagesAsync(
+            string projectId,
+            string folderId,
+            string accessToken,
+            System.Threading.CancellationToken cancellationToken = default,
+            string configuracaoParaLog = null,
+            string pastaParaLog = null)
+        {
+            const int limitePaginasSeguranca = 500;
+
+            string dataManagementProjectId = ToDataManagementProjectId(projectId);
+            string primeiraUrl = $"https://developer.api.autodesk.com/data/v1/projects/{dataManagementProjectId}/folders/{folderId}/contents";
+            string identificacaoPasta = pastaParaLog ?? ResumirIdPasta(folderId);
+
+            var itens = new List<AccFolderItem>();
+            var idsVistos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var urlsVisitadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int duplicadosRemovidos = 0;
+
+            string urlAtual = primeiraUrl;
+            int pagina = 0;
+
+            while (!string.IsNullOrEmpty(urlAtual))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                pagina++;
+
+                if (pagina > limitePaginasSeguranca)
+                {
+                    throw new InvalidOperationException(
+                        $"[ETAPA7][ACC][PAGINACAO] Limite de segurança de {limitePaginasSeguranca} páginas excedido para a pasta '{identificacaoPasta}'. Coleta abortada para evitar loop infinito.");
+                }
+
+                if (!urlsVisitadas.Add(urlAtual))
+                {
+                    throw new InvalidOperationException(
+                        $"[ETAPA7][ACC][PAGINACAO] URL repetida detectada (possível loop) na pasta '{identificacaoPasta}' — página {pagina}.");
+                }
+
+                var request = new HttpRequestMessage(HttpMethod.Get, urlAtual);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                HttpResponseMessage response;
+                try
+                {
+                    response = await _httpClient.SendAsync(request, cancellationToken);
+                }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    throw new InvalidOperationException(
+                        $"[ETAPA7][ACC][PAGINACAO] Falha de rede lendo página {pagina} da pasta '{identificacaoPasta}': {ex.Message}", ex);
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string erro = await response.Content.ReadAsStringAsync();
+                    throw new InvalidOperationException(
+                        $"[ETAPA7][ACC][PAGINACAO] Falha HTTP {(int)response.StatusCode} lendo página {pagina} da pasta '{identificacaoPasta}': {erro}");
+                }
+
+                string jsonString = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(jsonString);
+                var root = doc.RootElement;
+
+                int itensNaPagina = 0;
+
+                if (root.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in dataArray.EnumerateArray())
+                    {
+                        string type = item.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "" : "";
+                        string id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
+
+                        if (string.IsNullOrEmpty(id))
+                        {
+                            _logger.LogError(
+                                "[ETAPA7][ACC][PAGINACAO][ITEM_SEM_ID] Pasta={Pasta} | Pagina={Pagina} | Type={Type}",
+                                identificacaoPasta, pagina, string.IsNullOrEmpty(type) ? "(desconhecido)" : type);
+                            continue;
+                        }
+
+                        string chaveDedup = type + "|" + id;
+                        if (!idsVistos.Add(chaveDedup))
+                        {
+                            duplicadosRemovidos++;
+                            continue; // Mesmo Type+Id já coletado em outra página — não duplica.
+                        }
+
+                        if (!item.TryGetProperty("attributes", out var attributes))
+                        {
+                            continue; // Elemento inválido da resposta — ignorado (seção 8).
+                        }
+
+                        string name = attributes.TryGetProperty("displayName", out var nameProp) ? nameProp.GetString() ?? "Sem Nome" : "Sem Nome";
+
+                        string? lastModified = null;
+                        if (attributes.TryGetProperty("lastModifiedTime", out var lmProp))
+                            lastModified = lmProp.GetString();
+
+                        bool isHidden = false;
+                        if (attributes.TryGetProperty("hidden", out var hiddenProp))
+                            isHidden = hiddenProp.ValueKind == JsonValueKind.True;
+
+                        string? versionUrn = null;
+                        if (type == "items" &&
+                            item.TryGetProperty("relationships", out var rels) &&
+                            rels.TryGetProperty("tip", out var tip) &&
+                            tip.TryGetProperty("data", out var tipData) &&
+                            tipData.TryGetProperty("id", out var tipIdProp))
+                        {
+                            versionUrn = tipIdProp.GetString();
+                        }
+
+                        itens.Add(new AccFolderItem
+                        {
+                            Name = name,
+                            Type = type,
+                            Id = id,
+                            VersionUrn = versionUrn,
+                            LastModifiedTime = lastModified,
+                            IsHidden = isHidden
+                        });
+
+                        itensNaPagina++;
+                    }
+                }
+
+                string? proximaUrl = null;
+                if (root.TryGetProperty("links", out var links) &&
+                    links.ValueKind == JsonValueKind.Object &&
+                    links.TryGetProperty("next", out var next) &&
+                    next.ValueKind == JsonValueKind.Object &&
+                    next.TryGetProperty("href", out var hrefProp))
+                {
+                    proximaUrl = hrefProp.GetString();
+                }
+
+                if (!string.IsNullOrEmpty(proximaUrl) && !Uri.IsWellFormedUriString(proximaUrl, UriKind.Absolute))
+                {
+                    // links.next.href relativo: resolve contra a própria URL da página atual.
+                    proximaUrl = new Uri(new Uri(urlAtual), proximaUrl).ToString();
+                }
+
+                _logger.LogInformation(
+                    "[ETAPA7][ACC][PAGINACAO][PAGINA] Configuracao={Configuracao} | Pasta={Pasta} | Pagina={Pagina} | ItensNaPagina={ItensNaPagina} | ItensAcumulados={ItensAcumulados} | TemProximaPagina={TemProximaPagina}",
+                    configuracaoParaLog ?? "(n/d)", identificacaoPasta, pagina, itensNaPagina, itens.Count, !string.IsNullOrEmpty(proximaUrl));
+
+                urlAtual = proximaUrl;
+            }
+
+            int totalArquivos = itens.Count(i => i.Type == "items");
+            int totalSubpastas = itens.Count(i => i.Type == "folders");
+
+            _logger.LogInformation(
+                "[ETAPA7][ACC][PAGINACAO][FIM] Configuracao={Configuracao} | Pasta={Pasta} | PaginasLidas={PaginasLidas} | TotalItensAtivos={TotalItensAtivos} | TotalArquivos={TotalArquivos} | TotalSubpastas={TotalSubpastas} | DuplicadosRemovidos={DuplicadosRemovidos}",
+                configuracaoParaLog ?? "(n/d)", identificacaoPasta, pagina, itens.Count, totalArquivos, totalSubpastas, duplicadosRemovidos);
+
+            return itens;
+        }
+
+        private static string ResumirIdPasta(string folderId)
+        {
+            if (string.IsNullOrEmpty(folderId) || folderId.Length <= 14) return folderId ?? "";
+            return folderId.Substring(0, 8) + "..." + folderId.Substring(folderId.Length - 4);
         }
 
         public async Task<List<AttributeDefinition>> GetFolderAttributeDefinitionsAsync(string projectId, string folderId, string accessToken)
@@ -881,112 +1223,115 @@ public async Task<List<AccFolderItem>> GetFolderContentsSimpleAsync(string proje
         {
             if (!projectId.StartsWith("b.")) projectId = "b." + projectId;
 
-            using (var client = new HttpClient())
+            // NOTA: este método usava "new HttpClient()" isolado a cada chamada, o que contornava
+            // por completo o AutodeskRetryHandler (Polly) configurado no Program.cs. Agora usa o
+            // _httpClient injetado (resolvido via IHttpClientFactory), que passa por retry/backoff
+            // exponencial automático em respostas 429 da Autodesk.
+
+            // 1. RESOLVER ITEM -> VERSÃO
+            if (urn.Contains("dm.lineage"))
             {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var itemDetailsUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/items/{urn}";
+                var itemRequest = new HttpRequestMessage(HttpMethod.Get, itemDetailsUrl);
+                itemRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var itemResponse = await _httpClient.SendAsync(itemRequest);
 
-                // 1. RESOLVER ITEM -> VERSÃO
-                if (urn.Contains("dm.lineage"))
+                if (itemResponse.IsSuccessStatusCode)
                 {
-                    var itemDetailsUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/items/{urn}";
-                    var itemResponse = await client.GetAsync(itemDetailsUrl);
-
-                    if (itemResponse.IsSuccessStatusCode)
+                    var jsonItem = await itemResponse.Content.ReadAsStringAsync();
+                    using (var doc = JsonDocument.Parse(jsonItem))
                     {
-                        var jsonItem = await itemResponse.Content.ReadAsStringAsync();
-                        using (var doc = JsonDocument.Parse(jsonItem))
+                        if (doc.RootElement.TryGetProperty("data", out var data) &&
+                            data.TryGetProperty("relationships", out var rels) &&
+                            rels.TryGetProperty("tip", out var tip) &&
+                            tip.TryGetProperty("data", out var tipData) &&
+                            tipData.TryGetProperty("id", out var versionId))
                         {
-                            if (doc.RootElement.TryGetProperty("data", out var data) &&
-                                data.TryGetProperty("relationships", out var rels) &&
-                                rels.TryGetProperty("tip", out var tip) &&
-                                tip.TryGetProperty("data", out var tipData) &&
-                                tipData.TryGetProperty("id", out var versionId))
-                            {
-                                urn = versionId.GetString();
-                            }
+                            urn = versionId.GetString();
                         }
                     }
                 }
+            }
 
-                // 2. OBTER DETALHES DA VERSÃO (Storage ID)
-                var encodedVersionUrn = System.Net.WebUtility.UrlEncode(urn);
-                var versionDetailsUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/versions/{encodedVersionUrn}";
-                var versionResponse = await client.GetAsync(versionDetailsUrl);
+            // 2. OBTER DETALHES DA VERSÃO (Storage ID)
+            var encodedVersionUrn = System.Net.WebUtility.UrlEncode(urn);
+            var versionDetailsUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/versions/{encodedVersionUrn}";
+            var versionRequest = new HttpRequestMessage(HttpMethod.Get, versionDetailsUrl);
+            versionRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var versionResponse = await _httpClient.SendAsync(versionRequest);
 
-                if (!versionResponse.IsSuccessStatusCode)
+            if (!versionResponse.IsSuccessStatusCode)
+            {
+                var err = await versionResponse.Content.ReadAsStringAsync();
+                throw new Exception($"Erro ao pegar detalhes da versão ({versionResponse.StatusCode}): {err}");
+            }
+
+            string storageId = null;
+            var jsonVersion = await versionResponse.Content.ReadAsStringAsync();
+            using (var doc = JsonDocument.Parse(jsonVersion))
+            {
+                if (doc.RootElement.TryGetProperty("data", out var data) &&
+                    data.TryGetProperty("relationships", out var rels) &&
+                    rels.TryGetProperty("storage", out var storage) &&
+                    storage.TryGetProperty("data", out var storageData))
                 {
-                    var err = await versionResponse.Content.ReadAsStringAsync();
-                    throw new Exception($"Erro ao pegar detalhes da versão ({versionResponse.StatusCode}): {err}");
-                }
-
-                string storageId = null;
-                var jsonVersion = await versionResponse.Content.ReadAsStringAsync();
-                using (var doc = JsonDocument.Parse(jsonVersion))
-                {
-                    if (doc.RootElement.TryGetProperty("data", out var data) &&
-                        data.TryGetProperty("relationships", out var rels) &&
-                        rels.TryGetProperty("storage", out var storage) &&
-                        storage.TryGetProperty("data", out var storageData))
-                    {
-                        storageId = storageData.GetProperty("id").GetString();
-                    }
-                }
-
-                if (string.IsNullOrEmpty(storageId))
-                    throw new Exception("Storage ID não encontrado.");
-
-                // 3. OBTER URL DE DOWNLOAD S3 (Signed URL)
-                // O storageId vem como: urn:adsk.objects:os.object:wip.dm.prod/bucket-key/object-key
-                // Exemplo real: urn:adsk.objects:os.object:wip.dm.prod/9a3d4.../meu-arquivo.dwg
-                
-                // CORREÇÃO: Limpeza robusta do prefixo
-                var cleanStorageId = storageId.Replace("urn:adsk.objects:os.object:", "");
-                var parts = cleanStorageId.Split('/');
-                
-                if (parts.Length < 2) throw new Exception($"Formato de StorageID inválido: {storageId}");
-
-                var bucketKey = parts[0]; // Agora pegamos o primeiro pedaço limpo (ex: wip.dm.prod)
-                var objectKey = string.Join("/", parts.Skip(1)); // O resto é a chave do objeto (pode conter barras)
-
-                // Codifica apenas a objectKey
-                objectKey = System.Net.WebUtility.UrlEncode(objectKey);
-
-                var s3UrlEndpoint = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{objectKey}/signeds3download";
-                var s3Response = await client.GetAsync(s3UrlEndpoint);
-
-                if (!s3Response.IsSuccessStatusCode)
-                {
-                    var s3Err = await s3Response.Content.ReadAsStringAsync();
-                    throw new Exception($"Erro ao obter link S3 ({s3Response.StatusCode}): {s3Err}");
-                }
-
-                string downloadUrl = null;
-                var jsonS3 = await s3Response.Content.ReadAsStringAsync();
-                using (var doc = JsonDocument.Parse(jsonS3))
-                {
-                    if (doc.RootElement.TryGetProperty("url", out var urlProp))
-                    {
-                        downloadUrl = urlProp.GetString();
-                    }
-                }
-
-                if (string.IsNullOrEmpty(downloadUrl))
-                    throw new Exception("URL S3 vazia.");
-
-                // 4. BAIXAR BYTES
-                using (var s3Client = new HttpClient())
-                {
-                    var fileResponse = await s3Client.GetAsync(downloadUrl);
-                    
-                    if (!fileResponse.IsSuccessStatusCode)
-                        throw new Exception($"Erro ao baixar bytes S3 ({fileResponse.StatusCode})");
-
-                    var memoryStream = new MemoryStream();
-                    await fileResponse.Content.CopyToAsync(memoryStream);
-                    memoryStream.Position = 0;
-                    return memoryStream;
+                    storageId = storageData.GetProperty("id").GetString();
                 }
             }
+
+            if (string.IsNullOrEmpty(storageId))
+                throw new Exception("Storage ID não encontrado.");
+
+            // 3. OBTER URL DE DOWNLOAD S3 (Signed URL)
+            // O storageId vem como: urn:adsk.objects:os.object:wip.dm.prod/bucket-key/object-key
+            // Exemplo real: urn:adsk.objects:os.object:wip.dm.prod/9a3d4.../meu-arquivo.dwg
+
+            // CORREÇÃO: Limpeza robusta do prefixo
+            var cleanStorageId = storageId.Replace("urn:adsk.objects:os.object:", "");
+            var parts = cleanStorageId.Split('/');
+
+            if (parts.Length < 2) throw new Exception($"Formato de StorageID inválido: {storageId}");
+
+            var bucketKey = parts[0]; // Agora pegamos o primeiro pedaço limpo (ex: wip.dm.prod)
+            var objectKey = string.Join("/", parts.Skip(1)); // O resto é a chave do objeto (pode conter barras)
+
+            // Codifica apenas a objectKey
+            objectKey = System.Net.WebUtility.UrlEncode(objectKey);
+
+            var s3UrlEndpoint = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{objectKey}/signeds3download";
+            var s3Request = new HttpRequestMessage(HttpMethod.Get, s3UrlEndpoint);
+            s3Request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var s3Response = await _httpClient.SendAsync(s3Request);
+
+            if (!s3Response.IsSuccessStatusCode)
+            {
+                var s3Err = await s3Response.Content.ReadAsStringAsync();
+                throw new Exception($"Erro ao obter link S3 ({s3Response.StatusCode}): {s3Err}");
+            }
+
+            string downloadUrl = null;
+            var jsonS3 = await s3Response.Content.ReadAsStringAsync();
+            using (var doc = JsonDocument.Parse(jsonS3))
+            {
+                if (doc.RootElement.TryGetProperty("url", out var urlProp))
+                {
+                    downloadUrl = urlProp.GetString();
+                }
+            }
+
+            if (string.IsNullOrEmpty(downloadUrl))
+                throw new Exception("URL S3 vazia.");
+
+            // 4. BAIXAR BYTES (URL pré-assinada do S3, sem necessidade de Bearer)
+            var fileResponse = await _httpClient.GetAsync(downloadUrl);
+
+            if (!fileResponse.IsSuccessStatusCode)
+                throw new Exception($"Erro ao baixar bytes S3 ({fileResponse.StatusCode})");
+
+            var memoryStream = new MemoryStream();
+            await fileResponse.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+            return memoryStream;
         }
 
         /// <summary>
@@ -1255,31 +1600,31 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
     // 3. Itera sobre a LDP (Dados do Banco)
     foreach (var row in ldpData)
     {
-        if (row.TryGetValue("_DOC_NUMBER_KEY_", out var docCode) || 
+        if (row.TryGetValue("_DOC_NUMBER_KEY_", out var docCode) ||
             row.TryGetValue(keyColumnName, out docCode))
         {
             if (string.IsNullOrEmpty(docCode)) continue;
 
-            result.AllLdpFiles.Add(docCode); 
+            result.AllLdpFiles.Add(docCode);
             var codeToSearch = docCode.Trim();
 
             // === LÓGICA DE BUSCA DE ARQUIVOS (SMART MATCH) ===
+            // Delega para o DocumentMatchingService (usado também em LdpUpdateService) em vez da
+            // verificação manual (TryGetValue exato + fallback .StartsWith). O código principal da
+            // linha é sempre "codeToSearch"; quando a linha também trouxer o Número N&A separado
+            // (caso de LdpUpdateService.SyncAccAttributesFromSqlAsync), ele entra como fallback.
+            row.TryGetValue("NADOCUMENTNUMBER", out var numeroNaFallback);
+            if (string.Equals(numeroNaFallback, codeToSearch, StringComparison.OrdinalIgnoreCase))
+            {
+                numeroNaFallback = null; // Evita repetir a mesma busca quando a chave já É o número N&A
+            }
+
             List<string> targetUrns = new List<string>();
 
-            if (fileMap.TryGetValue(codeToSearch, out var exactMatches))
+            var matchedFileName = _documentMatching.EncontrarDocumentoNoAcc(codeToSearch, numeroNaFallback, fileMap.Keys);
+            if (matchedFileName != null && fileMap.TryGetValue(matchedFileName, out var matchedUrns))
             {
-                targetUrns.AddRange(exactMatches);
-            }
-            else
-            {
-                var partialMatches = fileMap.Keys
-                    .Where(k => k.StartsWith(codeToSearch, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                foreach (var key in partialMatches)
-                {
-                    targetUrns.AddRange(fileMap[key]);
-                }
+                targetUrns.AddRange(matchedUrns);
             }
 
             // === AÇÃO ===
@@ -1805,28 +2150,28 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
             var clientId = _configuration["APS:ClientId"];
             var clientSecret = _configuration["APS:ClientSecret"];
 
-            using (var client = new HttpClient())
+            var body = new Dictionary<string, string>
             {
-                var body = new Dictionary<string, string>
-                {
-                    { "client_id", clientId },
-                    { "client_secret", clientSecret },
-                    { "grant_type", "client_credentials" },
-                    { "scope", scope }
-                };
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "grant_type", "client_credentials" },
+                { "scope", scope }
+            };
 
-                var content = new FormUrlEncodedContent(body);
-                var response = await client.PostAsync("https://developer.api.autodesk.com/authentication/v2/token", content);
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://developer.api.autodesk.com/authentication/v2/token")
+            {
+                Content = new FormUrlEncodedContent(body)
+            };
+            var response = await _httpClient.SendAsync(request);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new Exception("O Robô falhou ao tentar pegar o crachá (Token). Verifique ClientId/Secret.");
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.GetProperty("access_token").GetString();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("O Robô falhou ao tentar pegar o crachá (Token). Verifique ClientId/Secret.");
             }
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.GetProperty("access_token").GetString();
         }
 
         /// <summary>
@@ -1834,35 +2179,138 @@ public async Task<SyncResult> SyncLdpAttributesAsync(string hubId, string projec
 /// </summary>
 public async Task<string> FindFolderIdByPathAsync(string hubId, string projectId, string[] folderNames, string accessToken)
 {
+    // [DISCOVERY][RECURSION] Diagnóstico somente-leitura (não altera a lógica abaixo): este método
+    // SEMPRE navega um caminho fixo de N níveis (N = folderNames.Length), nunca varre a árvore
+    // inteira em busca de um nome — não existe recursão livre aqui.
+    _logger.LogInformation(
+        "[DISCOVERY][RECURSION] recursive=NO | caminho fixo de {Niveis} nivel(is): {Caminho}",
+        folderNames.Length, string.Join(" / ", folderNames));
+
     // Passamos o HubId corretamente agora
+    // (TOP_FOLDER já é logado dentro de GetTopFoldersAsync — não duplicar aqui.)
     var topFolders = await GetTopFoldersAsync(hubId, projectId, accessToken);
-    
-    var rootFolder = topFolders.FirstOrDefault(f => f.Name == "Project Files");
-    if (rootFolder == null) 
+
+    // Normalização de whitespace (AccFolderNameComparer) — ver diagnóstico do canário Tipo 2:
+    // pastas do ACC podem ter espaçamento interno variável ("Project Files" em si nunca apresentou
+    // esse problema até hoje, mas a comparação é normalizada por consistência com o match abaixo).
+    var rootFolder = topFolders.FirstOrDefault(f => AccFolderNameComparer.AreEquivalent(f.Name, "Project Files"));
+    if (rootFolder == null)
     {
-        _logger.LogError("Pasta 'Project Files' não encontrada na raiz.");
+        // Tentativa individual de um caminho alternativo (ver chamadores: FindFolderByPaths /
+        // pathsToSearch) — Debug, não Error. Só o chamador, depois de esgotar TODAS as alternativas,
+        // decide se isso é um Warning (ausência operacional) ou não encontra nada a reportar.
+        _logger.LogDebug("[CAMINHO][TENTATIVA] Pasta 'Project Files' não encontrada na raiz para este caminho alternativo.");
         return null;
     }
 
     string currentFolderId = rootFolder.Id;
+    string parentNameParaDiagnostico = rootFolder.Name;
 
-    foreach (var folderName in folderNames)
+    for (int depth = 0; depth < folderNames.Length; depth++)
     {
+        string folderName = folderNames[depth];
+
+        _logger.LogInformation(
+            "[DISCOVERY][ENTER_FOLDER] Name={NomeProcurado} | Id(pastaAtual)={CurrentId} | Parent={ParentName} | Depth={Depth}",
+            folderName, currentFolderId, parentNameParaDiagnostico, depth);
+
+        // (ITEM já é logado dentro de GetFolderContentsAsync — não duplicar aqui.)
         var contents = await GetFolderContentsAsync(projectId, currentFolderId, accessToken);
-        
-        var subFolder = contents.FirstOrDefault(c => 
-            c.Type == "folders" && 
-            c.Name.Trim().Equals(folderName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        // Correção do canário Tipo 2 (b.9e5d47da-e37f-452f-9ef4-7df992f27033): comparação tolerante
+        // a espaçamento interno variável ("09 -   ENGINEERING DOCUMENTS" vs "09 - ENGINEERING
+        // DOCUMENTS") via AccFolderNameComparer — não remove acentos/hífens/dígitos, não é fuzzy.
+        var subFolder = contents.FirstOrDefault(c =>
+            c.Type == "folders" &&
+            AccFolderNameComparer.AreEquivalent(c.Name, folderName));
 
         if (subFolder == null)
         {
-            _logger.LogError($"Caminho quebrado: Pasta '{folderName}' não encontrada.");
+            // Idem — esta é só UMA tentativa dentre várias alternativas possíveis (seção 12 da
+            // manutenção técnica). Nunca Error aqui; o chamador registra Warning se TODAS falharem.
+            _logger.LogDebug("[CAMINHO][TENTATIVA] Pasta '{FolderName}' não encontrada neste caminho alternativo.", folderName);
             return null;
         }
         currentFolderId = subFolder.Id;
+        parentNameParaDiagnostico = subFolder.Name;
     }
     return currentFolderId;
 }
+
+// Extrai só o código numérico (ex.: "09", "09.14") do início do nome de uma pasta ACC — nunca
+// remove/altera nada além disso, não é fuzzy, não usa AccFolderNameComparer (propósito diferente:
+// aquele compara o nome INTEIRO tolerando espaçamento, este ignora o texto após o código).
+internal static readonly Regex PrefixoNumericoPastaAcc = new(@"^\s*(\d+(?:\.\d+)?)\s*-", RegexOptions.Compiled);
+
+internal static string ExtrairPrefixoNumericoDaPasta(string nomePasta)
+{
+    if (string.IsNullOrWhiteSpace(nomePasta)) return null;
+    var m = PrefixoNumericoPastaAcc.Match(nomePasta);
+    return m.Success ? m.Groups[1].Value : null;
+}
+
+/// <summary>
+/// Correção 17/09/2026 (achado real: CHS001 tem a pasta raiz "09 - DEVELOPMENT", nome que não batia
+/// com nenhum dos 4 candidatos fixos configurados — "09 - DESENVOLVIMENTO"/"09 - DEVELOPING"/"09 -
+/// MODEL DEVELOPING"/"09 - ENGINEERING DOCUMENTS" — mesmo a pasta existindo e sendo inequivocamente
+/// a raiz "09"). Localiza um caminho de pastas pelo CÓDIGO NUMÉRICO no início do nome (ex.: "09",
+/// depois "09.14" dentro dela), ignorando o texto descritivo que vem depois do código — o robô já
+/// tinha visto esse texto variar entre projetos/idiomas (DESENVOLVIMENTO/DEVELOPING/DEVELOPMENT/
+/// MODEL DEVELOPING/ENGINEERING DOCUMENTS), mas o código numérico da pasta nunca varia.
+/// NUNCA adivinha: se mais de uma subpasta no mesmo nível tiver o mesmo prefixo numérico
+/// (ambiguidade real), registra e retorna null — não escolhe arbitrariamente entre elas.
+/// </summary>
+public async Task<string> FindFolderIdByNumericPrefixPathAsync(string hubId, string projectId, string[] prefixos, string accessToken)
+{
+    _logger.LogInformation(
+        "[DISCOVERY][RECURSION] recursive=NO | caminho fixo por prefixo numerico de {Niveis} nivel(is): {Caminho}",
+        prefixos.Length, string.Join(" / ", prefixos));
+
+    var topFolders = await GetTopFoldersAsync(hubId, projectId, accessToken);
+    var rootFolder = topFolders.FirstOrDefault(f => AccFolderNameComparer.AreEquivalent(f.Name, "Project Files"));
+    if (rootFolder == null)
+    {
+        _logger.LogDebug("[CAMINHO][TENTATIVA][PREFIXO] Pasta 'Project Files' não encontrada na raiz.");
+        return null;
+    }
+
+    string currentFolderId = rootFolder.Id;
+    string parentNameParaDiagnostico = rootFolder.Name;
+
+    for (int depth = 0; depth < prefixos.Length; depth++)
+    {
+        string prefixoProcurado = prefixos[depth];
+
+        _logger.LogInformation(
+            "[DISCOVERY][ENTER_FOLDER][PREFIXO] Prefixo={PrefixoProcurado} | Id(pastaAtual)={CurrentId} | Parent={ParentName} | Depth={Depth}",
+            prefixoProcurado, currentFolderId, parentNameParaDiagnostico, depth);
+
+        var contents = await GetFolderContentsAsync(projectId, currentFolderId, accessToken);
+
+        var candidatos = contents
+            .Where(c => c.Type == "folders" && ExtrairPrefixoNumericoDaPasta(c.Name) == prefixoProcurado)
+            .ToList();
+
+        if (candidatos.Count == 0)
+        {
+            _logger.LogDebug("[CAMINHO][TENTATIVA][PREFIXO] Nenhuma pasta com prefixo numérico '{Prefixo}' encontrada neste nível.", prefixoProcurado);
+            return null;
+        }
+
+        if (candidatos.Count > 1)
+        {
+            _logger.LogWarning(
+                "[DISCOVERY][PREFIXO_AMBIGUO] {Count} pastas com o mesmo prefixo '{Prefixo}' no mesmo nível: {Nomes} — não é possível decidir automaticamente, abortando esta tentativa.",
+                candidatos.Count, prefixoProcurado, string.Join(", ", candidatos.Select(c => c.Name)));
+            return null;
+        }
+
+        currentFolderId = candidatos[0].Id;
+        parentNameParaDiagnostico = candidatos[0].Name;
+    }
+    return currentFolderId;
+}
+
 /// <summary>
 /// Localiza um arquivo dentro de uma pasta específica buscando por parte do nome (ex: "LDP").
 /// </summary>
@@ -1906,20 +2354,32 @@ public async Task<List<AccFolderItem>> GetTopFoldersAsync(string hubId, string p
     // MUDANÇA: Usando a rota project/v1 que sabemos que funciona
     var requestUrl = $"https://developer.api.autodesk.com/project/v1/hubs/{hubId}/projects/{projectId}/topFolders";
 
-    using (var client = new HttpClient())
+    // Usa o _httpClient injetado (via IHttpClientFactory) em vez de "new HttpClient()":
+    // este método é chamado repetidamente em varreduras recursivas de pastas e é um dos
+    // maiores geradores de chamadas à Autodesk. Sem passar pelo _httpClient, o
+    // AutodeskRetryHandler (Polly) nunca entra em ação e qualquer 429 vira exceção direta.
+    var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var response = await _httpClient.SendAsync(request);
+
+    if (!response.IsSuccessStatusCode)
     {
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        var response = await client.GetAsync(requestUrl);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError($"Erro ao buscar TopFolders (Hub: {hubId}): {response.StatusCode}");
-            return new List<AccFolderItem>();
-        }
-
-        var json = await response.Content.ReadAsStringAsync();
-        return ParseFolderItems(json);
+        _logger.LogError($"Erro ao buscar TopFolders (Hub: {hubId}): {response.StatusCode}");
+        return new List<AccFolderItem>();
     }
+
+    var json = await response.Content.ReadAsStringAsync();
+    var topFoldersParsed = ParseFolderItems(json);
+
+    // [CANÁRIO][DIAGNÓSTICO] Lista TODOS os top folders retornados pela Autodesk — não altera a
+    // seleção que os chamadores já fazem (ex.: FindFolderIdByPathAsync continua filtrando por
+    // Name == "Project Files" exatamente como antes).
+    foreach (var tf in topFoldersParsed)
+    {
+        _logger.LogInformation("[DISCOVERY][TOP_FOLDER] Name={Name} | Id={Id}", tf.Name, tf.Id);
+    }
+
+    return topFoldersParsed;
 }
 
 /// <summary>
@@ -1933,20 +2393,33 @@ public async Task<List<AccFolderItem>> GetFolderContentsAsync(string projectId, 
 
     var requestUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/folders/{folderId}/contents";
 
-    using (var client = new HttpClient())
+    // Idem: chamado recursivamente para cada subpasta do projeto — precisa passar pelo
+    // _httpClient para se beneficiar do retry/backoff do AutodeskRetryHandler.
+    var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var response = await _httpClient.SendAsync(request);
+
+    if (!response.IsSuccessStatusCode)
     {
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        var response = await client.GetAsync(requestUrl);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError($"Erro ao buscar conteúdo da pasta {folderId}: {response.StatusCode}");
-            return new List<AccFolderItem>();
-        }
-
-        var json = await response.Content.ReadAsStringAsync();
-        return ParseFolderItems(json);
+        _logger.LogError($"Erro ao buscar conteúdo da pasta {folderId}: {response.StatusCode}");
+        return new List<AccFolderItem>();
     }
+
+    var json = await response.Content.ReadAsStringAsync();
+    var itemsParsed = ParseFolderItems(json);
+
+    // [CANÁRIO][DIAGNÓSTICO] Lista TODOS os itens retornados por esta chamada de /contents —
+    // não altera nenhuma seleção/filtragem já feita pelos chamadores.
+    foreach (var it in itemsParsed)
+    {
+        string tipoDescritivo = it.Type == "items" ? "item" : it.Type == "folders" ? "folder" : it.Type;
+        string extensao = it.Type == "items" ? System.IO.Path.GetExtension(it.Name ?? string.Empty) : string.Empty;
+        _logger.LogInformation(
+            "[DISCOVERY][ITEM] Name={Name} | Type={Type} | Extension={Extension} | Id={Id}",
+            it.Name, tipoDescritivo, extensao, it.Id);
+    }
+
+    return itemsParsed;
 }
 
 /// <summary>
@@ -2069,154 +2542,163 @@ public async Task<string> UploadFileToFolderAsync(string projectId, string folde
     // Garante prefixos
     if (!projectId.StartsWith("b.")) projectId = "b." + projectId;
 
-    using (var client = new HttpClient())
+    // Usa o _httpClient injetado (via IHttpClientFactory) para as chamadas JSON à Autodesk,
+    // que passam a se beneficiar do retry/backoff do AutodeskRetryHandler em respostas 429.
+    // O PUT dos bytes para o S3 (streamContent) continua fora do retry automático: o
+    // AutodeskRetryHandler detecta corpos StreamContent e os executa uma única tentativa,
+    // pois o stream do arquivo já estaria parcialmente consumido após uma 1ª tentativa falha.
+
+    // PASSO 1: Criar um local de armazenamento (Storage Location)
+    var storageUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/storage";
+    var storageBody = new
     {
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        // PASSO 1: Criar um local de armazenamento (Storage Location)
-        var storageUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/storage";
-        var storageBody = new
+        jsonapi = new { version = "1.0" },
+        data = new
         {
-            jsonapi = new { version = "1.0" },
-            data = new
+            type = "objects",
+            attributes = new { name = fileName },
+            relationships = new { target = new { data = new { type = "folders", id = folderId } } }
+        }
+    };
+
+    var storageRequest = new HttpRequestMessage(HttpMethod.Post, storageUrl)
+    {
+        Content = new StringContent(JsonSerializer.Serialize(storageBody), Encoding.UTF8, "application/json")
+    };
+    storageRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var storageResponse = await _httpClient.SendAsync(storageRequest);
+
+    if (!storageResponse.IsSuccessStatusCode)
+    {
+        var err = await storageResponse.Content.ReadAsStringAsync();
+        throw new Exception($"Erro ao criar Storage ({storageResponse.StatusCode}): {err}");
+    }
+
+    var storageJson = await storageResponse.Content.ReadAsStringAsync();
+    string objectId;
+    using (var doc = JsonDocument.Parse(storageJson))
+    {
+        objectId = doc.RootElement.GetProperty("data").GetProperty("id").GetString();
+    }
+
+    // PASSO 2: Obter URL assinada para Upload (S3)
+    // Precisamos extrair bucketKey e objectKey do objectId
+    // Formato: urn:adsk.objects:os.object:wip.dm.prod/bucketKey/objectKey
+    var cleanId = objectId.Replace("urn:adsk.objects:os.object:", "");
+    var parts = cleanId.Split('/');
+    var bucketKey = parts[0];
+    var objectKey = string.Join("/", parts.Skip(1));
+    var encodedObjectKey = System.Net.WebUtility.UrlEncode(objectKey);
+
+    var signedUrlEndpoint = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{encodedObjectKey}/signeds3upload";
+    var signedRequest = new HttpRequestMessage(HttpMethod.Get, signedUrlEndpoint);
+    signedRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var signedResponse = await _httpClient.SendAsync(signedRequest);
+
+    if (!signedResponse.IsSuccessStatusCode)
+    {
+         var err = await signedResponse.Content.ReadAsStringAsync();
+         throw new Exception($"Erro ao obter URL S3 ({signedResponse.StatusCode}): {err}");
+    }
+
+    string uploadUrl, uploadKey;
+    var signedJson = await signedResponse.Content.ReadAsStringAsync();
+    using (var doc = JsonDocument.Parse(signedJson))
+    {
+        uploadUrl = doc.RootElement.GetProperty("urls").EnumerateArray().First().GetString();
+        uploadKey = doc.RootElement.GetProperty("uploadKey").GetString();
+    }
+
+    // PASSO 3: Fazer o Upload dos bytes para o S3 (URL pré-assinada, sem header de Autorização da Autodesk)
+    if (fileStream.Position != 0 && fileStream.CanSeek) fileStream.Position = 0;
+
+    var streamContent = new StreamContent(fileStream);
+    // S3 às vezes rejeita se não tiver content-type ou se for incorreto. "application/octet-stream" é seguro.
+    streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+    var uploadResponse = await _httpClient.PutAsync(uploadUrl, streamContent);
+
+    if (!uploadResponse.IsSuccessStatusCode)
+    {
+        var err = await uploadResponse.Content.ReadAsStringAsync();
+        throw new Exception($"Erro ao fazer Upload dos bytes S3 ({uploadResponse.StatusCode}): {err}");
+    }
+
+    // PASSO 4: Completar o Upload no OSS
+    var completeUrl = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{encodedObjectKey}/signeds3upload";
+    var completeBody = new { uploadKey = uploadKey };
+    var completeRequest = new HttpRequestMessage(HttpMethod.Post, completeUrl)
+    {
+        Content = new StringContent(JsonSerializer.Serialize(completeBody), Encoding.UTF8, "application/json")
+    };
+    completeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var completeResponse = await _httpClient.SendAsync(completeRequest);
+    if (!completeResponse.IsSuccessStatusCode)
+    {
+         var err = await completeResponse.Content.ReadAsStringAsync();
+         throw new Exception($"Erro ao completar upload OSS ({completeResponse.StatusCode}): {err}");
+    }
+
+    // PASSO 5: Criar o Item no Data Management (Linkar o arquivo ao Folder)
+    // Isso cria a PRIMEIRA versão do arquivo
+    var itemUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/items";
+    var itemBody = new
+    {
+        jsonapi = new { version = "1.0" },
+        data = new
+        {
+            type = "items",
+            attributes = new
             {
-                type = "objects",
-                attributes = new { name = fileName },
-                relationships = new { target = new { data = new { type = "folders", id = folderId } } }
+                displayName = fileName,
+                extension = new
+                {
+                    type = "items:autodesk.bim360:File",
+                    version = "1.0"
+                }
+            },
+            relationships = new
+            {
+                tip = new { data = new { type = "versions", id = "1" } },
+                parent = new { data = new { type = "folders", id = folderId } }
             }
-        };
-
-        var storageContent = new StringContent(JsonSerializer.Serialize(storageBody), Encoding.UTF8, "application/json");
-        var storageResponse = await client.PostAsync(storageUrl, storageContent);
-        
-        if (!storageResponse.IsSuccessStatusCode)
+        },
+        included = new[]
         {
-            var err = await storageResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Erro ao criar Storage ({storageResponse.StatusCode}): {err}");
-        }
-
-        var storageJson = await storageResponse.Content.ReadAsStringAsync();
-        string objectId;
-        using (var doc = JsonDocument.Parse(storageJson))
-        {
-            objectId = doc.RootElement.GetProperty("data").GetProperty("id").GetString();
-        }
-
-        // PASSO 2: Obter URL assinada para Upload (S3)
-        // Precisamos extrair bucketKey e objectKey do objectId
-        // Formato: urn:adsk.objects:os.object:wip.dm.prod/bucketKey/objectKey
-        var cleanId = objectId.Replace("urn:adsk.objects:os.object:", "");
-        var parts = cleanId.Split('/');
-        var bucketKey = parts[0];
-        var objectKey = string.Join("/", parts.Skip(1));
-        var encodedObjectKey = System.Net.WebUtility.UrlEncode(objectKey);
-
-        var signedUrlEndpoint = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{encodedObjectKey}/signeds3upload";
-        var signedResponse = await client.GetAsync(signedUrlEndpoint);
-
-        if (!signedResponse.IsSuccessStatusCode)
-        {
-             var err = await signedResponse.Content.ReadAsStringAsync();
-             throw new Exception($"Erro ao obter URL S3 ({signedResponse.StatusCode}): {err}");
-        }
-
-        string uploadUrl, uploadKey;
-        var signedJson = await signedResponse.Content.ReadAsStringAsync();
-        using (var doc = JsonDocument.Parse(signedJson))
-        {
-            uploadUrl = doc.RootElement.GetProperty("urls").EnumerateArray().First().GetString();
-            uploadKey = doc.RootElement.GetProperty("uploadKey").GetString();
-        }
-
-        // PASSO 3: Fazer o Upload dos bytes para o S3
-        // IMPORTANTE: Usar um cliente novo SEM headers de autorização da Autodesk, pois o S3 usa a assinatura na URL
-        using (var s3Client = new HttpClient()) 
-        {
-            // Garante que o stream está no início
-            if (fileStream.Position != 0 && fileStream.CanSeek) fileStream.Position = 0;
-
-            var streamContent = new StreamContent(fileStream);
-            // S3 às vezes rejeita se não tiver content-type ou se for incorreto. "application/octet-stream" é seguro.
-            streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream"); 
-
-            var uploadResponse = await s3Client.PutAsync(uploadUrl, streamContent);
-
-            if (!uploadResponse.IsSuccessStatusCode)
+            new
             {
-                var err = await uploadResponse.Content.ReadAsStringAsync();
-                throw new Exception($"Erro ao fazer Upload dos bytes S3 ({uploadResponse.StatusCode}): {err}");
-            }
-        }
-
-        // PASSO 4: Completar o Upload no OSS
-        var completeUrl = $"https://developer.api.autodesk.com/oss/v2/buckets/{bucketKey}/objects/{encodedObjectKey}/signeds3upload";
-        var completeBody = new { uploadKey = uploadKey };
-        var completeContent = new StringContent(JsonSerializer.Serialize(completeBody), Encoding.UTF8, "application/json");
-        
-        var completeResponse = await client.PostAsync(completeUrl, completeContent);
-        if (!completeResponse.IsSuccessStatusCode)
-        {
-             var err = await completeResponse.Content.ReadAsStringAsync();
-             throw new Exception($"Erro ao completar upload OSS ({completeResponse.StatusCode}): {err}");
-        }
-
-        // PASSO 5: Criar o Item no Data Management (Linkar o arquivo ao Folder)
-        // Isso cria a PRIMEIRA versão do arquivo
-        var itemUrl = $"https://developer.api.autodesk.com/data/v1/projects/{projectId}/items";
-        var itemBody = new
-        {
-            jsonapi = new { version = "1.0" },
-            data = new
-            {
-                type = "items",
+                type = "versions",
+                id = "1",
                 attributes = new
                 {
-                    displayName = fileName,
-                    extension = new
-                    {
-                        type = "items:autodesk.bim360:File",
-                        version = "1.0"
-                    }
+                    name = fileName,
+                    extension = new { type = "versions:autodesk.bim360:File", version = "1.0" }
                 },
                 relationships = new
                 {
-                    tip = new { data = new { type = "versions", id = "1" } },
-                    parent = new { data = new { type = "folders", id = folderId } }
-                }
-            },
-            included = new[]
-            {
-                new
-                {
-                    type = "versions",
-                    id = "1",
-                    attributes = new
-                    {
-                        name = fileName,
-                        extension = new { type = "versions:autodesk.bim360:File", version = "1.0" }
-                    },
-                    relationships = new
-                    {
-                        storage = new { data = new { type = "objects", id = objectId } }
-                    }
+                    storage = new { data = new { type = "objects", id = objectId } }
                 }
             }
-        };
-
-        var itemContent = new StringContent(JsonSerializer.Serialize(itemBody), Encoding.UTF8, "application/json");
-        var itemResponse = await client.PostAsync(itemUrl, itemContent);
-
-        if (!itemResponse.IsSuccessStatusCode)
-        {
-            var err = await itemResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Erro ao criar Item no ACC ({itemResponse.StatusCode}): {err}");
         }
+    };
 
-        var itemJson = await itemResponse.Content.ReadAsStringAsync();
-        using (var doc = JsonDocument.Parse(itemJson))
-        {
-            return doc.RootElement.GetProperty("data").GetProperty("id").GetString();
-        }
+    var itemRequest = new HttpRequestMessage(HttpMethod.Post, itemUrl)
+    {
+        Content = new StringContent(JsonSerializer.Serialize(itemBody), Encoding.UTF8, "application/json")
+    };
+    itemRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    var itemResponse = await _httpClient.SendAsync(itemRequest);
+
+    if (!itemResponse.IsSuccessStatusCode)
+    {
+        var err = await itemResponse.Content.ReadAsStringAsync();
+        throw new Exception($"Erro ao criar Item no ACC ({itemResponse.StatusCode}): {err}");
+    }
+
+    var itemJson = await itemResponse.Content.ReadAsStringAsync();
+    using (var doc = JsonDocument.Parse(itemJson))
+    {
+        return doc.RootElement.GetProperty("data").GetProperty("id").GetString();
     }
 }
 
@@ -2254,36 +2736,36 @@ private string GetLdpFileNameFromConfig(string projectId)
         throw new Exception("As configurações APS:ClientId e APS:ClientSecret não foram encontradas no appsettings.json.");
     }
 
-    using (var client = new HttpClient())
+    // 🎯 A GRANDE MUDANÇA DA V2: As chaves vão no Cabeçalho (Header) codificadas em Base64
+    var authString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+
+    // 🎯 O corpo da requisição agora leva apenas a permissão e o escopo
+    var body = new Dictionary<string, string>
     {
-        // 🎯 A GRANDE MUDANÇA DA V2: As chaves vão no Cabeçalho (Header) codificadas em Base64
-        var authString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+        { "grant_type", "client_credentials" },
+        { "scope", scope }
+    };
 
-        // 🎯 O corpo da requisição agora leva apenas a permissão e o escopo
-        var body = new Dictionary<string, string>
-        {
-            { "grant_type", "client_credentials" },
-            { "scope", scope }
-        };
+    var request = new HttpRequestMessage(HttpMethod.Post, "https://developer.api.autodesk.com/authentication/v2/token")
+    {
+        Content = new FormUrlEncodedContent(body)
+    };
+    request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
 
-        var content = new FormUrlEncodedContent(body);
-        
-        // Chama o endpoint de autenticação V2
-        var response = await client.PostAsync("https://developer.api.autodesk.com/authentication/v2/token", content);
+    // Chama o endpoint de autenticação V2
+    var response = await _httpClient.SendAsync(request);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            _logger.LogError($"[AutodeskApiService] Falha ao obter Token do Robô: {response.StatusCode} - {error}");
-            throw new Exception($"Não foi possível autenticar o Robô no Autodesk APS. Erro: {error}");
-        }
+    if (!response.IsSuccessStatusCode)
+    {
+        var error = await response.Content.ReadAsStringAsync();
+        _logger.LogError($"[AutodeskApiService] Falha ao obter Token do Robô: {response.StatusCode} - {error}");
+        throw new Exception($"Não foi possível autenticar o Robô no Autodesk APS. Erro: {error}");
+    }
 
-        var json = await response.Content.ReadAsStringAsync();
-        using (var doc = JsonDocument.Parse(json))
-        {
-            return doc.RootElement.GetProperty("access_token").GetString();
-        }
+    var json = await response.Content.ReadAsStringAsync();
+    using (var doc = JsonDocument.Parse(json))
+    {
+        return doc.RootElement.GetProperty("access_token").GetString();
     }
 }
 
@@ -2513,4 +2995,3 @@ public async Task<ItemDetails> GetItemDetailsAsync(string projectId, string item
 
     }
 }
-#endregion

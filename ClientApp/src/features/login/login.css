@@ -1,0 +1,422 @@
+/* Ficheiro: ClientApp/src/features/login/login.css
+   Estilos exclusivos da tela /login. Tudo sob o prefixo na-login / na-marquee para não vazar para o sistema. */
+
+.na-login {
+  --na-navy-950: #070d1a;
+  --na-navy-900: #0b1424;
+  --na-navy-800: #12213d;
+  --na-navy: #283554;
+  --na-blue: #235a8a;
+  --na-cyan: #1192af;
+  --na-cyan-300: #6cc3d8;
+  --na-ink-on-dark: #ffffff;
+  --na-ink-soft: rgba(255, 255, 255, 0.84);
+  --na-ink-quiet: rgba(255, 255, 255, 0.64);
+  --na-hairline: rgba(255, 255, 255, 0.12);
+  --na-gutter: clamp(24px, 3.4vw, 48px);
+  --na-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background-color: var(--na-navy-900);
+  color: var(--na-ink-on-dark);
+  font-family: "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.na-login ::selection {
+  background: var(--na-cyan);
+  color: #fff;
+}
+
+.na-login :focus-visible {
+  outline: 2px solid var(--na-cyan-300);
+  outline-offset: 3px;
+}
+
+/* ---------- Palco de mídia ---------- */
+
+.na-login-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.na-login-hero__stage {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.na-login-hero__fallback,
+.na-login-hero__poster,
+.na-login-hero__video,
+.na-login-hero__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Sem vídeo/poster: campo navy com malha de prancha técnica (módulo 24px, malha mestra 120px). */
+.na-login-hero__fallback {
+  background: linear-gradient(118deg, var(--na-navy-950) 0%, var(--na-navy-800) 58%, #183455 100%);
+}
+
+.na-login-hero__fallback::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.085) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: calc(var(--na-gutter) - 1px) calc(var(--na-gutter) - 1px);
+  -webkit-mask-image: radial-gradient(120% 90% at 78% 30%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 85%);
+  mask-image: radial-gradient(120% 90% at 78% 30%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 85%);
+}
+
+.na-login-hero__poster,
+.na-login-hero__video {
+  object-fit: cover;
+  object-position: center;
+}
+
+.na-login-hero__video {
+  opacity: 0;
+  transition: opacity 1200ms var(--na-ease-out);
+}
+
+.na-login-hero__video[data-state="playing"] {
+  opacity: 1;
+}
+
+/* Legibilidade à esquerda (onde está o texto) e no rodapé (faixa de clientes); o centro-direita deixa a mídia respirar. */
+.na-login-hero__overlay {
+  /* Reforçado para o vídeo final, que traz títulos e legendas gravados no quadro. */
+  background:
+    linear-gradient(90deg, rgba(7, 13, 26, 0.86) 0%, rgba(7, 13, 26, 0.7) 34%, rgba(7, 13, 26, 0.34) 62%, rgba(7, 13, 26, 0.18) 100%),
+    linear-gradient(180deg, rgba(7, 13, 26, 0.55) 0%, rgba(7, 13, 26, 0) 22%, rgba(7, 13, 26, 0) 58%, rgba(7, 13, 26, 0.88) 100%);
+}
+
+/* ---------- Header ---------- */
+
+.na-login__header {
+  padding: var(--na-gutter) var(--na-gutter) 0;
+}
+
+.na-login__brand {
+  display: block;
+  height: clamp(40px, 3.6vw, 56px);
+  width: auto;
+}
+
+/* ---------- Conteúdo principal ---------- */
+
+.na-login__main {
+  align-self: center;
+  padding: clamp(40px, 7vh, 72px) var(--na-gutter);
+  max-width: 1120px;
+}
+
+.na-login__title {
+  margin: 0;
+  font-size: clamp(3rem, 6.4vw, 6rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.na-login__tagline {
+  margin: clamp(20px, 2.6vh, 28px) 0 0;
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.5;
+  color: var(--na-ink-soft);
+}
+
+.na-login__tagline span {
+  display: block;
+}
+
+/* ---------- Ações ---------- */
+
+.na-login-actions {
+  margin-top: clamp(32px, 5vh, 48px);
+}
+
+.na-login-actions__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.na-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.na-login-btn--primary {
+  background: #fff;
+  color: var(--na-navy-900);
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55);
+}
+
+.na-login-btn--primary:hover {
+  background: #e6eef6;
+}
+
+.na-login-btn--primary:active {
+  background: #d5e2ee;
+}
+
+.na-login-btn__icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 220ms var(--na-ease-out);
+}
+
+.na-login-btn--primary:hover .na-login-btn__icon {
+  transform: translateX(3px);
+}
+
+.na-login-btn--secondary {
+  background: rgba(7, 13, 26, 0.45);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--na-ink-quiet);
+}
+
+.na-login-btn--secondary:disabled {
+  cursor: not-allowed;
+}
+
+.na-login-btn__soon {
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--na-cyan-300);
+}
+
+.na-login-actions__note {
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--na-ink-quiet);
+}
+
+/* ---------- Faixa de clientes ---------- */
+
+.na-marquee {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: clamp(24px, 3vw, 48px);
+  padding: 0 0 0 var(--na-gutter);
+  border-top: 1px solid var(--na-hairline);
+  background: rgba(7, 13, 26, 0.74);
+}
+
+.na-marquee__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--na-ink-quiet);
+  white-space: nowrap;
+}
+
+.na-marquee__viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%);
+}
+
+.na-marquee__viewport:focus-visible {
+  outline-offset: -3px;
+}
+
+.na-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: na-marquee-scroll var(--na-marquee-duration, 40s) linear infinite;
+}
+
+.na-marquee__viewport:hover .na-marquee__track,
+.na-marquee__viewport:focus-within .na-marquee__track {
+  animation-play-state: paused;
+}
+
+.na-marquee__set {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.na-marquee__item {
+  display: flex;
+  align-items: center;
+  height: 88px;
+  padding: 0 clamp(24px, 2.6vw, 40px);
+}
+
+/* Largura/altura vêm dos atributos (tamanho óptico calculado em ClientMarquee). */
+.na-marquee__logo {
+  display: block;
+  flex: none;
+  object-fit: contain;
+  opacity: 0.62;
+  transition: opacity 200ms ease;
+  user-select: none;
+}
+
+.na-marquee__logo[data-tone="mono"] {
+  filter: brightness(0) invert(1);
+}
+
+.na-marquee__logo[data-tone="knockout"] {
+  filter: url(#na-logo-knockout);
+}
+
+.na-marquee__logo:hover {
+  opacity: 0.92;
+}
+
+.na-marquee__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+@keyframes na-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* ---------- Entrada (um único momento, conteúdo visível por padrão) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .na-login__title,
+  .na-login__tagline,
+  .na-login-actions {
+    animation: na-login-rise 900ms var(--na-ease-out) both;
+  }
+  .na-login__tagline {
+    animation-delay: 90ms;
+  }
+  .na-login-actions {
+    animation-delay: 180ms;
+  }
+}
+
+@keyframes na-login-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .na-marquee__track {
+    animation: none;
+  }
+  .na-marquee__viewport {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+  .na-marquee__set[aria-hidden="true"] {
+    display: none;
+  }
+  .na-login-btn,
+  .na-login-btn__icon,
+  .na-login-hero__video {
+    transition: none;
+  }
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 720px) {
+  .na-login__main {
+    align-self: end;
+    padding-bottom: 40px;
+  }
+
+  .na-login-actions__row {
+    flex-direction: column;
+  }
+
+  .na-login-btn {
+    width: 100%;
+  }
+
+  .na-login-hero__overlay {
+    background:
+      linear-gradient(180deg, rgba(7, 13, 26, 0.6) 0%, rgba(7, 13, 26, 0.38) 30%, rgba(7, 13, 26, 0.8) 58%, rgba(7, 13, 26, 0.92) 100%);
+  }
+
+  .na-marquee {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px 0 0;
+  }
+
+  .na-marquee__label {
+    padding: 0 var(--na-gutter);
+  }
+
+  .na-marquee__item {
+    height: 72px;
+  }
+
+  .na-marquee__viewport {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+  }
+}
+
+@media (max-height: 720px) and (min-width: 721px) {
+  .na-login__title {
+    font-size: clamp(3rem, 5.4vw, 5rem);
+  }
+  .na-marquee__item {
+    height: 72px;
+  }
+}

@@ -1,3 +1,4 @@
+using APS.WebApp.Services.Permissions;
 // Ficheiro: Controllers/HomeController.cs
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace APS.WebApp.Controllers
 {
+    [PermissionExempt("Entrega a SPA; a autorização é feita por cada API.")]
     public class HomeController : Controller
     {
         private readonly IWebHostEnvironment _env;

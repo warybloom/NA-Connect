@@ -77,85 +77,13 @@ namespace APS.WebApp.Services
                     }
 
                     // Mapeamento Dinâmico dos Cabeçalhos em Runtime
-                    var mapLdp = MapearColunas(wsLdp);
-                    var mapCusto = MapearColunas(wsCusto);
-
-                    string[] colunasParaCopiar = {
-                        "ITEM", "DISCIPLINE", "N&A DOCUMENT NUMBER", "CLIENT DOCUMENT NUMBER",
-                        "DOCUMENT TITLE", "FORMAT", "DOCUMENT STATUS", "CR", "CR-OS",
-                        "AREA CODE", "DISCIPLINE ACTIVITY", "DOC TYPE CODE", "SEQ"
-                    };
-
-                    int LINHA_CABECALHO_LOCAL = LINHA_CABECALHO;
-                    int LINHA_INICIO_DADOS_LOCAL = LINHA_INICIO_DADOS;
-                    int COLUNA_LIMITE_TECNICO_LOCAL = COLUNA_LIMITE_TECNICO;
-
-                    // Limpeza Controlada baseada estritamente no teto técnico da coluna 7
-                    int ultimaLinhaExistenteCusto = wsCusto.Dimension?.End.Row ?? LINHA_CABECALHO_LOCAL;
-                    if (ultimaLinhaExistenteCusto >= LINHA_INICIO_DADOS_LOCAL)
-                    {
-                        wsCusto.Cells[LINHA_INICIO_DADOS_LOCAL, 1, ultimaLinhaExistenteCusto, COLUNA_LIMITE_TECNICO_LOCAL].Value = null;
-                    }
-
-                    int ultimaLinhaLdp = wsLdp.Dimension?.End.Row ?? LINHA_INICIO_DADOS_LOCAL;
-                    int linhaDestino = LINHA_INICIO_DADOS_LOCAL;
-                    
-                    int colKeyLdp = 0;
-                    if (mapLdp.ContainsKey("N&A DOCUMENT NUMBER")) colKeyLdp = mapLdp["N&A DOCUMENT NUMBER"];
-                    else if (mapLdp.ContainsKey("NÚMERO DOCUMENTO N&A")) colKeyLdp = mapLdp["NÚMERO DOCUMENTO N&A"];
-                    else if (mapLdp.ContainsKey("NÚMERO DOCUMENTO N&A ")) colKeyLdp = mapLdp["NÚMERO DOCUMENTO N&A "];
-
-                    if (colKeyLdp == 0)
-                    {
-                        _logger.LogWarning("⚠️ Cabeçalho 'N&A DOCUMENT NUMBER' (ou equivalente) não localizado. Etapa Custo abortada por segurança.");
-                        return "Aviso: Falha de cabeçalho. A aba Custo não foi atualizada.";
-                    }
-
-                    // 🎯 LOOKUP DE ORIGEM TOTALMENTE RELACIONAL (Elimina posições chumbadas 26 e 29)
-                    int colOrigemAreaCode = mapLdp.ContainsKey("AREA CODE") ? mapLdp["AREA CODE"] : 26; 
-                    int colOrigemSeq = mapLdp.ContainsKey("SEQ") ? mapLdp["SEQ"] : 29; 
-
-                    for (int r = LINHA_INICIO_DADOS_LOCAL; r <= ultimaLinhaLdp; r++)
-                    {
-                        string docCode = wsLdp.Cells[r, colKeyLdp].Value?.ToString()?.Trim();
-                        if (string.IsNullOrWhiteSpace(docCode)) continue;
-
-                        // 🎯 VALIDAÇÃO DE ESCRITA: Só injeta nas colunas 11 ou 14 se elas existirem no arquivo físico do projeto
-                        if (mapCusto.ContainsKey("AREA CODE"))
-                        {
-                            int cDestinoArea = mapCusto["AREA CODE"];
-                            if (cDestinoArea <= COLUNA_LIMITE_TECNICO_LOCAL)
-                                wsCusto.Cells[linhaDestino, cDestinoArea].Value = wsLdp.Cells[r, colOrigemAreaCode].Value;
-                        }
-
-                        if (mapCusto.ContainsKey("SEQ"))
-                        {
-                            int cDestinoSeq = mapCusto["SEQ"];
-                            if (cDestinoSeq <= COLUNA_LIMITE_TECNICO_LOCAL)
-                                wsCusto.Cells[linhaDestino, cDestinoSeq].Value = wsLdp.Cells[r, colOrigemSeq].Value;
-                        }
-
-                        // Sincronização em Lote das Demais Colunas do Escopo
-                        foreach (var nomeCol in colunasParaCopiar)
-                        {
-                            if (nomeCol.Contains("AREA") || nomeCol.Contains("SEQ")) continue;
-
-                            if (mapLdp.ContainsKey(nomeCol) && mapCusto.ContainsKey(nomeCol))
-                            {
-                                int cOrigem = mapLdp[nomeCol];
-                                int cDestino = mapCusto[nomeCol];
-
-                                // Segunda Barreira de Contenção: Nenhuma escrita ultrapassa a Coluna G (7)
-                                if (cDestino <= COLUNA_LIMITE_TECNICO_LOCAL)
-                                {
-                                    wsCusto.Cells[linhaDestino, cDestino].Value = wsLdp.Cells[r, cOrigem].Value;
-                                }
-                            }
-                        }
-                        linhaDestino++;
-                    }
-
-                    _logger.LogInformation($"✅ Sincronização LDP->CUSTO: {linhaDestino - LINHA_INICIO_DADOS_LOCAL} documentos copiados.");
+                    var validacao = LdpToCustoSyncMapper.Sincronizar(wsLdp, wsCusto);
+                    _logger.LogInformation(
+                        "[LDP_CUSTO][VALIDADO] Documentos={Documentos} Colunas={Colunas} "
+                        + "CelulasCopiadas={Celulas} CelulasNaoVazias={NaoVazias} "
+                        + "Destino=A:G PrimeiraLinha=8; formulas H:AH fora do escopo",
+                        validacao.Documentos, validacao.Colunas,
+                        validacao.Celulas, validacao.CelulasNaoVazias);
                     package.Save();
                 }
 

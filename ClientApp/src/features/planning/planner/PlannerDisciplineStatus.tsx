@@ -1,0 +1,4 @@
+import { Badge } from '../shared/PlanningShell';
+import { deadlineStatus } from '../shared/utils';
+import type { PlanningWeek } from '../shared/types';
+export function PlannerDisciplineStatus({ week, selected, onSelect, now }: { week: PlanningWeek; selected: string; onSelect: (discipline: string) => void; now: number }) { return <div className="planning-discipline-list">{week.submissions.map(s => { const rows = s.documents.filter(d => d.selected); return <button key={s.discipline} className={selected === s.discipline ? 'planning-discipline selected' : 'planning-discipline'} onClick={() => onSelect(s.discipline)} aria-pressed={selected === s.discipline}><strong>{s.discipline}</strong><span>{rows.length} documentos · {rows.reduce((sum, d) => sum + (d.weeklyHours ?? 0), 0)} HH</span><Badge value={deadlineStatus(s, week.deadline, now)}/></button>; })}</div>; }

@@ -1,0 +1,922 @@
+﻿[
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Id_Registro",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "NO",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  1
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Project_ID_ACC",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  100,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Data_Sincronizacao",
+        "DATA_TYPE":  "datetime",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "ID",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Date",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Name",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Company",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "CYCLE",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "FRONT_OF_SERVICES",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "AFE",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Description",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Name2",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Company3",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Schedule",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Reschedule",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Concl",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Critical",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "Status",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ExternalActionLog",
+        "COLUMN_NAME":  "COMMENTS",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "Id_Registro",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "NO",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  1
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "Project_ID_ACC",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  100,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "Data_Sincronizacao",
+        "DATA_TYPE":  "datetime",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "ITEM",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "N_HOLD",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "N_NA_DOCUMENTO",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "DISCIPLINA",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "TITULO_DOCUMENTO",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "REV",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "MOTIVO_HOLD",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "STATUS",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_HoldControl",
+        "COLUMN_NAME":  "RESPONSAVEL",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Id_Registro",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "NO",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  1
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Project_ID_ACC",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  100,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Data_Sincronizacao",
+        "DATA_TYPE":  "datetime",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "ID",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Date",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Name",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Company",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "CYCLE",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "FRONT_OF_SERVICES",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "AFE",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Description",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Name2",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Company3",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Schedule",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Reschedule",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Concl",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Critical",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "Status",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_InternalActionLog",
+        "COLUMN_NAME":  "COMMENTS",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "Id_Registro",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "NO",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  1
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "Project_ID_ACC",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  100,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "Data_Sincronizacao",
+        "DATA_TYPE":  "datetime",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "ITEM",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "DESCRICAO",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "DISCIPLINA",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "N_DO_DESVIO",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "DATA",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "QUANT_HH",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "STATUS",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "DESVIO_INTERNO",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_ScopeDeviation",
+        "COLUMN_NAME":  "CHANGE_ORDER",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Id_Registro",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "NO",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  1
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Project_ID_ACC",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  100,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Data_Sincronizacao",
+        "DATA_TYPE":  "datetime",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Numero_NA_Atividade",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Disciplina",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Nome_Tarefa",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Perc_Previsto_Semana",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Perc_Realizado",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Recurso",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Item",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Phase",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Progress_Status",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Baseline_Date",
+        "DATA_TYPE":  "date",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Replanned_Date",
+        "DATA_TYPE":  "date",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Preparation_Completed",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Verification",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Approval",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_HH_Previsto",
+        "DATA_TYPE":  "decimal",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  18,
+        "NUMERIC_SCALE":  6,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_HH_Verificacao",
+        "DATA_TYPE":  "decimal",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  18,
+        "NUMERIC_SCALE":  6,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Responsible_Verification",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_HH_Aprovacao",
+        "DATA_TYPE":  "decimal",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  18,
+        "NUMERIC_SCALE":  6,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Responsible_Approval",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Liberado_Execucao",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Weekly_Observacao_Dia",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Tipo_Registro",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  30,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Status_Importacao",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  50,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Diagnostico_Importacao",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  -1,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Arquivo_Origem",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  500,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Aba_Origem",
+        "DATA_TYPE":  "nvarchar",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  255,
+        "NUMERIC_PRECISION":  null,
+        "NUMERIC_SCALE":  null,
+        "IS_IDENTITY":  0
+    },
+    {
+        "TABLE_NAME":  "tb_WeeklyEngineeringSchedule",
+        "COLUMN_NAME":  "Linha_Excel",
+        "DATA_TYPE":  "int",
+        "IS_NULLABLE":  "YES",
+        "CHARACTER_MAXIMUM_LENGTH":  null,
+        "NUMERIC_PRECISION":  10,
+        "NUMERIC_SCALE":  0,
+        "IS_IDENTITY":  0
+    }
+]

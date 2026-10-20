@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Testes do módulo ISOLADO do BI CHS001 (Services/BiChs001Schedule + BiChs001ScheduleController).
+       Integração SQL roda SOMENTE no banco de teste (BI_CHS001_TEST_DB, padrão DB_NA_CONNECT_BI_TESTE — clone restaurado do
+       backup); se ele não existir, os testes de banco falham com a instrução de preparo (nunca tocam DB_NA_CONNECT). -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AccIntegration.WebApp.csproj" />
+  </ItemGroup>
+
+</Project>

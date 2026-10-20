@@ -1,0 +1,24 @@
+.ge3-layout{flex:1;min-height:0;display:grid;grid-template-rows:minmax(20rem,1.35fr) minmax(13rem,.75fr) auto;gap:clamp(.65rem,1vw,1rem);color:var(--gv-ink)}
+.ge3-week,.ge3-panel{min-width:0;min-height:0;background:var(--gv-surface);border:1px solid var(--gv-line)}
+.ge3-week{display:flex;flex-direction:column;padding:clamp(.55rem,.8vw,.8rem)}
+.ge3-tools{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.5rem 1rem;padding:.05rem .2rem .55rem;font-size:clamp(.72rem,.68vw,.88rem)}
+.ge3-tools strong{color:var(--gv-steel);letter-spacing:.035em}.ge3-tools span{font-weight:650}.ge3-tools label{display:flex;align-items:center;gap:.4rem;font-weight:700;white-space:nowrap;cursor:pointer}
+.ge3-table-scroll{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable}
+.ge3-table-scroll table{width:100%;min-width:76rem;border-collapse:collapse;font-size:clamp(.68rem,.62vw,.82rem);font-variant-numeric:tabular-nums;color:var(--gv-ink)}
+.ge3-table-scroll th,.ge3-table-scroll td{padding:clamp(.28rem,.38vw,.44rem) clamp(.35rem,.48vw,.58rem);border-bottom:1px solid var(--gv-line);vertical-align:top;line-height:1.22}
+.ge3-table-scroll th{position:sticky;top:0;z-index:2;background:var(--gv-steel);color:var(--gv-on-color);font-weight:650;text-align:left;white-space:normal}
+.ge3-table-scroll td{white-space:nowrap}.ge3-table-scroll th:last-child,.ge3-table-scroll td:last-child{text-align:right}
+.ge3-table-scroll .ge3-title-cell{width:30%;min-width:17rem;white-space:normal;overflow-wrap:anywhere;hyphens:auto}
+.ge3-title-cell span{display:block;max-width:42rem}.ge3-table-scroll .ge3-day-row td{text-align:left;background:var(--gv-date-bg);font-weight:800;letter-spacing:.015em}
+.ge3-warning,.ge3-footer{font-size:.75rem;line-height:1.35}.ge3-warning{margin:.45rem 0 0;color:var(--gv-warn)}
+.ge3-discipline-grid{min-width:0;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(.65rem,1vw,1rem)}
+.ge3-panel{display:flex;flex-direction:column;padding:.65rem .75rem;overflow:hidden}.ge3-panel h3{margin:0 0 .5rem;color:var(--gv-steel);font-size:clamp(.72rem,.7vw,.9rem);letter-spacing:.035em}
+.ge3-bars{min-height:0;overflow:auto;display:grid;align-content:start;gap:.38rem}.ge3-bar-row{display:grid;grid-template-columns:minmax(6.5rem,32%) 1fr;align-items:center;gap:.5rem;font-size:clamp(.67rem,.62vw,.8rem)}
+.ge3-bar-row>span{overflow-wrap:anywhere}.ge3-bar-row>div{position:relative;height:1.15rem;background:var(--gv-date-bg)}.ge3-bar-row i{display:block;height:100%;min-width:.18rem;background:var(--gv-teal)}.ge3-bar-row b{position:absolute;inset:0 .35rem auto auto;line-height:1.15rem}
+.ge3-hh-scroll{flex:1;min-height:0;overflow:auto}.ge3-hh{height:100%;min-width:max(100%,calc(var(--ge3-groups, 1) * 5rem));display:flex;align-items:stretch;gap:.45rem}
+.ge3-hh-col{flex:1 0 4.5rem;min-width:0;display:grid;grid-template-rows:minmax(5rem,1fr) auto;text-align:center;font-size:clamp(.64rem,.6vw,.78rem)}.ge3-hh-col>div{padding-top:1.2rem;display:flex;align-items:end;justify-content:center;border-bottom:1px solid var(--gv-line-strong)}
+.ge3-hh-col i{position:relative;width:min(72%,3rem);min-height:.18rem;background:var(--gv-steel)}.ge3-hh-col b{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);padding-bottom:.14rem;white-space:nowrap}.ge3-hh-col span{padding-top:.3rem;overflow-wrap:anywhere;line-height:1.1}
+.ge3-state{margin:auto;padding:1rem;text-align:center;color:var(--gv-ink-soft)}.ge3-footer{color:var(--gv-ink-soft)}
+@media(max-width:900px){.ge3-layout{grid-template-rows:minmax(24rem,auto) auto auto}.ge3-tools{grid-template-columns:1fr auto}.ge3-tools span{grid-column:1/-1;grid-row:2}.ge3-discipline-grid{grid-template-columns:minmax(0,1fr)}.ge3-panel{min-height:14rem}}
+@media(max-width:560px){.ge3-tools{grid-template-columns:1fr}.ge3-tools label{white-space:normal}.ge3-table-scroll table{min-width:68rem}.ge3-table-scroll .ge3-title-cell{min-width:14rem}.ge3-bar-row{grid-template-columns:minmax(5rem,38%) 1fr}}
+@media(prefers-reduced-motion:reduce){.ge3-layout *{scroll-behavior:auto}}

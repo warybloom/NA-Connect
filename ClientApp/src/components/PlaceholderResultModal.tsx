@@ -1,183 +1,146 @@
 // Caminho: ClientApp/src/components/PlaceholderResultModal.tsx
-// VERSÃO COMPLETA E ATUALIZADA (Incluindo console.log para depuração)
+// VERSÃO FINAL: CORREÇÃO DE EXPORTAÇÃO NOMEADA E ADAPTAÇÃO DE TIPOS
 
-import React from 'react'; // Importar React é uma boa prática
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog"; // Componentes UI do Shadcn/ui
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Fragment } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CheckCircle, XCircle, FileText, AlertTriangle } from "lucide-react";
+// Importamos a interface correta definida no outro arquivo
+import type { PlaceholderResult } from "@/components/CreatePlaceholdersModal";
 
-// Interface TypeScript que ESPELHA a classe C# PlaceholderResult ATUALIZADA
-interface PlaceholderResult {
-  totalRowsInLdp: number;       // Total de linhas lidas da LDP
-  rowsProcessed: number;        // Quantas linhas foram TENTADAS (após filtro inicial, se houver)
-  placeholdersCreated: number;  // Quantos foram criados com sucesso
-  filesSkippedExisting: number; // Quantos foram pulados porque já existiam
-  filesSkippedFiltered: number; // Quantos foram pulados por causa dos filtros de tipo/disciplina
-  createdFiles: string[];       // Lista dos nomes dos arquivos criados
-  skippedExistingFiles: string[];// Lista dos nomes dos arquivos pulados (existentes)
-  skippedFilteredInfo: string[]; // Lista de informações sobre arquivos pulados (filtrados)
-  errors: string[];             // Lista de mensagens de erro
-  summaryMessage: string;       // Mensagem de resumo geral
-}
-
-// Props que o componente Modal espera receber do componente pai (Files.tsx)
 interface PlaceholderResultModalProps {
-  isOpen: boolean;                // Controla se o modal está visível
-  onClose: () => void;            // Função para fechar o modal
-  result: PlaceholderResult | null; // Os dados do resultado (ou null se ainda não houver)
+  isOpen: boolean;
+  onClose: () => void;
+  result: PlaceholderResult | null;
 }
 
-// Componente Funcional React
-export function PlaceholderResultModal({
-  isOpen,
-  onClose,
-  result
-}: PlaceholderResultModalProps) {
+// ✅ CORREÇÃO APLICADA: 'export function' para permitir Named Import ({ })
+export function PlaceholderResultModal({ isOpen, onClose, result }: PlaceholderResultModalProps) {
+  if (!result) return null;
 
-  // --- ADICIONADO PARA DEPURAÇÃO ---
-  console.log(`PlaceholderResultModal attempting to render. isOpen: ${isOpen}, result exists: ${!!result}`);
-  // ---------------------------------
-
-  // Se não houver dados de resultado, não renderiza nada
-  if (!result) {
-     console.log("PlaceholderResultModal returning null because result is null/undefined"); // Log adicional
-     return null;
-  }
-
-  // Desestruturação com VALORES PADRÃO para as listas, prevenindo o erro 'length' of undefined
-  const {
-    totalRowsInLdp = 0,
-    // rowsProcessed = 0, // Descomente se quiser mostrar este valor
-    placeholdersCreated = 0,
-    filesSkippedExisting = 0,
-    filesSkippedFiltered = 0, // Novo contador
-    createdFiles = [], // Valor padrão: array vazio
-    skippedExistingFiles = [], // Valor padrão: array vazio
-    skippedFilteredInfo = [], // Novo - Valor padrão: array vazio
-    errors = [], // Valor padrão: array vazio
-    summaryMessage = "Operação concluída." // Mensagem padrão
-  } = result;
-
-  // Calcula a contagem total de ignorados para exibição (opcional)
-  const totalSkipped = filesSkippedExisting + filesSkippedFiltered;
+  // Cálculos baseados na interface PlaceholderResult oficial
+  const successCount = result.placeholdersCreated;
+  const errorCount = result.errors.length;
+  const existingCount = result.filesSkippedExisting;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-card border-border"> {/* Estilos baseados no Shadcn/ui */}
-        <DialogHeader>
-          <DialogTitle>Resultado da Criação de Placeholders</DialogTitle>
-          {/* Mostra a mensagem de resumo vinda do backend */}
-          <DialogDescription>{summaryMessage}</DialogDescription>
-        </DialogHeader>
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+        </Transition.Child>
 
-        {/* Seção de Resumo com contadores */}
-        <div className="grid grid-cols-2 gap-4 my-4">
-          <div className="p-4 bg-secondary rounded-lg">
-            <p className="text-sm text-muted-foreground">Total Linhas na LDP</p>
-            <p className="text-2xl font-bold text-foreground">{totalRowsInLdp}</p>
-          </div>
-          <div className="p-4 bg-green-900/50 rounded-lg">
-            <p className="text-sm text-green-400">Criados com Sucesso</p>
-            <p className="text-2xl font-bold text-foreground">{placeholdersCreated}</p>
-          </div>
-          {/* Bloco para Ignorados (Total ou separados) - Escolha uma das opções abaixo */}
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-card p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-foreground flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                  Resultado da Criação de Placeholders
+                </Dialog.Title>
+                
+                <div className="mt-4 space-y-4">
+                  {/* Mensagem de Resumo */}
+                  <div className="bg-muted/60 p-4 rounded-lg text-sm text-foreground/80">
+                    <p className="font-semibold">{result.summaryMessage}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Total Processado: {result.rowsProcessed} | Total LDP: {result.totalRowsInLdp}
+                    </p>
+                  </div>
 
-          {/* Opção 1: Mostrar Total de Ignorados */}
-          {/* <div className="p-4 bg-yellow-900/50 rounded-lg">
-            <p className="text-sm text-yellow-400">Total Ignorados</p>
-            <p className="text-2xl font-bold text-foreground">{totalSkipped}</p>
-          </div> */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Coluna de Sucessos */}
+                    <div className="border rounded-lg p-3 bg-green-500/5 border-green-500/20">
+                      <div className="flex items-center gap-2 font-semibold text-green-700 dark:text-green-400 mb-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Sucessos ({successCount})
+                      </div>
+                      <ul className="max-h-40 overflow-y-auto text-xs space-y-1 scrollbar-thin scrollbar-thumb-green-200">
+                        {result.createdFiles && result.createdFiles.length > 0 ? (
+                            result.createdFiles.map((fileName, idx) => (
+                                <li key={idx} className="text-green-800 dark:text-green-400 flex items-start gap-1">
+                                    <span>•</span> {fileName}
+                                </li>
+                            ))
+                        ) : (
+                            <li className="text-muted-foreground italic">Nenhum arquivo criado nesta execução.</li>
+                        )}
+                      </ul>
+                    </div>
 
-          {/* Opção 2: Mostrar Ignorados Separados */}
-           <div className="p-4 bg-yellow-900/50 rounded-lg">
-             <p className="text-sm text-yellow-400">Ignorados (Já Existiam)</p>
-             <p className="text-2xl font-bold text-foreground">{filesSkippedExisting}</p>
-           </div>
-           <div className="p-4 bg-blue-900/50 rounded-lg"> {/* Cor diferente para filtrados */}
-             <p className="text-sm text-blue-400">Ignorados (Filtrados)</p>
-             <p className="text-2xl font-bold text-foreground">{filesSkippedFiltered}</p>
-           </div>
+                    {/* Coluna de Erros */}
+                    <div className="border rounded-lg p-3 bg-red-500/5 border-red-500/20">
+                      <div className="flex items-center gap-2 font-semibold text-red-700 dark:text-red-400 mb-2">
+                        <XCircle className="h-4 w-4" />
+                        Erros ({errorCount})
+                      </div>
+                      <ul className="max-h-40 overflow-y-auto text-xs space-y-1 scrollbar-thin scrollbar-thumb-red-200">
+                        {result.errors && result.errors.length > 0 ? (
+                            result.errors.map((errorMsg, idx) => (
+                                <li key={idx} className="text-red-800 dark:text-red-400 break-words flex items-start gap-1">
+                                  <span>•</span> {errorMsg}
+                                </li>
+                            ))
+                        ) : (
+                            <li className="text-muted-foreground italic">Nenhum erro encontrado.</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Área de Arquivos Ignorados (Já Existentes) */}
+                  {existingCount > 0 && (
+                     <div className="border rounded-lg p-3 bg-yellow-500/5 border-yellow-500/20">
+                      <div className="flex items-center gap-2 font-semibold text-yellow-700 dark:text-yellow-400 mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Já Existiam ({existingCount})
+                      </div>
+                      <div className="text-xs text-yellow-800 dark:text-yellow-400 mb-2">
+                        Arquivos ignorados pois já existiam na pasta de destino:
+                      </div>
+                      <ul className="max-h-24 overflow-y-auto text-xs space-y-1 text-yellow-900/80 dark:text-yellow-200/80">
+                          {result.skippedExistingFiles && result.skippedExistingFiles.slice(0, 50).map((file, idx) => (
+                              <li key={idx}>{file}</li>
+                          ))}
+                          {result.skippedExistingFiles && result.skippedExistingFiles.length > 50 && (
+                              <li className="italic text-[10px] mt-1">...e mais {result.skippedExistingFiles.length - 50} arquivos.</li>
+                          )}
+                      </ul>
+                    </div>
+                  )}
 
-          {/* Contagem de Erros (agora seguro devido ao valor padrão `errors = []`) */}
-          <div className="p-4 bg-destructive/30 rounded-lg">
-            <p className="text-sm text-red-400">Erros</p>
-            <p className="text-2xl font-bold text-foreground">{errors.length}</p> {/* Seguro usar .length */}
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={onClose}
+                    className="font-bold uppercase text-xs"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
           </div>
         </div>
-
-        {/* Seção de Detalhes com Acordeão */}
-        <Accordion type="single" collapsible className="w-full">
-
-          {/* Detalhes dos Criados (seguro usar .length) */}
-          {createdFiles.length > 0 && (
-            <AccordionItem value="created">
-              <AccordionTrigger>Detalhes dos {createdFiles.length} Arquivos Criados</AccordionTrigger>
-              <AccordionContent>
-                <ScrollArea className="h-40 rounded-md border p-2">
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {createdFiles.map((file, index) => <li key={`created-${index}`}>{file}</li>)}
-                  </ul>
-                </ScrollArea>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Detalhes dos Ignorados (Já Existiam) (seguro usar .length) */}
-          {skippedExistingFiles.length > 0 && (
-            <AccordionItem value="skipped-existing">
-              <AccordionTrigger>Detalhes dos {skippedExistingFiles.length} Ignorados (Já Existiam)</AccordionTrigger>
-              <AccordionContent>
-                <ScrollArea className="h-40 rounded-md border p-2">
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {skippedExistingFiles.map((file, index) => <li key={`skipped-e-${index}`}>{file}</li>)}
-                  </ul>
-                </ScrollArea>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* NOVO: Detalhes dos Ignorados (Filtrados) (seguro usar .length) */}
-          {skippedFilteredInfo.length > 0 && (
-            <AccordionItem value="skipped-filtered">
-              <AccordionTrigger>Detalhes dos {skippedFilteredInfo.length} Ignorados (Filtrados por Tipo/Disciplina)</AccordionTrigger>
-              <AccordionContent>
-                <ScrollArea className="h-40 rounded-md border p-2">
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {/* skippedFilteredInfo contém a string completa "Linha X: Ignorada (Tipo='Y', Disc='Z')" */}
-                    {skippedFilteredInfo.map((info, index) => <li key={`skipped-f-${index}`}>{info}</li>)}
-                  </ul>
-                </ScrollArea>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Detalhes dos Erros (seguro usar .length) */}
-          {errors.length > 0 && (
-            <AccordionItem value="errors">
-              <AccordionTrigger className="text-destructive">Detalhes dos {errors.length} Erros Encontrados</AccordionTrigger>
-              <AccordionContent>
-                <ScrollArea className="h-40 rounded-md border border-destructive/50 bg-destructive/10 p-2">
-                  <ul className="list-disc pl-5 text-sm text-destructive">
-                    {errors.map((error, index) => <li key={`error-${index}`}>{error}</li>)}
-                  </ul>
-                </ScrollArea>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-        </Accordion> {/* Fim do Acordeão */}
-
-        <DialogFooter>
-          <Button onClick={onClose}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Dialog>
+    </Transition>
   );
 }
