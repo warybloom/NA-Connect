@@ -11,7 +11,8 @@ import { ConteudoTv, getTelaTv } from "./tvScreens";
 import { usePermissions } from "@/features/permissions/PermissionProvider";
 import { carregarConfiguracaoTv } from "./tvApi";
 import {
-  dataReferenciaAutomatica, diaAnterior, escolherApresentacao, formatarDataReferencia, projetosDoSlide, proximoIndice, resumoProjetosSlide, tvAtiva,
+  dataReferenciaAutomatica, diaAnterior, escolherApresentacao, formatarDataReferencia, layoutDoSlide, projetosDoSlide, proximoIndice, resumoProjetosSlide,
+  rotuloLayoutDiario, tvAtiva,
   type TvPresentation,
 } from "./tvLogic";
 import { useHojeBahia } from "./useHojeBahia";
@@ -141,6 +142,7 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
             {resumoProjetosSlide(slide).texto}
             {def?.exigeDataReferencia && dataReferenciaAutomatica(slide.dataReferencia)
               ? ` · Hoje ${formatarDataReferencia(hoje)} + pendências de ${formatarDataReferencia(diaAnterior(hoje))}`
+                + (layoutDoSlide(slide) === "padrao" ? "" : ` · ${rotuloLayoutDiario(slide)}`)
               : def?.exigeDataReferencia && slide.dataReferencia ? ` · ${formatarDataReferencia(slide.dataReferencia)}` : ""}
           </p>
         </div>
@@ -176,6 +178,9 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
             key={`${indice}-${slide.screenId}-${projetosDoSlide(slide).map((p) => p.projectId).join("+")}-${slide.dataReferencia ?? ""}`}
             screenId={slide.screenId}
             dataReferencia={def?.exigeDataReferencia ? slide.dataReferencia ?? null : null}
+            layoutDiario={def?.exigeDataReferencia ? slide.layoutDiario ?? null : null}
+            disciplina={def?.exigeDataReferencia ? slide.disciplina ?? null : null}
+            disciplinaNome={def?.exigeDataReferencia ? slide.disciplinaNome ?? null : null}
             selection={projetosDoSlide(slide).map((p) => ({ id: p.projectId, hubId: p.hubId, name: p.projectName ?? p.projectId }))}
           />
         </NavegacaoTvProvider>

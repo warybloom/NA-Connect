@@ -76,6 +76,8 @@ public sealed class TvConfigurationController(TvConfigurationStore store, IPermi
                     : autorizadas?.Where(x => !TelaExcluida(x)).ToArray(),
                 // 20/10/2026: este servidor aceita a Programação Diária automática (DataReferencia = "AUTO").
                 diariaAutomatica = true,
+                // 20/10/2026: aceita a exibição por slide automático (LayoutDiario padrao/cards/disciplina + Disciplina).
+                layoutsDiarios = true,
             });
         }
         catch (TvConfigurationException ex) { return StatusCode(503, new { message = ex.Message }); }

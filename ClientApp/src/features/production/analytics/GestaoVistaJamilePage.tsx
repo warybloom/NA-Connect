@@ -10,7 +10,7 @@ import {enrichDocuments,type FactsReport} from "@/components/pmo/pmoFacts";
 import {ReportState} from "@/components/reports/ReportComponents";
 import {encontrarFolha,rotaProducao} from "../productionRoutes";
 import {ItemMenuTv,useNavegacaoTv} from "@/features/tv/tvNavegacao";
-import {dataReferenciaAutomatica,dataReferenciaValida,janelaDiariaAutomatica} from "@/features/tv/tvLogic";
+import {dataReferenciaAutomatica,dataReferenciaValida,janelaDiariaAutomatica,type LayoutDiario} from "@/features/tv/tvLogic";
 import {useHojeBahia} from "@/features/tv/useHojeBahia";
 import {useLdpPorProjeto} from "./useLdpPorProjeto";
 import {
@@ -19,7 +19,7 @@ import {
  deduplicarProgramacao,diaDaSemanaCurto,filtrarDia,atividadesPorDia,semanasVizinhasComProgramacao,
  visaoGeralDaSemana,ldpParaEmissao,type ContagemVisaoGeral,SEM_DISCIPLINA,type CatalogoDisciplinas,type DisciplinasNorma,type PhaseValues,type ProgramacaoLinha,
  type ProgramacaoResposta,resumoProgramacao,ultimaSemanaComProgramacao,janelasDoPeriodo,mesclarJanelas,
- analiseDiariaAutomatica,type AtividadeDiaria
+ analiseDiariaAutomatica,type AtividadeDiaria,type DisciplinaDiaria
 } from "./gestaoVistaJamileLogic";
 import "./gestaoVistaJamile.css";
 import { NA_LOGO } from "@/features/theme/brandAssets";
@@ -186,12 +186,14 @@ function Overview({reports,dados,selection,semana,cat,carregando,onSemana}:{repo
 /* ---------------------------------------------------------------- 02. PROGRAMAÇÃO */
 type ProgLinha=ProgramacaoLinha&{projectId:string};
 const cobertura=(xs:readonly ProgLinha[],f:(l:ProgLinha)=>string|null)=>`${xs.filter(l=>(f(l)??"").trim()!=="").length}/${xs.length}`;
-function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,historico=false,diario=false}:{reports:FactsReport[];semana:{start:string;end:string};dia:string|null;
+function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,historico=false,diario=false,rotulos}:{reports:FactsReport[];semana:{start:string;end:string};dia:string|null;
  cat:CatalogoDisciplinas;dados:ProgramacaoResposta[];erro:string|null;carregando:boolean;onSemana:(data:string)=>void;
  /** Modo histórico: TODAS as atividades importadas com a data real de cada uma (semana = período disponível). */
  historico?:boolean;
  /** Programação Diária da TV: somente o dia do slide (dia obrigatório), sem agrupamento por dia nem navegação de semana. */
- diario?:boolean}){
+ diario?:boolean;
+ /** Diária automática (Padrão, seção ONTEM): títulos próprios no MESMO layout; ausente = títulos da 02/diária de sempre. */
+ rotulos?:{documentos:string;hh:string;titulo:string;vazio:string}}){
  const [agruparDia,setAgruparDia]=useState(true);
  const noPeriodo=(d:string|null|undefined)=>!!d&&d>=semana.start&&d<=semana.end&&(!dia||d===dia);
  // Semana inteira (domingo–sábado) sem repetições; o filtro de dia é opcional e só recorta a semana já carregada.
@@ -222,8 +224,8 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,hist
  // Item 3 (Codex): Semana Completa no topo (largura total, com título do documento) e, abaixo, Entregáveis × HH por disciplina.
  return <div className="gv-program-item3" style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,gap:"1em"}}>
   <div className="gv-kpis gv-three">
-   <Tile title={historico?"DOCUMENTOS IMPORTADOS COM DATA":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA"} value={String(totalDocumentos)}/>
-   <Tile title={dia?"HH PLANEJADO DO DIA":"HH PLANEJADO DA SEMANA"} value={fmt2(totalHh)}/>
+   <Tile title={rotulos?.documentos??(historico?"DOCUMENTOS IMPORTADOS COM DATA":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA")} value={String(totalDocumentos)}/>
+   <Tile title={rotulos?.hh??(dia?"HH PLANEJADO DO DIA":"HH PLANEJADO DA SEMANA")} value={fmt2(totalHh)}/>
    <Tile title="RECURSOS" value={linhas.length?String(recursosDistintos(linhas)):"—"}/>
   </div>
   {itensSemHh>0&&<p className="gv-rule" role="status">HH planejado {totalHh===null?"não informado":"parcial"}: {itensSemHh} atividade(s) sem horas na programação semanal. O total considera apenas os HH disponíveis {diario?"do dia":"da semana"}.</p>}
@@ -234,9 +236,9 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,hist
    agruparPorDia={diario?false:agruparDia}
    onAgruparPorDia={diario?undefined:setAgruparDia}
    descricaoPeriodo={diario&&dia?`${diaDaSemanaCurto(dia)} ${br(dia)}`:dia?`Filtro: ${diaDaSemanaCurto(dia)} ${br(dia)}`:historico?`Datas reais de ${br(semana.start)} a ${br(semana.end)} — não é a semana atual`:`${br(semana.start)} a ${br(semana.end)}`}
-   titulo={historico?"TODAS AS ATIVIDADES IMPORTADAS":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA"}
+   titulo={rotulos?.titulo??(historico?"TODAS AS ATIVIDADES IMPORTADAS":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA")}
    carregando={carregando}
-   mensagemVazia={<Empty>
+   mensagemVazia={rotulos?<Empty>{rotulos.vazio}</Empty>:<Empty>
     {registros?`Nenhuma atividade programada para ${periodo} (${registros} registro(s) na programação do projeto).`:"O projeto não possui programação semanal importada."}
     {!historico&&!diario&&vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
     {!historico&&!diario&&vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}
@@ -252,60 +254,130 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,hist
 
 /* ---------------------------------------------------------------- PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV) */
 const recursosTexto=(l:Pick<AtividadeDiaria,"elaborador"|"verificador"|"aprovador">)=>[l.elaborador,l.verificador,l.aprovador].map(x=>x?.trim()||"—").join(" / ");
+type AnaliseDiaria=ReturnType<typeof analiseDiariaAutomatica>;
+const somaHhDisc=(xs:readonly (number|null)[])=>xs.some(x=>x!==null)?xs.reduce<number>((s,x)=>s+(x??0),0):null;
 /**
- * Slide AUTO: HOJE e ONTEM pela data civil da Bahia (o slide nunca guarda data). Por disciplina: PREVISTO HOJE e PENDENTE DE
- * ONTEM (não emissão COMPROVADA pela LDP); sem prova = SEM COMPROVAÇÃO, nunca pendente. Mesma fonte/deduplicação da 02.
+ * Slide AUTO: HOJE e ONTEM pela data civil da Bahia (o slide nunca guarda data). Mesma fonte/deduplicação da 02; pendente de
+ * ontem = não emissão COMPROVADA pela LDP; sem prova = SEM COMPROVAÇÃO, nunca pendente. Três exibições (TvSlide.layoutDiario):
+ *   • padrao     = o MESMO layout da 02 (Programming, modo diário), em duas seções: HOJE e PENDÊNCIAS DE ONTEM;
+ *   • cards      = cartões de indicadores por disciplina + blocos por disciplina (previsto hoje / pendente de ontem);
+ *   • disciplina = só a disciplina do slide (chave da classificação), com projeto e disciplina no cabeçalho.
  */
-function DiariaAutomatica({reports,dados,cat,hoje,carregando}:{reports:FactsReport[];dados:ProgramacaoResposta[];cat:CatalogoDisciplinas;hoje:string;carregando:boolean}){
+export function DiariaAutomatica({reports,dados,cat,hoje,carregando,layout,disciplina,disciplinaNome}:{reports:FactsReport[];dados:ProgramacaoResposta[];
+ cat:CatalogoDisciplinas;hoje:string;carregando:boolean;layout:LayoutDiario;disciplina:string|null;disciplinaNome:string|null}){
  const a=analiseDiariaAutomatica({dados,cat,hoje,ldp:ldpParaEmissao(reports)});
  const indice=criarIndiceTitulosDocumentos(reports);
  const titulo=(projectId:string,codigo:string|null)=>obterTituloDocumentoOficial(indice,projectId,codigo)??"—";
- const t=a.totais;
  const diaH=`${diaDaSemanaCurto(a.hoje)} ${br(a.hoje)}`,diaO=`${diaDaSemanaCurto(a.ontem)} ${br(a.ontem)}`;
  const v=(n:number|null)=>carregando?"…":fmt2(n);
- return <div className="gv-diaria-auto" data-testid="gv-diaria-automatica">
+ const n=(x:number)=>carregando?"…":String(x);
+ if(layout==="padrao")return <DiariaPadrao reports={reports} dados={dados} cat={cat} a={a} carregando={carregando} diaH={diaH} diaO={diaO}/>;
+ const umaDisciplina=layout==="disciplina";
+ const disciplinas=umaDisciplina?a.disciplinas.filter(d=>d.chave===disciplina):a.disciplinas;
+ const t=umaDisciplina?{documentosHoje:disciplinas.reduce((s,d)=>s+d.documentosHoje,0),hhHoje:somaHhDisc(disciplinas.map(d=>d.hhHoje)),
+   pendentes:disciplinas.reduce((s,d)=>s+d.pendentes.length,0),hhPendente:somaHhDisc(disciplinas.map(d=>d.hhPendente)),
+   semComprovacao:disciplinas.reduce((s,d)=>s+d.semComprovacao.length,0)}:a.totais;
+ const nomeDisciplina=disciplina&&(cat.rotulos.has(disciplina)||disciplina===SEM_DISCIPLINA)?rotulo(cat,disciplina):disciplinaNome?.trim()||disciplina||"—";
+ const foraDaNorma=umaDisciplina&&!!disciplina&&disciplina!==SEM_DISCIPLINA&&!cat.rotulos.has(disciplina);
+ return <div className={`gv-diaria-auto gv-diaria-modo-${layout}`} data-testid="gv-diaria-automatica" data-layout={layout}>
   <div className="gv-kpis gv-five">
-   <Tile title="DOCUMENTOS PREVISTOS HOJE" value={carregando?"…":String(t.documentosHoje)}/>
+   <Tile title="DOCUMENTOS PREVISTOS HOJE" value={n(t.documentosHoje)}/>
    <Tile title="HH PREVISTO HOJE" value={v(t.hhHoje)}/>
-   <Tile title="PENDENTES DE ONTEM (COMPROVADOS)" value={carregando?"…":String(t.pendentes)}/>
+   <Tile title="PENDENTES DE ONTEM (COMPROVADOS)" value={n(t.pendentes)}/>
    <Tile title="HH PENDENTE DE ONTEM" value={v(t.hhPendente)}/>
-   <Tile title="ONTEM SEM COMPROVAÇÃO" value={carregando?"…":String(t.semComprovacao)}/>
+   <Tile title="ONTEM SEM COMPROVAÇÃO" value={n(t.semComprovacao)}/>
   </div>
   {carregando?<Empty>Carregando a programação de hoje ({diaH}) e de ontem ({diaO})…</Empty>
-   :!a.disciplinas.length?<div className="gv-diaria-vazia" data-testid="gv-diaria-vazia"><Empty>Nenhuma atividade programada para hoje ({diaH}) nem para ontem ({diaO}) neste projeto.
-     {" "}Sem pendências de ontem a exibir.</Empty></div>
-   :<div className="gv-diaria-disciplinas">{a.disciplinas.map(d=><section key={d.chave} className="gv-diaria-disc" data-testid="gv-diaria-disciplina">
-    <header><b>{d.nome}</b><span>Hoje: {d.documentosHoje} documento(s) · {fmt2(d.hhHoje)} HH — Pendentes de ontem: {d.pendentes.length} · {fmt2(d.hhPendente)} HH
-     {d.semComprovacao.length>0&&<> — {d.semComprovacao.length} sem comprovação</>}</span></header>
-    <div className="gv-diaria-colunas">
-     <div data-testid="gv-diaria-hoje"><h3>PREVISTO HOJE · {diaH}</h3>
-      {d.hoje.length?<div className="gv-table-scroll"><table>
-       <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE</th><th>ELAB. / VERIF. / APROV.</th><th>SITUAÇÃO</th><th>HH</th></tr></thead>
-       <tbody>{d.hoje.map(l=><tr key={`${l.projectId}:${l.idRegistro}`}><td>{l.documento??"—"}</td><td>{titulo(l.projectId,l.documento)}</td><td>{l.tarefa??"—"}</td>
-        <td>{recursosTexto(l)}</td><td>{l.status??"—"}</td><td>{fmt2(l.hh)}</td></tr>)}</tbody>
-      </table></div>:<p className="gv-diaria-vazio">Nada programado para hoje nesta disciplina.</p>}
-     </div>
-     <div data-testid="gv-diaria-ontem"><h3>PENDENTE DE ONTEM · {diaO}</h3>
-      {d.pendentes.length?<div className="gv-table-scroll"><table>
-       <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE(S)</th><th>ELAB. / VERIF. / APROV.</th><th>LDP</th><th>HH</th></tr></thead>
-       <tbody>{d.pendentes.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td>
-        <td>{x.atividades.map(l=>l.tarefa??"—").join(" · ")}</td><td>{recursosTexto(x.atividades[0])}</td><td>NÃO EMITIDO</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
-      </table></div>:<p className="gv-diaria-vazio">Nenhuma pendência comprovada de ontem nesta disciplina.</p>}
-      {(d.emitidosOntem>0||d.regularizados>0)&&<p className="gv-diaria-vazio">{d.emitidosOntem} emitido(s) até ontem{d.regularizados>0&&<>; {d.regularizados} emitido(s) depois de ontem (não é mais pendência)</>}.</p>}
-      {d.semComprovacao.length>0&&<div data-testid="gv-diaria-sem-comprovacao"><h4>SEM COMPROVAÇÃO / INDETERMINADO — não contado como pendente</h4>
-       <div className="gv-table-scroll"><table>
-        <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>MOTIVO</th><th>HH</th></tr></thead>
-        <tbody>{d.semComprovacao.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td><td>{x.motivo??"—"}</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
-       </table></div></div>}
-     </div>
-    </div>
-   </section>)}</div>}
-  <p className="gv-rule">Atualização automática: HOJE = {br(a.hoje)} e ONTEM = {br(a.ontem)} pela data civil da Bahia; a tela muda sozinha na virada do dia.
-   {" "}Fonte: programação semanal (data da atividade = Reprogramada › Baseline), somente ontem e hoje; mesma deduplicação da 02
-   {a.repetidos>0&&<> ({a.repetidos} registro(s) repetido(s) contado(s) uma vez)</>}. HH = elaboração + verificação + aprovação.
-   {" "}Pendente de ontem = documento programado ontem que a LDP oficial (mesmo projeto e código) mostra NÃO emitido; emitido até ontem ou depois
-   não é pendência; sem prova (sem código, fora da LDP, cancelado, código repetido ou emitido sem data) fica em "sem comprovação".
-   {t.documentosOntem>0&&<> Ontem: {t.documentosOntem} documento(s) — {t.emitidosOntem} emitido(s), {t.pendentes} pendente(s), {t.regularizados} emitido(s) depois, {t.semComprovacao} sem comprovação.</>}</p>
+   :!disciplinas.length?<div className="gv-diaria-vazia" data-testid="gv-diaria-vazia"><Empty>{umaDisciplina
+     ?<>Nenhuma atividade de {nomeDisciplina} programada para hoje ({diaH}) nem para ontem ({diaO}) neste projeto. Sem pendências de ontem a exibir.
+      {foraDaNorma&&<> A disciplina deste slide não está na Norma de Coordenação atual do projeto — revise o slide em Configurações → Telas para TV.</>}</>
+     :<>Nenhuma atividade programada para hoje ({diaH}) nem para ontem ({diaO}) neste projeto.{" "}Sem pendências de ontem a exibir.</>}</Empty></div>
+   :<>
+    {layout==="cards"&&<div className="gv-diaria-cards" data-testid="gv-diaria-cards">{disciplinas.map(d=><CartaoDisciplinaDiaria key={d.chave} d={d}/>)}</div>}
+    <div className="gv-diaria-disciplinas">{disciplinas.map(d=><BlocoDisciplinaDiaria key={d.chave} d={d} titulo={titulo} diaH={diaH} diaO={diaO}/>)}</div>
+   </>}
+  <RegraDiariaAutomatica a={a}/>
+ </div>;
+}
+/** Cards por disciplina: indicadores da disciplina num cartão (estilos da Gestão à Vista; só disciplinas com algo hoje/ontem). */
+function CartaoDisciplinaDiaria({d}:{d:DisciplinaDiaria}){
+ return <article className="gv-diaria-card" data-testid="gv-diaria-card">
+  <header title={d.nome}>{d.nome}</header>
+  <dl>
+   <div><dt>DOC. HOJE</dt><dd>{d.documentosHoje}</dd></div>
+   <div><dt>HH HOJE</dt><dd>{fmt2(d.hhHoje)}</dd></div>
+   <div><dt>PENDENTES DE ONTEM</dt><dd>{d.pendentes.length}</dd></div>
+   <div><dt>HH PENDENTE</dt><dd>{fmt2(d.hhPendente)}</dd></div>
+   <div><dt>SEM COMPROVAÇÃO</dt><dd>{d.semComprovacao.length}</dd></div>
+   <div><dt>EMITIDOS ATÉ ONTEM</dt><dd>{d.emitidosOntem}</dd></div>
+  </dl>
+ </article>;
+}
+function BlocoDisciplinaDiaria({d,titulo,diaH,diaO}:{d:DisciplinaDiaria;titulo:(projectId:string,codigo:string|null)=>string;diaH:string;diaO:string}){
+ return <section className="gv-diaria-disc" data-testid="gv-diaria-disciplina">
+  <header><b>{d.nome}</b><span>Hoje: {d.documentosHoje} documento(s) · {fmt2(d.hhHoje)} HH — Pendentes de ontem: {d.pendentes.length} · {fmt2(d.hhPendente)} HH
+   {d.semComprovacao.length>0&&<> — {d.semComprovacao.length} sem comprovação</>}</span></header>
+  <div className="gv-diaria-colunas">
+   <div data-testid="gv-diaria-hoje"><h3>PREVISTO HOJE · {diaH}</h3>
+    {d.hoje.length?<div className="gv-table-scroll"><table>
+     <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE</th><th>ELAB. / VERIF. / APROV.</th><th>SITUAÇÃO</th><th>HH</th></tr></thead>
+     <tbody>{d.hoje.map(l=><tr key={`${l.projectId}:${l.idRegistro}`}><td>{l.documento??"—"}</td><td>{titulo(l.projectId,l.documento)}</td><td>{l.tarefa??"—"}</td>
+      <td>{recursosTexto(l)}</td><td>{l.status??"—"}</td><td>{fmt2(l.hh)}</td></tr>)}</tbody>
+    </table></div>:<p className="gv-diaria-vazio">Nada programado para hoje nesta disciplina.</p>}
+   </div>
+   <div data-testid="gv-diaria-ontem"><h3>PENDENTE DE ONTEM · {diaO}</h3>
+    {d.pendentes.length?<div className="gv-table-scroll"><table>
+     <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE(S)</th><th>ELAB. / VERIF. / APROV.</th><th>LDP</th><th>HH</th></tr></thead>
+     <tbody>{d.pendentes.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td>
+      <td>{x.atividades.map(l=>l.tarefa??"—").join(" · ")}</td><td>{recursosTexto(x.atividades[0])}</td><td>NÃO EMITIDO</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
+    </table></div>:<p className="gv-diaria-vazio">Nenhuma pendência comprovada de ontem nesta disciplina.</p>}
+    {(d.emitidosOntem>0||d.regularizados>0)&&<p className="gv-diaria-vazio">{d.emitidosOntem} emitido(s) até ontem{d.regularizados>0&&<>; {d.regularizados} emitido(s) depois de ontem (não é mais pendência)</>}.</p>}
+    {d.semComprovacao.length>0&&<div data-testid="gv-diaria-sem-comprovacao"><h4>SEM COMPROVAÇÃO / INDETERMINADO — não contado como pendente</h4>
+     <div className="gv-table-scroll"><table>
+      <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>MOTIVO</th><th>HH</th></tr></thead>
+      <tbody>{d.semComprovacao.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td><td>{x.motivo??"—"}</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
+     </table></div></div>}
+   </div>
+  </div>
+ </section>;
+}
+function RegraDiariaAutomatica({a}:{a:AnaliseDiaria}){
+ const t=a.totais;
+ return <p className="gv-rule">Atualização automática: HOJE = {br(a.hoje)} e ONTEM = {br(a.ontem)} pela data civil da Bahia; a tela muda sozinha na virada do dia.
+  {" "}Fonte: programação semanal (data da atividade = Reprogramada › Baseline), somente ontem e hoje; mesma deduplicação da 02
+  {a.repetidos>0&&<> ({a.repetidos} registro(s) repetido(s) contado(s) uma vez)</>}. HH = elaboração + verificação + aprovação.
+  {" "}Pendente de ontem = documento programado ontem que a LDP oficial (mesmo projeto e código) mostra NÃO emitido; emitido até ontem ou depois
+  não é pendência; sem prova (sem código, fora da LDP, cancelado, código repetido ou emitido sem data) fica em "sem comprovação".
+  {t.documentosOntem>0&&<> Ontem: {t.documentosOntem} documento(s) — {t.emitidosOntem} emitido(s), {t.pendentes} pendente(s), {t.regularizados} emitido(s) depois, {t.semComprovacao} sem comprovação.</>}</p>;
+}
+/**
+ * Exibição PADRÃO: exatamente o layout da 02 (Programming no modo diário — cartões, tabela e gráficos por disciplina), em duas
+ * seções. HOJE = atividades programadas hoje; PENDÊNCIAS DE ONTEM = só as atividades de ontem cujo documento a LDP comprova
+ * NÃO emitido (mesma análise das outras exibições). Sem comprovação fica listado à parte, nunca como pendente.
+ */
+function DiariaPadrao({reports,dados,cat,a,carregando,diaH,diaO}:{reports:FactsReport[];dados:ProgramacaoResposta[];cat:CatalogoDisciplinas;a:AnaliseDiaria;
+ carregando:boolean;diaH:string;diaO:string}){
+ const doDia=(dia:string,manter:(projectId:string,l:ProgramacaoLinha)=>boolean=()=>true)=>
+  dados.map(d=>({...d,linhas:d.linhas.filter(l=>l.dataAtividade.slice(0,10)===dia&&manter(d.projectId,l))}));
+ const pendentes=new Set(a.disciplinas.flatMap(d=>d.pendentes.flatMap(x=>x.atividades.map(l=>`${l.projectId}:${l.idRegistro}`))));
+ const semComprovacao=a.disciplinas.flatMap(d=>d.semComprovacao.map(x=>({...x,nome:d.nome})));
+ const semana={start:a.ontem,end:a.hoje};
+ return <div className="gv-diaria-auto gv-diaria-modo-padrao" data-testid="gv-diaria-automatica" data-layout="padrao">
+  <section className="gv-diaria-secao" data-testid="gv-diaria-padrao-hoje">
+   <h2 className="gv-diaria-faixa">HOJE · {diaH}</h2>
+   <Programming reports={reports} semana={semana} dia={a.hoje} cat={cat} dados={doDia(a.hoje)} erro={null} carregando={carregando} onSemana={()=>undefined} diario/>
+  </section>
+  <section className="gv-diaria-secao" data-testid="gv-diaria-padrao-ontem">
+   <h2 className="gv-diaria-faixa">PENDÊNCIAS DE ONTEM · {diaO}</h2>
+   <Programming reports={reports} semana={semana} dia={a.ontem} cat={cat} dados={doDia(a.ontem,(p,l)=>pendentes.has(`${p}:${l.idRegistro}`))} erro={null}
+    carregando={carregando} onSemana={()=>undefined} diario
+    rotulos={{documentos:"PENDENTES DE ONTEM (COMPROVADOS)",hh:"HH PENDENTE DE ONTEM",titulo:"PENDÊNCIAS DE ONTEM (NÃO EMITIDAS NA LDP)",
+     vazio:`Nenhuma pendência comprovada de ontem (${diaO}): ${a.totais.documentosOntem} documento(s) programado(s) ontem — ${a.totais.emitidosOntem} emitido(s) até ontem, `
+      +`${a.totais.regularizados} emitido(s) depois, ${a.totais.semComprovacao} sem comprovação.`}}/>
+   {!carregando&&semComprovacao.length>0&&<p className="gv-rule" data-testid="gv-diaria-sem-comprovacao">SEM COMPROVAÇÃO / INDETERMINADO (não contado como pendente):
+    {" "}{semComprovacao.map(x=>`${x.codigo??"sem código"} (${x.nome}: ${x.motivo??"—"})`).join("; ")}.</p>}
+  </section>
+  <RegraDiariaAutomatica a={a}/>
  </div>;
 }
 
@@ -517,7 +589,9 @@ function ConsolidacaoIncompleta({falhas,total,onRetry}:{falhas:FalhaProjeto[];to
 
 type PropsGestaoVista={selection:PmoSelecionado[];screen:JamileScreen;
  /** Só "programacao-diaria": dia (YYYY-MM-DD) salvo no slide da TV, ou "AUTO" (hoje + pendências de ontem). Ausente/inválido = aviso. */
- dataReferencia?:string|null};
+ dataReferencia?:string|null;
+ /** Só no slide AUTO: exibição (ausente = padrão) e, em "disciplina", a chave/rótulo da disciplina salvos no slide. */
+ layoutDiario?:string|null;disciplina?:string|null;disciplinaNome?:string|null};
 export default function GestaoVistaJamilePage(props:PropsGestaoVista){
  return props.screen==="programacao-diaria"&&dataReferenciaAutomatica(props.dataReferencia)
   ?<DiariaAutomaticaNoDia {...props}/>:<GestaoVistaJamileConteudo {...props} hojeAuto={null}/>;
@@ -527,7 +601,7 @@ function DiariaAutomaticaNoDia(props:PropsGestaoVista){
  const hoje=useHojeBahia();
  return <GestaoVistaJamileConteudo key={hoje} {...props} hojeAuto={hoje}/>;
 }
-function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAuto}:PropsGestaoVista&{
+function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAuto,layoutDiario=null,disciplina=null,disciplinaNome=null}:PropsGestaoVista&{
  /** Só no slide AUTO: hoje (Bahia), vindo de DiariaAutomaticaNoDia; null em qualquer outra tela. */
  hojeAuto:string|null}){
  const {reports,falhas,loading,error,retry}=usePmoReports("gestao-vista",{hub:"",project:"",selection});
@@ -540,6 +614,9 @@ function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAut
  // Diária AUTOMÁTICA: janela [ontem, hoje] (cruza a semana no domingo numa consulta só); dia fixo continua como antes.
  const auto=diaria&&hojeAuto!==null?janelaDiariaAutomatica(hojeAuto):null;
  const diaFixo=diaria&&!auto&&dataReferenciaValida(dataReferencia)?dataReferencia:null;
+ // Exibição do slide AUTO: desconhecida ou "disciplina" sem disciplina = aviso explícito (nunca outra exibição no lugar).
+ const layoutAuto:LayoutDiario|null=!auto?null:(layoutDiario??"padrao")==="padrao"?"padrao":layoutDiario==="cards"?"cards"
+  :layoutDiario==="disciplina"&&disciplina?.trim()?"disciplina":null;
  const valid=diaFixo??(/^\d{4}-\d{2}-\d{2}$/.test(cutoff)?cutoff:TODAY()),week=semanaDoCorte(valid);
  // 01 e 02: MESMA fonte — programação semanal oficial (domingo–sábado) de cada projeto; na 02, filtro opcional de um dia.
  // Diária: o MESMO endpoint semanal, filtrado exatamente no dia do slide.
@@ -567,6 +644,7 @@ function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAut
  const normalizador=useMemo(()=>consolidado?criarNormalizador(siglas.regras):null,[consolidado,siglas.regras]);
  const cat=useMemo(()=>criarCatalogo(normas.normas,selection,normalizador),[normas.normas,selection,normalizador]);
  const name=selection.map(x=>x.name).join(" · ");
+ const nomeDisciplinaSlide=disciplina&&(cat.rotulos.has(disciplina)||disciplina===SEM_DISCIPLINA)?rotulo(cat,disciplina):disciplinaNome?.trim()||disciplina||"";
  const falhasTela:FalhaProjeto[]=[
   ...falhas,
   ...(screen==="programacao"&&prog.falhas.length<selection.length?prog.falhas:[]),
@@ -588,7 +666,10 @@ function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAut
   ?<ProgramacaoImportada dados={prog.dados} selection={selection} reports={reports as FactsReport[]} cat={cat} semana={week} modo={historico?"todas":"semana"}
     onSemana={irParaSemana} onModo={setModoProg}/>:null;
  let content:ReactNode;
- if(diaria&&!diaFixo&&!auto)content=<ReportState title="Programação Diária sem data de referência" error>
+ if(auto&&!layoutAuto)content=<ReportState title="Programação Diária automática com exibição inválida" error>
+  {layoutDiario==="disciplina"?"Este slide é \"uma tela por disciplina\", mas não tem a disciplina.":`Exibição "${layoutDiario}" desconhecida.`} Corrija em
+  Configurações → Configuração de Telas para TV.</ReportState>;
+ else if(diaria&&!diaFixo&&!auto)content=<ReportState title="Programação Diária sem data de referência" error>
   {dataReferencia?`A data "${dataReferencia}" deste slide não é uma data válida (AAAA-MM-DD).`:"Este slide não tem data de referência."} Configure-a em
   Configurações → Configuração de Telas para TV. A data de hoje nunca é usada no lugar.</ReportState>;
  else if(loading||normas.carregando||siglas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
@@ -614,7 +695,8 @@ function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAut
     carregando={prog.carregando||(historico&&todas.carregando)} onSemana={irParaSemana} historico={historico}/>}
    {diaria&&diaFixo&&<Programming reports={fr} semana={week} dia={diaFixo} cat={cat} dados={prog.dados} erro={null}
     carregando={prog.carregando} onSemana={()=>undefined} diario/>}
-   {auto&&<DiariaAutomatica reports={fr} dados={progAuto.dados} cat={cat} hoje={auto.hoje} carregando={progAuto.carregando}/>}
+   {auto&&layoutAuto&&<DiariaAutomatica reports={fr} dados={progAuto.dados} cat={cat} hoje={auto.hoje} carregando={progAuto.carregando}
+    layout={layoutAuto} disciplina={disciplina} disciplinaNome={disciplinaNome}/>}
    {screen==="documentacao"&&<Documentation reports={fr} ldp={ldp} cat={cat}/>}
    {screen==="indicadores"&&<Indicators reports={fr} cutoff={valid} ldp={ldp} cat={cat}/>}
    {consolidado&&<p className="gv-rule" data-testid="gv-normalizador">{siglas.aviso??(normalizador?.ativo
@@ -634,7 +716,7 @@ function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAut
   </aside>
   <div className="gv-main">
    <header className="gv-page-header">
-    <div className="gv-header-text"><b>GERÊNCIA DA ENGENHARIA</b><h1>{SUBTITLE[screen]}</h1><small title={consolidado?selection.map(x=>x.name).join("\n"):name} data-testid="gv-escopo">{consolidado?(screen==="programacao"?`POR DISCIPLINA — ${selection.length} PROJETOS`:`${porProjetoFase?"POR PROJETO E FASE":"CONSOLIDADO"} — ${selection.length} PROJETOS: ${name}`):name}</small>
+    <div className="gv-header-text"><b>GERÊNCIA DA ENGENHARIA</b><h1>{SUBTITLE[screen]}</h1><small title={consolidado?selection.map(x=>x.name).join("\n"):name} data-testid="gv-escopo">{layoutAuto==="disciplina"?`${name} · DISCIPLINA: ${nomeDisciplinaSlide}`:consolidado?(screen==="programacao"?`POR DISCIPLINA — ${selection.length} PROJETOS`:`${porProjetoFase?"POR PROJETO E FASE":"CONSOLIDADO"} — ${selection.length} PROJETOS: ${name}`):name}</small>
      {false&&consolidado&&<SeletorVisaoMultiprojeto valor={visaoMulti} onChange={setVisaoMulti}/>}</div>
     {screen==="programacao"&&<div className="gv-date gv-date-semana">
      <CalendarDays className="gv-date-icon" aria-hidden/>

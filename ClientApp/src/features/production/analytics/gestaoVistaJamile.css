@@ -289,3 +289,15 @@
 .gv-diaria-colunas th:last-child,.gv-diaria-colunas td:last-child{text-align:right;white-space:nowrap}
 .gv-diaria-vazio{margin:.2em 0 0;font-size:.85em;color:var(--gv-ink-soft)}
 @media (max-width:900px){.gv-diaria-colunas{grid-template-columns:minmax(0,1fr)}}
+/* Exibições do slide automático (20/10/2026): padrão = layout da 02 em Hoje/Ontem; cards = indicadores por disciplina; disciplina = uma só. */
+.gv-diaria-modo-padrao{overflow:auto}
+.gv-diaria-secao{flex:0 0 auto;display:flex;flex-direction:column;gap:.6em;min-height:min(46rem,92vh)}
+.gv-diaria-faixa{margin:0;padding:.4em .7em;background:var(--gv-steel);color:var(--gv-on-color);font-size:.95em;font-weight:800;letter-spacing:.05em}
+.gv-diaria-cards{flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(15em,1fr));gap:.7em}
+.gv-diaria-card{min-width:0;border:1px solid var(--gv-line);background:var(--gv-surface)}
+.gv-diaria-card>header{padding:.35em .6em;background:var(--gv-steel);color:var(--gv-on-color);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gv-diaria-card dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.1em .6em;padding:.45em .6em}
+.gv-diaria-card dl>div{display:flex;flex-direction:column;min-width:0}
+.gv-diaria-card dt{font-size:.68em;font-weight:700;letter-spacing:.03em;color:var(--gv-ink-soft)}
+.gv-diaria-card dd{margin:0;font-size:1.25em;font-weight:650;font-variant-numeric:tabular-nums;color:var(--gv-ink)}
+.gv-diaria-modo-disciplina .gv-diaria-disc{flex:1 0 auto}

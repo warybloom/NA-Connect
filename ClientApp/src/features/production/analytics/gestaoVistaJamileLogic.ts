@@ -547,3 +547,28 @@ export function analiseDiariaAutomatica({dados,cat,hoje,ldp}:{dados:readonly Pro
    semComprovacao:ontemDocs.filter(x=>x.situacao==="sem-comprovacao").length,
    emitidosOntem:ontemDocs.filter(x=>x.situacao==="emitido").length,regularizados:ontemDocs.filter(x=>x.situacao==="emitido-depois").length}};
 }
+
+/* ----------------------------------------------------------------------------------------------
+ * EDITOR DA TV — "Uma tela por disciplina" (20/10/2026). Disciplinas oferecidas para UM projeto, com a MESMA chave que a tela
+ * diária usa (criarCatalogo de 1 projeto, sem Normalizador — idêntico ao catálogo da tela): (a) as cadastradas na Norma de
+ * Coordenação do projeto (endpoint /disciplinas do servidor) e (b) as que aparecem na programação de ontem/hoje (classificação
+ * da 02). Nada é digitado nem inventado: sem Norma e sem programação, a lista fica vazia.
+ * ---------------------------------------------------------------------------------------------- */
+export interface OpcaoDisciplinaDiaria{chave:string;nome:string;naNorma:boolean;atividadesHoje:number;atividadesOntem:number}
+export function opcoesDisciplinaDiaria({norma,dados,projeto,hoje}:{norma:DisciplinasNorma|null;dados:ProgramacaoResposta|null;
+ projeto:{id:string;name?:string};hoje:string}):OpcaoDisciplinaDiaria[]{
+ const cat=criarCatalogo(norma?[norma]:[],[projeto]);
+ const ontem=addDias(hoje,-1);
+ const naJanela=(dados?.linhas??[]).filter(l=>{const d=l.dataAtividade.slice(0,10);return d===hoje||d===ontem;}).map(l=>({...l,projectId:projeto.id}));
+ const contagem=new Map<string,{hoje:number;ontem:number}>();
+ for(const l of deduplicarProgramacao(naJanela).linhas){
+  const k=classificarProgramacao(cat,projeto.id,l).chave,c=contagem.get(k)??{hoje:0,ontem:0};
+  if(l.dataAtividade.slice(0,10)===hoje)c.hoje++;else c.ontem++;
+  contagem.set(k,c);
+ }
+ const daNorma=new Set(cat.porNome.get(projeto.id)?.values()??[]);
+ return [...new Set([...daNorma,...contagem.keys()])].map(chave=>({chave,nome:rotulo(cat,chave),naNorma:daNorma.has(chave),
+  atividadesHoje:contagem.get(chave)?.hoje??0,atividadesOntem:contagem.get(chave)?.ontem??0}))
+  .sort((a,b)=>(a.chave===SEM_DISCIPLINA?1:0)-(b.chave===SEM_DISCIPLINA?1:0)
+   ||Number(b.atividadesHoje+b.atividadesOntem>0)-Number(a.atividadesHoje+a.atividadesOntem>0)||a.nome.localeCompare(b.nome,"pt-BR"));
+}

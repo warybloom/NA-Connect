@@ -16,6 +16,8 @@ import {
   TV_VISAO_GERAL, chavesTelaTv, getTelaTv, telasPorCategoria, type TelaTv,
 } from "@/features/tv/tvScreens";
 import SeletorProjetosTv from "@/features/tv/SeletorProjetosTv";
+import { useDisciplinasDiariaTv } from "@/features/tv/useDisciplinasDiariaTv";
+import { useHojeBahia } from "@/features/tv/useHojeBahia";
 import { useProjetosPermitidosTv } from "@/features/tv/useProjetosPermitidosTv";
 import type { AccItem } from "@/lib/api";
 import { usePermissions } from "@/features/permissions/PermissionProvider";
@@ -24,9 +26,9 @@ import { TV_PROJECTS_ENDPOINT } from "@/features/production/productionSelectionL
 import { useProjetoAtual } from "@/features/project/ProjetoAtualContext";
 import { carregarConfiguracaoTv, salvarConfiguracaoTv, TvSaveError } from "@/features/tv/tvApi";
 import {
-  ROTULO_DIARIA_AUTO, TV_LIMITES, TV_SEGUNDOS_PADRAO, dataReferenciaAutomatica, dataReferenciaValida, formatarDataReferencia, gerarIdApresentacao,
-  gerarTelasDiariasAutomaticas, mesmasApresentacoes, mover, projetosDoSlide, resumoProjetosSlide, resumoTv, slideComProjetos, tvAtiva,
-  validarApresentacoes, type TvSlide, type TvSlideProjeto,
+  LAYOUTS_DIARIOS, ROTULO_DIARIA_AUTO, TV_LIMITES, TV_SEGUNDOS_PADRAO, dataReferenciaAutomatica, dataReferenciaValida, formatarDataReferencia,
+  gerarIdApresentacao, gerarTelasDiariasAutomaticas, layoutDoSlide, mesmasApresentacoes, mover, projetosDoSlide, resumoProjetosSlide, resumoTv,
+  rotuloLayoutDiario, slideComProjetos, tvAtiva, validarApresentacoes, type LayoutDiario, type TvSlide, type TvSlideProjeto,
   type TvConfiguration, type TvPresentation,
 } from "@/features/tv/tvLogic";
 
@@ -40,6 +42,8 @@ export default function TelasTvConfigPage() {
   const [telasAutorizadas, setTelasAutorizadas] = useState<string[] | null>(null);
   // Servidor aceita a Programação Diária automática ("AUTO")? Backend anterior não envia o campo → botão desabilitado.
   const [diariaAutomatica, setDiariaAutomatica] = useState(false);
+  // Servidor guarda a exibição do slide automático (layoutDiario/disciplina)? Backend sem o campo descartaria a escolha em silêncio.
+  const [layoutsDiarios, setLayoutsDiarios] = useState(false);
   const [rascunho, setRascunho] = useState<TvPresentation[]>([]);
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -56,6 +60,7 @@ export default function TelasTvConfigPage() {
       setTelasPermitidas(Array.isArray(r.telasPermitidas) ? r.telasPermitidas : []);
       setTelasAutorizadas(Array.isArray(r.telasAutorizadas) ? r.telasAutorizadas : null);
       setDiariaAutomatica(r.diariaAutomatica === true);
+      setLayoutsDiarios(r.layoutsDiarios === true);
       setRascunho(r.configuration.presentations);
       setSelecionada((atual) => (r.configuration.presentations.some((a) => a.id === atual) ? atual : r.configuration.presentations[0]?.id ?? null));
     } catch (e) {
@@ -232,6 +237,7 @@ export default function TelasTvConfigPage() {
               candidatas={candidatas}
               opcoesTela={opcoesTela}
               diariaAutomatica={diariaAutomatica}
+              layoutsDiarios={layoutsDiarios}
               projetoInicial={projetoAtual}
               onChange={(f) => alterar(atual.id, f)}
               onExcluir={() => excluirApresentacao(atual.id)}
@@ -286,7 +292,8 @@ export const avisoProjetoExclusivo = (tela: Pick<TelaTv, "label">, fora: readonl
 /** Mesmo item = mesma tela, mesmos projetos e mesma data (Programação Diária repetida com outra data/projeto é outro item). */
 const mesmoItem = (a: TvSlide, b: TvSlide) =>
   a.screenId === b.screenId && projetosDoSlide(a).map((p) => p.projectId).join("+") === projetosDoSlide(b).map((p) => p.projectId).join("+")
-  && (a.dataReferencia ?? null) === (b.dataReferencia ?? null);
+  && (a.dataReferencia ?? null) === (b.dataReferencia ?? null)
+  && layoutDoSlide(a) === layoutDoSlide(b) && (a.disciplina ?? null) === (b.disciplina ?? null);
 
 /** "consolidado" = 1 item com todos os projetos; "por-projeto" = 1 item para cada projeto. */
 export type ModoAdicao = "consolidado" | "por-projeto";
@@ -317,12 +324,14 @@ interface EditorProps {
   opcoesTela: readonly OpcaoTela[];
   /** Servidor aceita dataReferencia "AUTO" (GET /api/tv-config → diariaAutomatica). */
   diariaAutomatica: boolean;
+  /** Servidor guarda a exibição (Cards / Uma tela por disciplina) do slide automático (GET /api/tv-config → layoutsDiarios). */
+  layoutsDiarios: boolean;
   projetoInicial: { hubId: string; projectId: string } | null;
   onChange: (f: (a: TvPresentation) => TvPresentation) => void;
   onExcluir: () => void;
 }
 
-function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAutomatica, projetoInicial, onChange, onExcluir }: EditorProps) {
+function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAutomatica, layoutsDiarios, projetoInicial, onChange, onExcluir }: EditorProps) {
   // Fluxo: PROJETOS → TELA → ADICIONAR. A lista de projetos vem da conta ACC do projeto atual (mesma fonte do seletor
   // do Controle de Produção), filtrada para ATIVOS + permitidos. A seleção fica mantida entre adições.
   // Projetos ELEGÍVEIS da TV (já sincronizados; fonte administrativa interna): sem Autodesk e sem depender dos
@@ -403,12 +412,37 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
   const motivoAutoIndisponivel = !diariaAutomatica ? "O servidor em execução ainda não aceita a Programação Diária automática (backend desatualizado)."
     : !diariaDisponivel ? "Programação Diária indisponível para o seu perfil."
     : verificando ? "Verificando permissões dos projetos…" : null;
+  // Exibição dos slides gerados: Padrão (layout da 02 em Hoje/Ontem), Cards por disciplina ou Uma tela por disciplina.
+  // Cards/Disciplina só com servidor que guarda o campo (senão a escolha seria descartada ao salvar).
+  const [layoutAuto, setLayoutAuto] = useState<LayoutDiario>("padrao");
+  const layoutEfetivo: LayoutDiario = layoutsDiarios ? layoutAuto : "padrao";
+  // Uma tela por disciplina: UM projeto por vez (entre os escolhidos com permissão na diária) e disciplinas vindas do servidor.
+  const hojeBahia = useHojeBahia();
+  const aptosDiaria = projetosAuto.filter((p) => podeTela(p.projectId, chavesTelaTv(TV_PROGRAMACAO_DIARIA)));
+  const [projetoDisciplinaId, setProjetoDisciplinaId] = useState("");
+  const projetoDisciplina = aptosDiaria.find((p) => p.projectId === projetoDisciplinaId) ?? aptosDiaria[0] ?? null;
+  const disciplinasProjeto = useDisciplinasDiariaTv(layoutEfetivo === "disciplina" && projetoDisciplina
+    ? { id: projetoDisciplina.projectId, name: projetoDisciplina.projectName ?? projetoDisciplina.projectId } : null, hojeBahia);
+  const [marcadas, setMarcadas] = useState<{ projeto: string; chaves: string[] } | null>(null);
+  // Ao carregar as disciplinas de um projeto, já vêm marcadas as DESCOBERTAS (com programação ontem/hoje); as demais, só se o usuário marcar.
+  useEffect(() => {
+    if (!projetoDisciplina || disciplinasProjeto.carregando || disciplinasProjeto.projeto !== projetoDisciplina.projectId) return;
+    setMarcadas((m) => m?.projeto === projetoDisciplina.projectId ? m
+      : { projeto: projetoDisciplina.projectId, chaves: disciplinasProjeto.opcoes.filter((o) => o.atividadesHoje + o.atividadesOntem > 0).map((o) => o.chave) });
+  }, [projetoDisciplina, disciplinasProjeto]);
+  const chavesMarcadas = marcadas && marcadas.projeto === projetoDisciplina?.projectId ? marcadas.chaves : [];
+  const alternarDisciplina = (chave: string) => projetoDisciplina && setMarcadas({ projeto: projetoDisciplina.projectId,
+    chaves: chavesMarcadas.includes(chave) ? chavesMarcadas.filter((c) => c !== chave) : [...chavesMarcadas, chave] });
   const gerarDiariasAutomaticas = () => {
     if (motivoAutoIndisponivel) return;
+    const porDisciplina = layoutEfetivo === "disciplina";
     const r = gerarTelasDiariasAutomaticas({
-      slides: a.slides, projetos: projetosAuto, telaDiaria: TV_PROGRAMACAO_DIARIA, telaVisaoGeral: TV_VISAO_GERAL,
+      slides: a.slides, projetos: porDisciplina ? (projetoDisciplina ? [projetoDisciplina] : []) : projetosAuto,
+      telaDiaria: TV_PROGRAMACAO_DIARIA, telaVisaoGeral: TV_VISAO_GERAL,
       podeDiaria: (id) => podeTela(id, chavesTelaTv(TV_PROGRAMACAO_DIARIA)), podeVisaoGeral: (id) => podeTela(id, chavesTelaTv(TV_VISAO_GERAL)),
       visaoGeralDisponivel: candidatas.some((t) => t.id === TV_VISAO_GERAL),
+      layout: layoutEfetivo,
+      disciplinas: porDisciplina ? disciplinasProjeto.opcoes.filter((o) => chavesMarcadas.includes(o.chave)).map((o) => ({ chave: o.chave, nome: o.nome })) : [],
     });
     setResultadoAuto(r.bloqueio ? { tipo: "erro", textos: [r.bloqueio] } : { tipo: "ok", textos: r.mensagens });
     const novos = r.slides;
@@ -443,8 +477,10 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
       <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4" data-testid="tv-diarias-automaticas">
         <h3 className={rotulo}>Telas diárias automáticas</h3>
         <p className="text-[11px] text-muted-foreground">
-          Uma tela por projeto com o que está PREVISTO HOJE e o que ficou PENDENTE DE ONTEM, por disciplina. As datas mudam sozinhas todo dia
+          Uma tela por projeto com o que está PREVISTO HOJE e o que ficou PENDENTE DE ONTEM. As datas mudam sozinhas todo dia
           (data da Bahia) — ninguém precisa mexer. A 01 Visão Geral entra no início se ainda não estiver na sequência. Depois, clique em Salvar.
+          Exibição: <b>Padrão</b> = mesmo layout da 02. Programação, em Hoje e Pendências de ontem; <b>Cards por disciplina</b> = indicadores e
+          blocos por disciplina num slide; <b>Uma tela por disciplina</b> = um slide para cada disciplina escolhida de um projeto.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs font-bold">
@@ -455,13 +491,61 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
             <input type="radio" name={`escopo-auto-${a.id}`} className="accent-primary" checked={escopoAuto === "todos"} onChange={() => setEscopoAuto("todos")} />
             Todos os permitidos ({verificando ? "…" : todosPermitidosDiaria.length})
           </label>
+          <label className="flex items-center gap-1.5 text-xs font-bold">
+            Exibição:
+            <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" data-testid="tv-diarias-exibicao" value={layoutEfetivo}
+              onChange={(e) => setLayoutAuto(e.target.value as LayoutDiario)}>
+              {LAYOUTS_DIARIOS.map((l) => <option key={l.id} value={l.id} disabled={l.id !== "padrao" && !layoutsDiarios}>{l.rotulo}</option>)}
+            </select>
+          </label>
           <Button size="sm" className="gap-1 font-bold" data-testid="tv-gerar-diarias-automaticas"
-            disabled={!!motivoAutoIndisponivel || projetosAuto.length === 0} title={motivoAutoIndisponivel ?? undefined} onClick={gerarDiariasAutomaticas}>
+            disabled={!!motivoAutoIndisponivel || projetosAuto.length === 0 || (layoutEfetivo === "disciplina" && (!projetoDisciplina || chavesMarcadas.length === 0))}
+            title={motivoAutoIndisponivel ?? undefined} onClick={gerarDiariasAutomaticas}>
             <CalendarClock className="h-4 w-4" />Gerar telas diárias automáticas
           </Button>
           <span className="text-[11px] text-muted-foreground">Sequência: {a.slides.length}/{TV_LIMITES.maxTelas} telas</span>
         </div>
         {motivoAutoIndisponivel && !verificando && <p className="text-xs text-amber-600 dark:text-amber-400">{motivoAutoIndisponivel}</p>}
+        {diariaAutomatica && !layoutsDiarios && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">Cards por disciplina e Uma tela por disciplina exigem o backend atualizado (só o Padrão é gravado com segurança).</p>
+        )}
+        {layoutEfetivo === "disciplina" && (
+          <div className="space-y-2 rounded-md border border-border bg-background/60 p-3" data-testid="tv-diarias-disciplinas">
+            <label className="flex flex-wrap items-center gap-2 text-xs font-bold">
+              Projeto:
+              <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={projetoDisciplina?.projectId ?? ""}
+                onChange={(e) => setProjetoDisciplinaId(e.target.value)} disabled={aptosDiaria.length === 0}>
+                {aptosDiaria.length === 0 && <option value="">Nenhum projeto com permissão na Programação Diária</option>}
+                {aptosDiaria.map((p) => <option key={p.projectId} value={p.projectId}>{p.projectName ?? p.projectId}</option>)}
+              </select>
+            </label>
+            <p className="text-[11px] text-muted-foreground">
+              Disciplinas do servidor: cadastradas na Norma de Coordenação do projeto e/ou com programação ontem/hoje (mesma chave que a TV usa,
+              pelo DOC3 → Norma). Nada é digitado. Já vêm marcadas as que têm programação ontem/hoje; as demais (só na Norma) podem ser marcadas
+              explicitamente — num dia sem atividade, a TV mostra o aviso "nenhuma atividade", nunca um card vazio.
+            </p>
+            {disciplinasProjeto.carregando ? <p className="text-xs text-muted-foreground">Carregando disciplinas…</p>
+              : disciplinasProjeto.opcoes.length === 0 ? <p className="text-xs text-amber-600 dark:text-amber-400">Nenhuma disciplina disponível para este projeto.</p>
+              : (
+                <ul className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {disciplinasProjeto.opcoes.map((o) => (
+                    <li key={o.chave}>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input type="checkbox" className="accent-primary" checked={chavesMarcadas.includes(o.chave)} onChange={() => alternarDisciplina(o.chave)}
+                          data-testid="tv-diarias-disciplina" />
+                        <span className="font-bold">{o.nome}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {o.atividadesHoje + o.atividadesOntem > 0 ? `hoje ${o.atividadesHoje} · ontem ${o.atividadesOntem}` : "sem programação ontem/hoje"}
+                          {o.naNorma ? "" : " · fora da Norma"}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            {disciplinasProjeto.avisos.map((t) => <p key={t} className="text-xs text-amber-600 dark:text-amber-400">{t}</p>)}
+          </div>
+        )}
         {resultadoAuto && (
           <ul role="status" data-testid="tv-diarias-resultado"
             className={cn("list-disc space-y-0.5 pl-5 text-xs", resultadoAuto.tipo === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-destructive")}>
@@ -550,6 +634,7 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
               const Icone = def?.icon ?? MonitorPlay;
               const escopo = resumoProjetosSlide(s);
               const foraDaTela = def ? projetosForaDaTela(def, projetosSelecionados) : [];
+              const porDisciplinaAuto = !!def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia) && layoutDoSlide(s) === "disciplina";
               return (
                 <li key={`${i}-${s.screenId}-${projetosDoSlide(s).map((p) => p.projectId).join("+")}-${s.dataReferencia ?? ""}`}
                   className="flex items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2">
@@ -568,7 +653,8 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
                       </details>
                     ) : (
                       <span className="block truncate text-[11px] text-muted-foreground" title={escopo.completo}>
-                        {escopo.texto}{def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia) ? ` · ${ROTULO_DIARIA_AUTO}`
+                        {escopo.texto}{def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia)
+                          ? ` · ${ROTULO_DIARIA_AUTO}${layoutDoSlide(s) === "padrao" ? "" : ` · ${rotuloLayoutDiario(s)}`}`
                           : def?.exigeDataReferencia && dataReferenciaValida(s.dataReferencia) ? ` · ${formatarDataReferencia(s.dataReferencia)}` : ""}
                       </span>
                     )}
@@ -576,7 +662,7 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
                   {def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia) ? (
                     // Item AUTOMÁTICO: sem campo de data (hoje/ontem são calculados na exibição).
                     <span data-testid="tv-data-referencia-auto" className="rounded-md bg-primary/15 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
-                      {ROTULO_DIARIA_AUTO}
+                      {ROTULO_DIARIA_AUTO} · {rotuloLayoutDiario(s)}
                     </span>
                   ) : def?.exigeDataReferencia && (
                     // Data deste item (independente dos demais itens da mesma tela). Obrigatória: vazia/inválida bloqueia o salvar.
@@ -587,9 +673,12 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAut
                   )}
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
                     title={def && foraDaTela.length > 0 ? avisoProjetoExclusivo(def, foraDaTela)
-                      : def && !def.multiProjeto && projetosSelecionados.length > 1 ? "Esta tela exibe um projeto por vez — selecione apenas um projeto" : "Trocar os projetos desta tela pelos projetos selecionados acima"}
-                    disabled={projetosSelecionados.length === 0 || foraDaTela.length > 0 || (!!def && !def.multiProjeto && projetosSelecionados.length > 1)}
-                    onClick={() => onChange((x) => ({ ...x, slides: x.slides.map((y, j) => (j === i ? slideComProjetos(y.screenId, projetosSelecionados, y.dataReferencia) : y)) }))}>
+                      : def && !def.multiProjeto && projetosSelecionados.length > 1 ? "Esta tela exibe um projeto por vez — selecione apenas um projeto"
+                      : porDisciplinaAuto ? "Uma tela por disciplina: a disciplina é do projeto deste item — gere o item de novo para outro projeto"
+                      : "Trocar os projetos desta tela pelos projetos selecionados acima"}
+                    disabled={projetosSelecionados.length === 0 || foraDaTela.length > 0 || (!!def && !def.multiProjeto && projetosSelecionados.length > 1) || porDisciplinaAuto}
+                    onClick={() => onChange((x) => ({ ...x, slides: x.slides.map((y, j) => (j === i
+                      ? { ...slideComProjetos(y.screenId, projetosSelecionados, y.dataReferencia), ...(y.layoutDiario ? { layoutDiario: y.layoutDiario } : {}) } : y)) }))}>
                     Usar seleção
                   </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" title="Subir" disabled={i === 0}

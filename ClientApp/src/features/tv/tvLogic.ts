@@ -13,6 +13,14 @@ export interface TvSlideProjeto { hubId: string; projectId: string; projectName:
 export interface TvSlide {
   screenId: string; hubId: string; projectId: string; projectName: string | null; projetos?: TvSlideProjeto[] | null;
   dataReferencia?: string | null;
+  /**
+   * 20/10/2026 — só no slide AUTOMÁTICO (dataReferencia "AUTO"): exibição. Ausente/"padrao" = layout da 02 dividido em
+   * Hoje/Ontem; "cards" = blocos por disciplina; "disciplina" = uma disciplina só (disciplina = chave do grupo, a mesma da
+   * classificação/Normalizador; disciplinaNome = rótulo). O backend descarta os campos em qualquer outro slide.
+   */
+  layoutDiario?: LayoutDiario | null;
+  disciplina?: string | null;
+  disciplinaNome?: string | null;
 }
 
 /** Data ISO real (AAAA-MM-DD, existe no calendário) — mesma regra do backend (DateOnly.TryParseExact "yyyy-MM-dd"). */
@@ -35,6 +43,23 @@ export const ROTULO_DIARIA_AUTO = "Hoje + pendências de ontem (automático)";
 export const dataReferenciaAutomatica = (v: string | null | undefined): v is typeof DATA_REFERENCIA_AUTO => v === DATA_REFERENCIA_AUTO;
 /** Data de um item com data: dia fixo ISO real OU "AUTO". Ausente continua inválida. */
 export const dataReferenciaDoSlideValida = (v: string | null | undefined) => dataReferenciaAutomatica(v) || dataReferenciaValida(v);
+
+/** Exibição do slide automático (espelho de TvDiaAutomatico.Layout* no backend). */
+export type LayoutDiario = "padrao" | "cards" | "disciplina";
+export const LAYOUTS_DIARIOS: readonly { id: LayoutDiario; rotulo: string }[] = [
+  { id: "padrao", rotulo: "Padrão" },
+  { id: "cards", rotulo: "Cards por disciplina" },
+  { id: "disciplina", rotulo: "Uma tela por disciplina" },
+];
+const LAYOUTS_VALIDOS = new Set<string>(LAYOUTS_DIARIOS.map((l) => l.id));
+/** Exibição efetiva do slide (ausente = padrão). Valor desconhecido continua desconhecido (a validação recusa). */
+export const layoutDoSlide = (s: Pick<TvSlide, "layoutDiario">): string => s.layoutDiario ?? "padrao";
+export const rotuloLayoutDiario = (s: Pick<TvSlide, "layoutDiario" | "disciplina" | "disciplinaNome">) =>
+  layoutDoSlide(s) === "disciplina" ? `Disciplina: ${s.disciplinaNome?.trim() || s.disciplina}`
+    : LAYOUTS_DIARIOS.find((l) => l.id === layoutDoSlide(s))?.rotulo ?? String(s.layoutDiario);
+/** Chave de duplicidade do slide automático: tela + projeto + exibição + disciplina (exibições/disciplinas distintas coexistem). */
+export const chaveDiariaAutomatica = (s: TvSlide) =>
+  `${s.screenId}|${s.projectId}|${layoutDoSlide(s)}|${layoutDoSlide(s) === "disciplina" ? (s.disciplina ?? "").trim() : ""}`;
 
 /** Data civil (AAAA-MM-DD) da Bahia no instante dado. Sem base de fusos no navegador: UTC−3 fixo (sem horário de verão desde 2012). */
 export function dataCivilBahia(instante: Date = new Date()): string {
@@ -112,7 +137,9 @@ export interface TvConfiguration {
  */
 export interface TvConfigResponse { configuration: TvConfiguration; telasPermitidas: string[]; telasAutorizadas?: string[] | null;
   /** 20/10/2026: servidor aceita dataReferencia "AUTO" (ausente = backend anterior). */
-  diariaAutomatica?: boolean | null }
+  diariaAutomatica?: boolean | null;
+  /** 20/10/2026: servidor guarda a exibição do slide automático (layoutDiario/disciplina); ausente = só o padrão é seguro. */
+  layoutsDiarios?: boolean | null }
 
 export const TV_LIMITES = { maxApresentacoes: 20, maxTelas: 50, minSegundos: 10, maxSegundos: 600, maxNome: 80 } as const;
 export const TV_SEGUNDOS_PADRAO = 30;
@@ -171,10 +198,16 @@ export function validarApresentacoes(lista: readonly TvPresentation[], telasPerm
       if (telasComData.includes(s.screenId) && !dataReferenciaDoSlideValida(s.dataReferencia))
         return `"${nome}": informe uma data de referência válida (AAAA-MM-DD) em cada Programação Diária.`;
     }
-    // Programação Diária automática idêntica (mesma tela + mesmo projeto) nunca se repete (mesma regra do backend).
+    // Programação Diária automática idêntica (mesma tela + projeto + exibição + disciplina) nunca se repete (mesma regra do backend).
     const automaticas = a.slides.filter((s) => telasComData.includes(s.screenId) && dataReferenciaAutomatica(s.dataReferencia));
-    const repetida = automaticas.find((s, i) => automaticas.findIndex((x) => x.screenId === s.screenId && x.projectId === s.projectId) !== i);
-    if (repetida) return `"${nome}": Programação Diária automática repetida para ${repetida.projectName ?? repetida.projectId} — remova a cópia.`;
+    for (const s of automaticas) {
+      if (!LAYOUTS_VALIDOS.has(layoutDoSlide(s))) return `"${nome}": exibição inválida na Programação Diária automática (${s.layoutDiario}).`;
+      if (layoutDoSlide(s) === "disciplina" && !s.disciplina?.trim())
+        return `"${nome}": a Programação Diária automática "Uma tela por disciplina" de ${s.projectName ?? s.projectId} está sem disciplina.`;
+    }
+    const repetida = automaticas.find((s, i) => automaticas.findIndex((x) => chaveDiariaAutomatica(x) === chaveDiariaAutomatica(s)) !== i);
+    if (repetida) return `"${nome}": Programação Diária automática repetida para ${repetida.projectName ?? repetida.projectId}`
+      + `${layoutDoSlide(repetida) === "padrao" ? "" : ` (${rotuloLayoutDiario(repetida)})`} — remova a cópia.`;
   }
   return null;
 }
@@ -226,11 +259,15 @@ export const resumoSelecao = (nomes: readonly { nome: string; id: string }[]) =>
 // (se ainda não houver). Só altera o RASCUNHO; nada é parcial: acima do limite, nada é adicionado.
 // ---------------------------------------------------------------------------------------------
 export type SituacaoVisaoGeral = "existente" | "inserida" | "sem-permissao" | "indisponivel";
+/** Disciplina escolhida para "Uma tela por disciplina": chave do grupo (classificação/Normalizador) + rótulo. */
+export interface DisciplinaEscolhida { chave: string; nome: string }
 export interface GeracaoDiariaAutomatica {
   /** Nova sequência (null = nada muda: bloqueado ou tudo já existia). */
   slides: TvSlide[] | null;
   adicionados: TvSlideProjeto[];
   jaExistentes: TvSlideProjeto[];
+  /** Slides diários novos (um por projeto; na exibição por disciplina, um por projeto × disciplina). */
+  novosSlides: TvSlide[];
   semPermissao: TvSlideProjeto[];
   visaoGeral: SituacaoVisaoGeral;
   /** Projetos sem permissão da 01 (quando ela não pôde ser inserida por isso). */
@@ -243,8 +280,16 @@ export interface GeracaoDiariaAutomatica {
 
 const nomeProjeto = (p: TvSlideProjeto) => codigoProjeto(p.projectName, p.projectId);
 
+/** Slide AUTO de um projeto na exibição escolhida (padrão = formato anterior, sem campos extras). */
+export function slideDiarioAutomatico(telaDiaria: string, p: TvSlideProjeto, layout: LayoutDiario = "padrao", disciplina?: DisciplinaEscolhida): TvSlide {
+  const base = slideComProjetos(telaDiaria, [p], DATA_REFERENCIA_AUTO);
+  return layout === "padrao" ? base
+    : layout === "cards" ? { ...base, layoutDiario: "cards" }
+    : { ...base, layoutDiario: "disciplina", disciplina: disciplina!.chave, disciplinaNome: disciplina!.nome };
+}
+
 export function gerarTelasDiariasAutomaticas({ slides, projetos, telaDiaria, telaVisaoGeral, podeDiaria, podeVisaoGeral, visaoGeralDisponivel,
-  limite = TV_LIMITES.maxTelas }: {
+  limite = TV_LIMITES.maxTelas, layout = "padrao", disciplinas = [] }: {
   slides: readonly TvSlide[];
   /** Projetos escolhidos (selecionados OU todos os permitidos), na ordem de exibição. */
   projetos: readonly TvSlideProjeto[];
@@ -254,45 +299,60 @@ export function gerarTelasDiariasAutomaticas({ slides, projetos, telaDiaria, tel
   /** 01 Visão Geral está entre as telas que o usuário pode adicionar (servidor + permissão). */
   visaoGeralDisponivel: boolean;
   limite?: number;
+  /** Exibição dos slides gerados (padrão = layout da 02 em Hoje/Ontem). */
+  layout?: LayoutDiario;
+  /** Só "disciplina": disciplinas escolhidas (vindas da Norma/programação do servidor, nunca digitadas); um slide por projeto × disciplina. */
+  disciplinas?: readonly DisciplinaEscolhida[];
 }): GeracaoDiariaAutomatica {
   const unicos = projetos.filter((p, i) => projetos.findIndex((x) => x.projectId === p.projectId) === i);
   const semPermissao = unicos.filter((p) => !podeDiaria(p.projectId));
   const aptos = unicos.filter((p) => podeDiaria(p.projectId));
-  const existe = (p: TvSlideProjeto) => slides.some((s) => s.screenId === telaDiaria && s.projectId === p.projectId && dataReferenciaAutomatica(s.dataReferencia));
-  const jaExistentes = aptos.filter(existe);
-  const novos = aptos.filter((p) => !existe(p));
+  const discs = disciplinas.filter((d, i) => d.chave.trim() !== "" && disciplinas.findIndex((x) => x.chave === d.chave) === i);
+  // Candidatos: padrão/cards = um por projeto; disciplina = um por projeto × disciplina. Duplicata = mesma chave (tela+projeto+exibição+disciplina).
+  const candidatos = aptos.flatMap((p) => layout === "disciplina" ? discs.map((d) => ({ p, slide: slideDiarioAutomatico(telaDiaria, p, layout, d) }))
+    : [{ p, slide: slideDiarioAutomatico(telaDiaria, p, layout) }]);
+  const chavesExistentes = new Set(slides.filter((s) => s.screenId === telaDiaria && dataReferenciaAutomatica(s.dataReferencia)).map(chaveDiariaAutomatica));
+  const novosC = candidatos.filter((c) => !chavesExistentes.has(chaveDiariaAutomatica(c.slide)));
+  const existentesC = candidatos.filter((c) => chavesExistentes.has(chaveDiariaAutomatica(c.slide)));
+  const projetosDe = (cs: typeof candidatos) => cs.map((c) => c.p).filter((p, i, xs) => xs.findIndex((x) => x.projectId === p.projectId) === i);
+  const novos = projetosDe(novosC);
+  const jaExistentes = projetosDe(existentesC).filter((p) => !novos.some((x) => x.projectId === p.projectId));
   const semPermissaoVisaoGeral = aptos.filter((p) => !podeVisaoGeral(p.projectId));
   const visaoGeral: SituacaoVisaoGeral = slides.some((s) => s.screenId === telaVisaoGeral) ? "existente"
     : !visaoGeralDisponivel ? "indisponivel"
     : aptos.length === 0 || semPermissaoVisaoGeral.length > 0 ? "sem-permissao" : "inserida";
   const inserir = visaoGeral === "inserida";
-  const totalResultante = slides.length + (inserir ? 1 : 0) + novos.length;
-  const base = { adicionados: [] as TvSlideProjeto[], jaExistentes, semPermissao, visaoGeral, semPermissaoVisaoGeral, totalResultante };
+  const totalResultante = slides.length + (inserir ? 1 : 0) + novosC.length;
+  const base = { adicionados: [] as TvSlideProjeto[], novosSlides: [] as TvSlide[], jaExistentes, semPermissao, visaoGeral, semPermissaoVisaoGeral, totalResultante };
   const lista = (ps: readonly TvSlideProjeto[]) => ps.map(nomeProjeto).join(", ");
+  const listaSlides = (cs: typeof candidatos) => cs.map((c) => layout === "disciplina" ? `${nomeProjeto(c.p)} · ${c.slide.disciplinaNome}` : nomeProjeto(c.p)).join(", ");
+  const sufixoLayout = layout === "padrao" ? "" : ` (${LAYOUTS_DIARIOS.find((l) => l.id === layout)!.rotulo})`;
 
   if (unicos.length === 0) return { ...base, slides: null, bloqueio: "Nenhum projeto escolhido.", mensagens: [] };
   if (aptos.length === 0)
     return { ...base, slides: null, mensagens: [],
       bloqueio: `Sem permissão para a Programação Diária em nenhum dos ${unicos.length} projeto(s): ${lista(semPermissao)}.` };
+  if (layout === "disciplina" && discs.length === 0)
+    return { ...base, slides: null, mensagens: [], bloqueio: "Uma tela por disciplina: escolha ao menos uma disciplina do projeto (nada foi adicionado)." };
   if (totalResultante > limite)
     return { ...base, slides: null, mensagens: [],
-      bloqueio: `Limite de ${limite} telas por TV: seriam ${totalResultante} (${slides.length} atuais + ${novos.length} diária(s)${inserir ? " + 01 Visão Geral" : ""}). `
+      bloqueio: `Limite de ${limite} telas por TV: seriam ${totalResultante} (${slides.length} atuais + ${novosC.length} diária(s)${inserir ? " + 01 Visão Geral" : ""}). `
         + "Nada foi adicionado — escolha menos projetos ou remova telas." };
 
   const mensagens = [
-    novos.length > 0 ? `${novos.length} tela(s) diária(s) automática(s) adicionada(s): ${lista(novos)}.` : "",
-    jaExistentes.length > 0 ? `${jaExistentes.length} já existia(m) e não foi(ram) duplicada(s): ${lista(jaExistentes)}.` : "",
+    novosC.length > 0 ? `${novosC.length} tela(s) diária(s) automática(s)${sufixoLayout} adicionada(s): ${listaSlides(novosC)}.` : "",
+    existentesC.length > 0 ? `${existentesC.length} já existia(m) e não foi(ram) duplicada(s): ${listaSlides(existentesC)}.` : "",
     semPermissao.length > 0 ? `${semPermissao.length} projeto(s) ignorado(s) por falta de permissão na Programação Diária: ${lista(semPermissao)}.` : "",
     visaoGeral === "inserida" ? `01 Visão Geral inserida no início, com os ${aptos.length} projeto(s).`
       : visaoGeral === "existente" ? "01 Visão Geral já está na sequência (posição mantida)."
       : visaoGeral === "indisponivel" ? "01 Visão Geral NÃO inserida: tela indisponível para o seu perfil/servidor."
       : `01 Visão Geral NÃO inserida: sem permissão em ${lista(semPermissaoVisaoGeral)}.`,
   ].filter(Boolean);
-  if (novos.length === 0 && !inserir)
+  if (novosC.length === 0 && !inserir)
     return { ...base, slides: null, bloqueio: null, mensagens: ["Nada a adicionar: todas as telas diárias automáticas já existem.", ...mensagens] };
-  const novosSlides = novos.map((p) => slideComProjetos(telaDiaria, [p], DATA_REFERENCIA_AUTO));
+  const novosSlides = novosC.map((c) => c.slide);
   return {
-    ...base, adicionados: novos, bloqueio: null, mensagens: [...mensagens, "Clique em Salvar para gravar."],
+    ...base, adicionados: novos, novosSlides, bloqueio: null, mensagens: [...mensagens, "Clique em Salvar para gravar."],
     slides: [...(inserir ? [slideComProjetos(telaVisaoGeral, [...aptos])] : []), ...slides, ...novosSlides],
   };
 }

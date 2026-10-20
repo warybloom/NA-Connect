@@ -10,7 +10,8 @@
 //   • "gestao-a-vista" = painel PMO antigo (ViewGestaoAVista), fora do Controle de Produção — mantido por compatibilidade.
 //   • "gestao-a-vista-programacao-diaria" (19/10/2026) = Programação Diária, SÓ na TV (fora de PRODUCTION_NAV): mesmo visual
 //     da 02. PROGRAMAÇÃO, UM projeto e UMA data (dataReferencia) por item; pode ser repetida com projetos/datas diferentes.
-//     dataReferencia "AUTO" (20/10/2026) = HOJE + PENDÊNCIAS DE ONTEM por disciplina, datas da Bahia recalculadas a cada dia.
+//     dataReferencia "AUTO" (20/10/2026) = HOJE + PENDÊNCIAS DE ONTEM, datas da Bahia recalculadas a cada dia; exibição por item
+//     (layoutDiario): Padrão (layout da 02 em Hoje/Ontem), Cards por disciplina ou Uma tela por disciplina (disciplina do item).
 //   • "gestao-vista-tipo2-<slug>" = Gestão à Vista Tipo 2 (reprodução do BI CHS001, biChs001Paginas.ts) — catálogo PRÓPRIO,
 //     fora de PRODUCTION_NAV: só as 10 páginas prioritárias (PRIORIDADE_10), um projeto por item e EXCLUSIVAS da CHS001.
 // Telas "em-desenvolvimento" ficam no catálogo como INDISPONÍVEIS (não selecionáveis, recusadas pelo backend).
@@ -205,9 +206,12 @@ export function telasPorCategoria<T extends Pick<TelaTv, "categoria">>(telas: re
  * desenvolvimento exibem um aviso explícito. A permissão da tela é conferida no projeto principal (o backend de cada
  * relatório continua validando todos os projetos).
  */
-export function ConteudoTv({ screenId, selection, dataReferencia = null }: { screenId: string; selection: PmoSelecionado[];
+export function ConteudoTv({ screenId, selection, dataReferencia = null, layoutDiario = null, disciplina = null, disciplinaNome = null }: {
+  screenId: string; selection: PmoSelecionado[];
   /** Data salva no item (só telas exigeDataReferencia); nunca substituída por "hoje". */
-  dataReferencia?: string | null }) {
+  dataReferencia?: string | null;
+  /** Slide AUTO (20/10/2026): exibição salva no item (padrão/cards/disciplina) e a disciplina da exibição por disciplina. */
+  layoutDiario?: string | null; disciplina?: string | null; disciplinaNome?: string | null }) {
   const tela = getTelaTv(screenId);
   if (!tela)
     return <ReportState title="Tela não encontrada" error>A tela “{screenId}” desta apresentação não existe mais no Controle de Produção. Remova-a em Configurações → Configuração de Telas para TV.</ReportState>;
@@ -232,7 +236,8 @@ export function ConteudoTv({ screenId, selection, dataReferencia = null }: { scr
           : tela.page.tipo === "gestao-vista-tipo2"
           ? <PaginaTipo2Tv slug={tela.page.slug} projectId={projetos[0].id} />
           : tela.page.tipo === "programacao-diaria"
-          ? <GestaoVistaJamilePage selection={projetos} screen="programacao-diaria" dataReferencia={dataReferencia} />
+          ? <GestaoVistaJamilePage selection={projetos} screen="programacao-diaria" dataReferencia={dataReferencia}
+              layoutDiario={layoutDiario} disciplina={disciplina} disciplinaNome={disciplinaNome} />
           : <ConteudoPaginaProducao page={tela.page as ProductionPageImplementada} selection={projetos} />}
       </LimiteErroTv>
     </GuardaPermissaoTv>

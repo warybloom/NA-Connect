@@ -256,6 +256,34 @@ public class TvPortalTests
         Assert.Equal(403,(await setup.Request(Url("a",0,TvTelas.ProjetoChs001,Iso(i),Iso(f)),"POST")).Status);
     }
 
+    // Exibições do slide AUTO (20/10/2026): Cards por disciplina e Uma tela por disciplina usam EXATAMENTE os mesmos recursos e a
+    // mesma janela [ontem, hoje] do slide; a apresentação devolvida ao portal carrega a exibição e a disciplina do item.
+    [Fact] public async Task AutoDailyLayoutsKeepSameResourcesWindowAndProject()
+    {
+        await using var setup=await Setup.Create();
+        var config=await setup.Config.ReadAsync();
+        await setup.Config.SaveAsync([
+            new("a","TV",30,[
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO"),
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO"){LayoutDiario="cards"},
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO"){LayoutDiario="disciplina",Disciplina="C:MECHANICAL",DisciplinaNome="MECÂNICA"},
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO"){LayoutDiario="disciplina",Disciplina="C:CIVIL",DisciplinaNome="CIVIL"}])],config.Revision,null);
+        var salvos=(await setup.Config.ReadAsync()).Presentations[0].Slides;
+        Assert.Equal(new string?[]{null,"cards","disciplina","disciplina"},salvos.Select(s=>s.LayoutDiario));
+        Assert.Equal(new string?[]{null,null,"C:MECHANICAL","C:CIVIL"},salvos.Select(s=>s.Disciplina));
+        var hoje=TvDiaAutomatico.Hoje(DateTimeOffset.UtcNow);var (i,f)=TvDiaAutomatico.Janela(hoje);
+        string Iso(DateOnly d)=>d.ToString("yyyy-MM-dd");
+        string Url(int slide,string inicio,string fim)=>$"/api/tv-portal/data/a/{slide}?resource={ProgramacaoJamile}&projectId={TvTelas.ProjetoChs001}&inicio={inicio}&fim={fim}";
+        for(var slide=1;slide<=3;slide++)
+        {
+            Assert.Equal(200,(await setup.Request(Url(slide,Iso(i),Iso(f)),"GET")).Status);
+            Assert.Equal(403,(await setup.Request(Url(slide,Iso(i.AddDays(-7)),Iso(f.AddDays(-7))),"GET")).Status);
+            Assert.Equal(200,(await setup.Request($"/api/tv-portal/data/a/{slide}?resource=%2Fapi%2Freports%2Fgestao-vista-jamile%2Fdisciplinas&projectId={TvTelas.ProjetoChs001}","GET")).Status);
+            Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/{slide}?resource=%2Fapi%2Fbi-chs001%2Fldp&projectId={TvTelas.ProjetoChs001}","GET")).Status);
+            Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/{slide}?resource={ProgramacaoJamile}&projectId=b.33333333-3333-3333-3333-333333333333&inicio={Iso(i)}&fim={Iso(f)}","GET")).Status);
+        }
+    }
+
     public class RepoProxy:DispatchProxy
     {
         public Func<MethodInfo, object?[]?, object?> Handler=null!;

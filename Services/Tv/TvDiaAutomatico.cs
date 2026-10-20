@@ -11,6 +11,13 @@ public static class TvDiaAutomatico
 {
     public const string Auto = "AUTO";
 
+    /// <summary>
+    /// Exibição do slide AUTOMÁTICO (TvSlide.LayoutDiario, 20/10/2026): padrão (ausente) = layout da 02 dividido em Hoje/Ontem;
+    /// cards = blocos por disciplina num slide; disciplina = uma disciplina por slide (TvSlide.Disciplina obrigatória).
+    /// </summary>
+    public const string LayoutPadrao = "padrao", LayoutCards = "cards", LayoutDisciplina = "disciplina";
+    public static readonly IReadOnlySet<string> Layouts = new HashSet<string>(StringComparer.Ordinal) { LayoutPadrao, LayoutCards, LayoutDisciplina };
+
     /// <summary>Tolerância de relógio entre a TV e o servidor perto da meia-noite (a janela continua calculada aqui).</summary>
     public static readonly TimeSpan ToleranciaRelogio = TimeSpan.FromMinutes(5);
 

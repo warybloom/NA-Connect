@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace APS.WebApp.Services.Tv;
@@ -15,9 +16,21 @@ public sealed record TvSlideProjeto(string HubId, string ProjectId, string? Proj
 /// (Programação Diária) e descartada nas demais — nunca muda os dados de outra tela; arquivos antigos continuam válidos.
 /// DataReferencia = "AUTO" (20/10/2026) = Programação Diária AUTOMÁTICA: hoje + pendências de ontem pela data civil da Bahia,
 /// recalculada a cada dia (TvDiaAutomatico). Datas fixas continuam exatamente como antes.
+/// LayoutDiario / Disciplina / DisciplinaNome (opcionais, 20/10/2026) = exibição do slide AUTOMÁTICO: null ou "padrao" = layout da
+/// 02 dividido em Hoje/Ontem; "cards" = blocos por disciplina; "disciplina" = uma disciplina só (Disciplina = chave do grupo, a
+/// mesma da classificação/Normalizador; DisciplinaNome = rótulo para o editor/cabeçalho). Descartados em qualquer outro slide e
+/// omitidos do JSON quando nulos — arquivos antigos continuam idênticos.
 /// </summary>
-public sealed record TvSlide(string ScreenId, string HubId, string ProjectId, string? ProjectName, IReadOnlyList<TvSlideProjeto>? Projetos = null,
+public sealed partial record TvSlide(string ScreenId, string HubId, string ProjectId, string? ProjectName, IReadOnlyList<TvSlideProjeto>? Projetos = null,
     string? DataReferencia = null);
+
+/// <summary>Exibição do slide AUTOMÁTICO (20/10/2026) — ver TvSlide; omitida do JSON quando nula.</summary>
+public sealed partial record TvSlide
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LayoutDiario { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Disciplina { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? DisciplinaNome { get; init; }
+}
 
 /// <summary>
 /// Configuração de UMA TV (Gestão à Vista): Name = "Nome da Tela / TV" (ex.: "TV SALA DE ENGENHARIA"), sequência de telas.
@@ -80,6 +93,8 @@ public static class TvConfigurationRules
     /// <summary>Data do slide: dia fixo ISO real OU "AUTO" exato (Programação Diária automática). Ausente continua inválida.</summary>
     public static bool DataReferenciaDoSlideValida(string? v) => v == TvDiaAutomatico.Auto || DataReferenciaValida(v);
 
+    private static bool Automatico(TvSlide t) => TvTelas.Obter(t.ScreenId)!.DataReferenciaObrigatoria && t.DataReferencia == TvDiaAutomatico.Auto;
+
     public static TvConfiguration Validate(TvConfiguration c)
     {
         if (c is null) throw new ArgumentException("Configuração vazia.");
@@ -95,7 +110,8 @@ public static class TvConfigurationRules
             var telas = a.Slides ?? Array.Empty<TvSlide>();
             if (telas.Count == 0) throw new ArgumentException($"A apresentação \"{a.Name}\" precisa de ao menos uma tela.");
             if (telas.Count > MaxTelas) throw new ArgumentException($"Máximo de {MaxTelas} telas por apresentação.");
-            // Programação Diária AUTOMÁTICA idêntica (mesma tela + mesmo projeto) nunca se repete na mesma apresentação.
+            // Programação Diária AUTOMÁTICA idêntica (mesma tela + mesmo projeto + mesma exibição + mesma disciplina) nunca se
+            // repete na mesma apresentação; exibições/disciplinas diferentes do mesmo projeto são slides distintos.
             var automaticas = new HashSet<string>(StringComparer.Ordinal);
             foreach (var t in telas)
             {
@@ -123,8 +139,19 @@ public static class TvConfigurationRules
                 // Programação Diária: cada item tem a SUA data (obrigatória, ISO real); hoje nunca é assumido.
                 if (tela.DataReferenciaObrigatoria && !DataReferenciaDoSlideValida(t.DataReferencia))
                     throw new ArgumentException($"A tela {t.ScreenId} exige data de referência válida (AAAA-MM-DD ou automática) em cada item.");
-                if (tela.DataReferenciaObrigatoria && t.DataReferencia == TvDiaAutomatico.Auto && !automaticas.Add(t.ScreenId + "|" + t.ProjectId))
-                    throw new ArgumentException($"A apresentação \"{a.Name}\" já tem a Programação Diária automática do projeto {t.ProjectName ?? t.ProjectId}.");
+                if (tela.DataReferenciaObrigatoria && t.DataReferencia == TvDiaAutomatico.Auto)
+                {
+                    var layout = t.LayoutDiario ?? TvDiaAutomatico.LayoutPadrao;
+                    if (!TvDiaAutomatico.Layouts.Contains(layout))
+                        throw new ArgumentException($"Exibição inválida na Programação Diária automática: {t.LayoutDiario} (use padrao, cards ou disciplina).");
+                    var disciplina = layout == TvDiaAutomatico.LayoutDisciplina ? t.Disciplina?.Trim() : null;
+                    if (layout == TvDiaAutomatico.LayoutDisciplina && (string.IsNullOrEmpty(disciplina) || disciplina.Length > 200))
+                        throw new ArgumentException("A Programação Diária automática \"uma tela por disciplina\" exige a disciplina do item.");
+                    if (t.DisciplinaNome is { Length: > 200 }) throw new ArgumentException("Nome de disciplina longo demais.");
+                    if (!automaticas.Add(t.ScreenId + "|" + t.ProjectId + "|" + layout + "|" + disciplina))
+                        throw new ArgumentException($"A apresentação \"{a.Name}\" já tem a Programação Diária automática do projeto {t.ProjectName ?? t.ProjectId}"
+                            + (layout == TvDiaAutomatico.LayoutPadrao ? "." : $" ({layout}{(disciplina is null ? "" : " · " + (t.DisciplinaNome ?? disciplina))})."));
+                }
             }
         }
         return c with
@@ -142,6 +169,11 @@ public static class TvConfigurationRules
                         : null,
                     // Só as telas com data a guardam; nas demais o campo é descartado (não altera dados nem o arquivo antigo).
                     DataReferencia = TvTelas.Obter(t.ScreenId)!.DataReferenciaObrigatoria ? t.DataReferencia : null,
+                    // Exibição só no slide AUTOMÁTICO; "padrao" = ausente (mesmo JSON de antes). Disciplina só na exibição por disciplina.
+                    LayoutDiario = Automatico(t) && t.LayoutDiario is TvDiaAutomatico.LayoutCards or TvDiaAutomatico.LayoutDisciplina ? t.LayoutDiario : null,
+                    Disciplina = Automatico(t) && t.LayoutDiario == TvDiaAutomatico.LayoutDisciplina ? t.Disciplina!.Trim() : null,
+                    DisciplinaNome = Automatico(t) && t.LayoutDiario == TvDiaAutomatico.LayoutDisciplina && !string.IsNullOrWhiteSpace(t.DisciplinaNome)
+                        ? t.DisciplinaNome.Trim() : null,
                 }).ToArray(),
             }).ToArray(),
         };
