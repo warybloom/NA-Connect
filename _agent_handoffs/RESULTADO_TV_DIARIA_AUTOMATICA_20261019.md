@@ -45,7 +45,7 @@ cd "C:\Dev\N-A-Connect aa\N-A-Connect"; graphify update .
 ```
 
 - **Conflitos:** o script compara cada arquivo com a base, ignorando só CRLF/LF. Se outro agente (Claude/Codex) tiver mudado algum deles, nada é escrito.
-  - Um arquivo igual à entrega anterior de 19–20/10 é aceito e atualizado (aparece como "entrega anterior → atualizar").
+  - Um arquivo igual à entrega anterior de 19–20/10 é aceito e atualizado (aparece como "entrega anterior -> atualizar").
 - **Backup:** é feito na hora da aplicação, em `C:\Dev\N-A-Connect aa\_backup_claude_tv_diaria_automatica_20261020\<data-hora>`.
 - **Frontend:** entra via Vite/HMR.
 - **Backend:** só passa a valer depois de publicado pelo seu procedimento controlado. São 4 arquivos .cs e um novo, `Services/Tv/TvDiaAutomatico.cs` (com as constantes das exibições). Antes de publicar, confira os jobs críticos e não pare o sincronizador.
