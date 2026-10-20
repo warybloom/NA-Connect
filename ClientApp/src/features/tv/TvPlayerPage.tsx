@@ -10,7 +10,11 @@ import { ThemeLogo } from "@/features/theme/ThemeLogo";
 import { ConteudoTv, getTelaTv } from "./tvScreens";
 import { usePermissions } from "@/features/permissions/PermissionProvider";
 import { carregarConfiguracaoTv } from "./tvApi";
-import { escolherApresentacao, formatarDataReferencia, projetosDoSlide, proximoIndice, resumoProjetosSlide, tvAtiva, type TvPresentation } from "./tvLogic";
+import {
+  dataReferenciaAutomatica, diaAnterior, escolherApresentacao, formatarDataReferencia, projetosDoSlide, proximoIndice, resumoProjetosSlide, tvAtiva,
+  type TvPresentation,
+} from "./tvLogic";
+import { useHojeBahia } from "./useHojeBahia";
 import { sairDaTelaCheia, useTelaCheia, type DocumentoTelaCheia } from "./telaCheia";
 import { NavegacaoTvProvider, destinoNaApresentacao, type NavegacaoTv } from "./tvNavegacao";
 
@@ -26,6 +30,8 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
   // Tela cheia do CONTAINER da apresentação (não do documento inteiro); estado lido do navegador (fullscreenchange).
   const palco = useRef<HTMLDivElement>(null);
   const { ativa: emTelaCheia, alternar: telaCheia, aviso: avisoTelaCheia } = useTelaCheia(palco);
+  // Programação Diária automática: datas VIGENTES no cabeçalho (mudam sozinhas na virada do dia, sem F5).
+  const hoje = useHojeBahia();
 
   useEffect(() => {
     const abort = new AbortController();
@@ -132,7 +138,10 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
           <p className="truncate text-sm font-black tracking-tight" data-testid="tv-identificacao"
             title={`Configuração: ${apresentacao.name} · id ${apresentacao.id}`}>{apresentacao.name}</p>
           <p className="truncate text-[11px] font-medium text-muted-foreground" title={resumoProjetosSlide(slide).completo} data-testid="tv-escopo-slide">
-            {resumoProjetosSlide(slide).texto}{def?.exigeDataReferencia && slide.dataReferencia ? ` · ${formatarDataReferencia(slide.dataReferencia)}` : ""}
+            {resumoProjetosSlide(slide).texto}
+            {def?.exigeDataReferencia && dataReferenciaAutomatica(slide.dataReferencia)
+              ? ` · Hoje ${formatarDataReferencia(hoje)} + pendências de ${formatarDataReferencia(diaAnterior(hoje))}`
+              : def?.exigeDataReferencia && slide.dataReferencia ? ` · ${formatarDataReferencia(slide.dataReferencia)}` : ""}
           </p>
         </div>
         <h1 className="pointer-events-none absolute left-1/2 top-1/2 max-w-[40%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-xl font-bold uppercase tracking-wide text-foreground"

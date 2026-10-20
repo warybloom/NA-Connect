@@ -10,14 +10,16 @@ import {enrichDocuments,type FactsReport} from "@/components/pmo/pmoFacts";
 import {ReportState} from "@/components/reports/ReportComponents";
 import {encontrarFolha,rotaProducao} from "../productionRoutes";
 import {ItemMenuTv,useNavegacaoTv} from "@/features/tv/tvNavegacao";
-import {dataReferenciaValida} from "@/features/tv/tvLogic";
+import {dataReferenciaAutomatica,dataReferenciaValida,janelaDiariaAutomatica} from "@/features/tv/tvLogic";
+import {useHojeBahia} from "@/features/tv/useHojeBahia";
 import {useLdpPorProjeto} from "./useLdpPorProjeto";
 import {
  FASES,addDias,agrupar,classificarDocumento,classificarProgramacao,criarCatalogo,faseContagem,
  faseHhPrevisto,faseTotalDocumentos,fasePrazos,hhLinha,performancePorDisciplina,recursosDistintos,rotulo,semanaDoCorte,
  deduplicarProgramacao,diaDaSemanaCurto,filtrarDia,atividadesPorDia,semanasVizinhasComProgramacao,
  visaoGeralDaSemana,ldpParaEmissao,type ContagemVisaoGeral,SEM_DISCIPLINA,type CatalogoDisciplinas,type DisciplinasNorma,type PhaseValues,type ProgramacaoLinha,
- type ProgramacaoResposta,resumoProgramacao,ultimaSemanaComProgramacao,janelasDoPeriodo,mesclarJanelas
+ type ProgramacaoResposta,resumoProgramacao,ultimaSemanaComProgramacao,janelasDoPeriodo,mesclarJanelas,
+ analiseDiariaAutomatica,type AtividadeDiaria
 } from "./gestaoVistaJamileLogic";
 import "./gestaoVistaJamile.css";
 import { NA_LOGO } from "@/features/theme/brandAssets";
@@ -248,6 +250,65 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,hist
  </div>;
 }
 
+/* ---------------------------------------------------------------- PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV) */
+const recursosTexto=(l:Pick<AtividadeDiaria,"elaborador"|"verificador"|"aprovador">)=>[l.elaborador,l.verificador,l.aprovador].map(x=>x?.trim()||"—").join(" / ");
+/**
+ * Slide AUTO: HOJE e ONTEM pela data civil da Bahia (o slide nunca guarda data). Por disciplina: PREVISTO HOJE e PENDENTE DE
+ * ONTEM (não emissão COMPROVADA pela LDP); sem prova = SEM COMPROVAÇÃO, nunca pendente. Mesma fonte/deduplicação da 02.
+ */
+function DiariaAutomatica({reports,dados,cat,hoje,carregando}:{reports:FactsReport[];dados:ProgramacaoResposta[];cat:CatalogoDisciplinas;hoje:string;carregando:boolean}){
+ const a=analiseDiariaAutomatica({dados,cat,hoje,ldp:ldpParaEmissao(reports)});
+ const indice=criarIndiceTitulosDocumentos(reports);
+ const titulo=(projectId:string,codigo:string|null)=>obterTituloDocumentoOficial(indice,projectId,codigo)??"—";
+ const t=a.totais;
+ const diaH=`${diaDaSemanaCurto(a.hoje)} ${br(a.hoje)}`,diaO=`${diaDaSemanaCurto(a.ontem)} ${br(a.ontem)}`;
+ const v=(n:number|null)=>carregando?"…":fmt2(n);
+ return <div className="gv-diaria-auto" data-testid="gv-diaria-automatica">
+  <div className="gv-kpis gv-five">
+   <Tile title="DOCUMENTOS PREVISTOS HOJE" value={carregando?"…":String(t.documentosHoje)}/>
+   <Tile title="HH PREVISTO HOJE" value={v(t.hhHoje)}/>
+   <Tile title="PENDENTES DE ONTEM (COMPROVADOS)" value={carregando?"…":String(t.pendentes)}/>
+   <Tile title="HH PENDENTE DE ONTEM" value={v(t.hhPendente)}/>
+   <Tile title="ONTEM SEM COMPROVAÇÃO" value={carregando?"…":String(t.semComprovacao)}/>
+  </div>
+  {carregando?<Empty>Carregando a programação de hoje ({diaH}) e de ontem ({diaO})…</Empty>
+   :!a.disciplinas.length?<div className="gv-diaria-vazia" data-testid="gv-diaria-vazia"><Empty>Nenhuma atividade programada para hoje ({diaH}) nem para ontem ({diaO}) neste projeto.
+     {" "}Sem pendências de ontem a exibir.</Empty></div>
+   :<div className="gv-diaria-disciplinas">{a.disciplinas.map(d=><section key={d.chave} className="gv-diaria-disc" data-testid="gv-diaria-disciplina">
+    <header><b>{d.nome}</b><span>Hoje: {d.documentosHoje} documento(s) · {fmt2(d.hhHoje)} HH — Pendentes de ontem: {d.pendentes.length} · {fmt2(d.hhPendente)} HH
+     {d.semComprovacao.length>0&&<> — {d.semComprovacao.length} sem comprovação</>}</span></header>
+    <div className="gv-diaria-colunas">
+     <div data-testid="gv-diaria-hoje"><h3>PREVISTO HOJE · {diaH}</h3>
+      {d.hoje.length?<div className="gv-table-scroll"><table>
+       <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE</th><th>ELAB. / VERIF. / APROV.</th><th>SITUAÇÃO</th><th>HH</th></tr></thead>
+       <tbody>{d.hoje.map(l=><tr key={`${l.projectId}:${l.idRegistro}`}><td>{l.documento??"—"}</td><td>{titulo(l.projectId,l.documento)}</td><td>{l.tarefa??"—"}</td>
+        <td>{recursosTexto(l)}</td><td>{l.status??"—"}</td><td>{fmt2(l.hh)}</td></tr>)}</tbody>
+      </table></div>:<p className="gv-diaria-vazio">Nada programado para hoje nesta disciplina.</p>}
+     </div>
+     <div data-testid="gv-diaria-ontem"><h3>PENDENTE DE ONTEM · {diaO}</h3>
+      {d.pendentes.length?<div className="gv-table-scroll"><table>
+       <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>ATIVIDADE(S)</th><th>ELAB. / VERIF. / APROV.</th><th>LDP</th><th>HH</th></tr></thead>
+       <tbody>{d.pendentes.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td>
+        <td>{x.atividades.map(l=>l.tarefa??"—").join(" · ")}</td><td>{recursosTexto(x.atividades[0])}</td><td>NÃO EMITIDO</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
+      </table></div>:<p className="gv-diaria-vazio">Nenhuma pendência comprovada de ontem nesta disciplina.</p>}
+      {(d.emitidosOntem>0||d.regularizados>0)&&<p className="gv-diaria-vazio">{d.emitidosOntem} emitido(s) até ontem{d.regularizados>0&&<>; {d.regularizados} emitido(s) depois de ontem (não é mais pendência)</>}.</p>}
+      {d.semComprovacao.length>0&&<div data-testid="gv-diaria-sem-comprovacao"><h4>SEM COMPROVAÇÃO / INDETERMINADO — não contado como pendente</h4>
+       <div className="gv-table-scroll"><table>
+        <thead><tr><th>CÓDIGO</th><th>TÍTULO DO DOCUMENTO</th><th>MOTIVO</th><th>HH</th></tr></thead>
+        <tbody>{d.semComprovacao.map(x=><tr key={x.chave}><td>{x.codigo??"—"}</td><td>{titulo(x.projectId,x.codigo)}</td><td>{x.motivo??"—"}</td><td>{fmt2(x.hh)}</td></tr>)}</tbody>
+       </table></div></div>}
+     </div>
+    </div>
+   </section>)}</div>}
+  <p className="gv-rule">Atualização automática: HOJE = {br(a.hoje)} e ONTEM = {br(a.ontem)} pela data civil da Bahia; a tela muda sozinha na virada do dia.
+   {" "}Fonte: programação semanal (data da atividade = Reprogramada › Baseline), somente ontem e hoje; mesma deduplicação da 02
+   {a.repetidos>0&&<> ({a.repetidos} registro(s) repetido(s) contado(s) uma vez)</>}. HH = elaboração + verificação + aprovação.
+   {" "}Pendente de ontem = documento programado ontem que a LDP oficial (mesmo projeto e código) mostra NÃO emitido; emitido até ontem ou depois
+   não é pendência; sem prova (sem código, fora da LDP, cancelado, código repetido ou emitido sem data) fica em "sem comprovação".
+   {t.documentosOntem>0&&<> Ontem: {t.documentosOntem} documento(s) — {t.emitidosOntem} emitido(s), {t.pendentes} pendente(s), {t.regularizados} emitido(s) depois, {t.semComprovacao} sem comprovação.</>}</p>
+ </div>;
+}
+
 /** Data/hora de um DateTime do SQL ("2026-10-19T10:28:21.437" → "19/10/2026 10:28"). */
 const dataHora=(v:string|null)=>v?`${br(v.slice(0,10))}${v.length>=16?" "+v.slice(11,16):""}`:"—";
 type ModoProgramacao="semana"|"todas";
@@ -454,9 +515,21 @@ function ConsolidacaoIncompleta({falhas,total,onRetry}:{falhas:FalhaProjeto[];to
  </div>;
 }
 
-export default function GestaoVistaJamilePage({selection,screen,dataReferencia=null}:{selection:PmoSelecionado[];screen:JamileScreen;
- /** Só "programacao-diaria": dia (YYYY-MM-DD) salvo no slide da TV. Ausente/inválido = aviso; nunca vira "hoje". */
- dataReferencia?:string|null}){
+type PropsGestaoVista={selection:PmoSelecionado[];screen:JamileScreen;
+ /** Só "programacao-diaria": dia (YYYY-MM-DD) salvo no slide da TV, ou "AUTO" (hoje + pendências de ontem). Ausente/inválido = aviso. */
+ dataReferencia?:string|null};
+export default function GestaoVistaJamilePage(props:PropsGestaoVista){
+ return props.screen==="programacao-diaria"&&dataReferenciaAutomatica(props.dataReferencia)
+  ?<DiariaAutomaticaNoDia {...props}/>:<GestaoVistaJamileConteudo {...props} hojeAuto={null}/>;
+}
+/** Slide AUTO: a data de hoje vira a key — na virada do dia a tela remonta e TODOS os dados (programação e LDP) são buscados de novo. */
+function DiariaAutomaticaNoDia(props:PropsGestaoVista){
+ const hoje=useHojeBahia();
+ return <GestaoVistaJamileConteudo key={hoje} {...props} hojeAuto={hoje}/>;
+}
+function GestaoVistaJamileConteudo({selection,screen,dataReferencia=null,hojeAuto}:PropsGestaoVista&{
+ /** Só no slide AUTO: hoje (Bahia), vindo de DiariaAutomaticaNoDia; null em qualquer outra tela. */
+ hojeAuto:string|null}){
  const {reports,falhas,loading,error,retry}=usePmoReports("gestao-vista",{hub:"",project:"",selection});
  const ldp=useLdpPorProjeto(selection);
  const ids=useMemo(()=>selection.map(x=>x.id),[selection]);
@@ -464,11 +537,15 @@ export default function GestaoVistaJamilePage({selection,screen,dataReferencia=n
  const [cutoff,setCutoff]=useState(TODAY);
  // Programação Diária (TV): o dia vem do slide; sem data válida nada é consultado (nunca cai em "hoje").
  const diaria=screen==="programacao-diaria";
- const diaFixo=diaria&&dataReferenciaValida(dataReferencia)?dataReferencia:null;
+ // Diária AUTOMÁTICA: janela [ontem, hoje] (cruza a semana no domingo numa consulta só); dia fixo continua como antes.
+ const auto=diaria&&hojeAuto!==null?janelaDiariaAutomatica(hojeAuto):null;
+ const diaFixo=diaria&&!auto&&dataReferenciaValida(dataReferencia)?dataReferencia:null;
  const valid=diaFixo??(/^\d{4}-\d{2}-\d{2}$/.test(cutoff)?cutoff:TODAY()),week=semanaDoCorte(valid);
  // 01 e 02: MESMA fonte — programação semanal oficial (domingo–sábado) de cada projeto; na 02, filtro opcional de um dia.
  // Diária: o MESMO endpoint semanal, filtrado exatamente no dia do slide.
  const prog=useProgramacao(selection,week.start,week.end,screen==="programacao"||screen==="visao-geral"||diaFixo!==null);
+ // Diária AUTOMÁTICA: consulta PRÓPRIA (mesmo endpoint) na janela [ontem, hoje]; 01/02/dia fixo seguem com a consulta acima.
+ const progAuto=useProgramacao(selection,auto?.inicio??week.start,auto?.fim??week.end,auto!==null);
  const [diaFiltro,setDiaFiltro]=useState<string|null>(null);
  // "todas" = modo histórico (todas as atividades importadas, data real); qualquer navegação de semana volta ao modo semana.
  const [,setModoProg]=useState<ModoProgramacao>("semana");
@@ -497,6 +574,7 @@ export default function GestaoVistaJamilePage({selection,screen,dataReferencia=n
   ...(screen==="visao-geral"?prog.falhas:[]),
   // Diária: um projeto, sem fallback para a LDP — falha mostra o erro e o botão de nova tentativa.
   ...(diaria?prog.falhas:[]),
+  ...(auto?progAuto.falhas:[]),
   ...(historico?todas.falhas:[]),
   ...((screen==="documentacao"||screen==="indicadores")&&ldp.erro&&!ldp.carregando
    ?[{projectId:"__ldp__",projectName:"Aba LDP (fases 30/60/90)",message:ldp.erro}]:[]),
@@ -510,12 +588,12 @@ export default function GestaoVistaJamilePage({selection,screen,dataReferencia=n
   ?<ProgramacaoImportada dados={prog.dados} selection={selection} reports={reports as FactsReport[]} cat={cat} semana={week} modo={historico?"todas":"semana"}
     onSemana={irParaSemana} onModo={setModoProg}/>:null;
  let content:ReactNode;
- if(diaria&&!diaFixo)content=<ReportState title="Programação Diária sem data de referência" error>
+ if(diaria&&!diaFixo&&!auto)content=<ReportState title="Programação Diária sem data de referência" error>
   {dataReferencia?`A data "${dataReferencia}" deste slide não é uma data válida (AAAA-MM-DD).`:"Este slide não tem data de referência."} Configure-a em
   Configurações → Configuração de Telas para TV. A data de hoje nunca é usada no lugar.</ReportState>;
  else if(loading||normas.carregando||siglas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
  else if(error)content=<ReportState title={error} error><button className="gv-link" onClick={retry}>Tentar novamente</button></ReportState>;
- else if(falhasTela.length>0)content=<ConsolidacaoIncompleta falhas={falhasTela} total={selection.length} onRetry={()=>{retry();prog.retry();todas.retry();}}/>;
+ else if(falhasTela.length>0)content=<ConsolidacaoIncompleta falhas={falhasTela} total={selection.length} onRetry={()=>{retry();prog.retry();progAuto.retry();todas.retry();}}/>;
  else if(porProjetoFase){
   const fr=reports as FactsReport[];
   const titulo=`${SUBTITLE[screen]} — POR PROJETO E FASE`;
@@ -536,6 +614,7 @@ export default function GestaoVistaJamilePage({selection,screen,dataReferencia=n
     carregando={prog.carregando||(historico&&todas.carregando)} onSemana={irParaSemana} historico={historico}/>}
    {diaria&&diaFixo&&<Programming reports={fr} semana={week} dia={diaFixo} cat={cat} dados={prog.dados} erro={null}
     carregando={prog.carregando} onSemana={()=>undefined} diario/>}
+   {auto&&<DiariaAutomatica reports={fr} dados={progAuto.dados} cat={cat} hoje={auto.hoje} carregando={progAuto.carregando}/>}
    {screen==="documentacao"&&<Documentation reports={fr} ldp={ldp} cat={cat}/>}
    {screen==="indicadores"&&<Indicators reports={fr} cutoff={valid} ldp={ldp} cat={cat}/>}
    {consolidado&&<p className="gv-rule" data-testid="gv-normalizador">{siglas.aviso??(normalizador?.ativo
@@ -576,8 +655,9 @@ export default function GestaoVistaJamilePage({selection,screen,dataReferencia=n
     </div>}
     {diaria&&<div className="gv-date" aria-label="Dia de referência da programação diária">
      <CalendarDays className="gv-date-icon" aria-hidden/>
-     <div><small>DIA DE REFERÊNCIA</small>
-      <span className="gv-date-input"><b data-testid="gv-dia-referencia">{diaFixo?`${diaDaSemanaCurto(diaFixo)} ${br(diaFixo)}`:"SEM DATA"}</b></span></div>
+     <div><small>{auto?"AUTOMÁTICO · HOJE + PENDÊNCIAS DE ONTEM":"DIA DE REFERÊNCIA"}</small>
+      <span className="gv-date-input"><b data-testid="gv-dia-referencia">{auto?`HOJE ${diaDaSemanaCurto(auto.hoje)} ${br(auto.hoje)} · ONTEM ${diaDaSemanaCurto(auto.ontem)} ${br(auto.ontem)}`
+       :diaFixo?`${diaDaSemanaCurto(diaFixo)} ${br(diaFixo)}`:"SEM DATA"}</b></span></div>
     </div>}
     {screen==="visao-geral"&&<div className="gv-date gv-date-semana" aria-label="Semana de referência da visão geral">
      <CalendarDays className="gv-date-icon" aria-hidden/>

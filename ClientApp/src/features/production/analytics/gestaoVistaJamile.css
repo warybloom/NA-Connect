@@ -272,3 +272,20 @@
 .gv-sem-data .gv-table-scroll{max-height:11em;overflow:auto;margin-top:.35em}
 .gv-sem-data table{width:100%;border-collapse:collapse}.gv-sem-data th,.gv-sem-data td{padding:.22em .45em;border-bottom:1px solid var(--gv-line);text-align:left;vertical-align:top}
 .gv-sem-data th{position:sticky;top:0;background:var(--gv-steel);color:var(--gv-on-color);font-weight:650}
+
+/* ------------------------------------------------------------------ PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV, 20/10/2026) */
+.gv-diaria-auto{flex:1;min-height:0;display:flex;flex-direction:column;gap:1em}
+.gv-diaria-vazia{flex:1;display:flex}
+.gv-diaria-disciplinas{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:.9em}
+.gv-diaria-disc{flex:0 0 auto;border:1px solid var(--gv-line);background:var(--gv-surface)}
+.gv-diaria-disc>header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.3em 1em;padding:.45em .7em;background:var(--gv-steel);color:var(--gv-on-color)}
+.gv-diaria-disc>header span{font-size:.85em}
+.gv-diaria-colunas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9em;padding:.6em}
+.gv-diaria-colunas h3,.gv-diaria-colunas h4{margin:0 0 .3em;font-size:.82em;font-weight:800;letter-spacing:.04em;color:var(--gv-ink)}
+.gv-diaria-colunas h4{margin-top:.6em;color:var(--gv-warn)}
+.gv-diaria-colunas table{font-size:.86em}
+.gv-diaria-colunas th{position:static;background:var(--gv-date-bg);white-space:normal}
+.gv-diaria-colunas td{border-bottom:1px solid var(--gv-line);vertical-align:top}
+.gv-diaria-colunas th:last-child,.gv-diaria-colunas td:last-child{text-align:right;white-space:nowrap}
+.gv-diaria-vazio{margin:.2em 0 0;font-size:.85em;color:var(--gv-ink-soft)}
+@media (max-width:900px){.gv-diaria-colunas{grid-template-columns:minmax(0,1fr)}}

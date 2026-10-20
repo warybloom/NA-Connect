@@ -13,6 +13,8 @@ public sealed record TvSlideProjeto(string HubId, string ProjectId, string? Proj
 /// consolidam vários projetos (TvTelas → MultiProjeto); o primeiro é sempre o principal.
 /// DataReferencia (opcional, 19/10/2026) = dia "yyyy-MM-dd" do item: OBRIGATÓRIA nas telas TvTela.DataReferenciaObrigatoria
 /// (Programação Diária) e descartada nas demais — nunca muda os dados de outra tela; arquivos antigos continuam válidos.
+/// DataReferencia = "AUTO" (20/10/2026) = Programação Diária AUTOMÁTICA: hoje + pendências de ontem pela data civil da Bahia,
+/// recalculada a cada dia (TvDiaAutomatico). Datas fixas continuam exatamente como antes.
 /// </summary>
 public sealed record TvSlide(string ScreenId, string HubId, string ProjectId, string? ProjectName, IReadOnlyList<TvSlideProjeto>? Projetos = null,
     string? DataReferencia = null);
@@ -75,6 +77,9 @@ public static class TvConfigurationRules
     public static bool DataReferenciaValida(string? v) =>
         v is { Length: 10 } && DateOnly.TryParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
 
+    /// <summary>Data do slide: dia fixo ISO real OU "AUTO" exato (Programação Diária automática). Ausente continua inválida.</summary>
+    public static bool DataReferenciaDoSlideValida(string? v) => v == TvDiaAutomatico.Auto || DataReferenciaValida(v);
+
     public static TvConfiguration Validate(TvConfiguration c)
     {
         if (c is null) throw new ArgumentException("Configuração vazia.");
@@ -90,6 +95,8 @@ public static class TvConfigurationRules
             var telas = a.Slides ?? Array.Empty<TvSlide>();
             if (telas.Count == 0) throw new ArgumentException($"A apresentação \"{a.Name}\" precisa de ao menos uma tela.");
             if (telas.Count > MaxTelas) throw new ArgumentException($"Máximo de {MaxTelas} telas por apresentação.");
+            // Programação Diária AUTOMÁTICA idêntica (mesma tela + mesmo projeto) nunca se repete na mesma apresentação.
+            var automaticas = new HashSet<string>(StringComparer.Ordinal);
             foreach (var t in telas)
             {
                 var tela = TvTelas.Obter(t?.ScreenId);
@@ -114,8 +121,10 @@ public static class TvConfigurationRules
                         || (t.Projetos ?? Array.Empty<TvSlideProjeto>()).Any(p => !string.Equals(p.ProjectId, exclusivo, StringComparison.Ordinal))))
                     throw new ArgumentException($"A tela {t.ScreenId} é exclusiva do projeto CHS001 ({exclusivo}).");
                 // Programação Diária: cada item tem a SUA data (obrigatória, ISO real); hoje nunca é assumido.
-                if (tela.DataReferenciaObrigatoria && !DataReferenciaValida(t.DataReferencia))
-                    throw new ArgumentException($"A tela {t.ScreenId} exige data de referência válida (AAAA-MM-DD) em cada item.");
+                if (tela.DataReferenciaObrigatoria && !DataReferenciaDoSlideValida(t.DataReferencia))
+                    throw new ArgumentException($"A tela {t.ScreenId} exige data de referência válida (AAAA-MM-DD ou automática) em cada item.");
+                if (tela.DataReferenciaObrigatoria && t.DataReferencia == TvDiaAutomatico.Auto && !automaticas.Add(t.ScreenId + "|" + t.ProjectId))
+                    throw new ArgumentException($"A apresentação \"{a.Name}\" já tem a Programação Diária automática do projeto {t.ProjectName ?? t.ProjectId}.");
             }
         }
         return c with

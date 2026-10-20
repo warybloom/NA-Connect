@@ -74,6 +74,8 @@ public sealed class TvConfigurationController(TvConfigurationStore store, IPermi
                     : TvConfigurationRules.TelasPermitidas.Where(x => !TelaExcluida(x)).ToArray(),
                 telasAutorizadas = gestorRestrito is null ? autorizadas
                     : autorizadas?.Where(x => !TelaExcluida(x)).ToArray(),
+                // 20/10/2026: este servidor aceita a Programação Diária automática (DataReferencia = "AUTO").
+                diariaAutomatica = true,
             });
         }
         catch (TvConfigurationException ex) { return StatusCode(503, new { message = ex.Message }); }

@@ -20,12 +20,15 @@ public static class TvPortalResources
     public const string ProgramacaoJamile = "/api/reports/gestao-vista-jamile/programacao";
     /// <summary>
     /// Tela com data por item (Programação Diária): a programação só pode ser lida para a semana (domingo–sábado) da data
-    /// SALVA no slide — a TV não abre outras semanas trocando inicio/fim. Demais telas/recursos: sem restrição extra.
+    /// SALVA no slide — a TV não abre outras semanas trocando inicio/fim. Slide AUTOMÁTICO ("AUTO"): somente a janela
+    /// [ontem, hoje] calculada no servidor (data civil da Bahia, TvDiaAutomatico). Demais telas/recursos: sem restrição extra.
     /// </summary>
-    public static bool PeriodoPermitido(TvSlide slide, string resource, IQueryCollection query)
+    public static bool PeriodoPermitido(TvSlide slide, string resource, IQueryCollection query, DateTimeOffset? agora = null)
     {
         if (TvTelas.Obter(slide.ScreenId) is not { DataReferenciaObrigatoria: true }) return true;
         if (!string.Equals(resource, ProgramacaoJamile, StringComparison.Ordinal)) return true;
+        if (slide.DataReferencia == TvDiaAutomatico.Auto)
+            return TvDiaAutomatico.JanelaPermitida(query["inicio"].ToString(), query["fim"].ToString(), agora ?? DateTimeOffset.UtcNow);
         if (!DateOnly.TryParseExact(slide.DataReferencia, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dia)) return false;
         var inicio = dia.AddDays(-(int)dia.DayOfWeek);
         return query["inicio"].ToString() == inicio.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)

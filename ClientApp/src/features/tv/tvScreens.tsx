@@ -10,6 +10,7 @@
 //   • "gestao-a-vista" = painel PMO antigo (ViewGestaoAVista), fora do Controle de Produção — mantido por compatibilidade.
 //   • "gestao-a-vista-programacao-diaria" (19/10/2026) = Programação Diária, SÓ na TV (fora de PRODUCTION_NAV): mesmo visual
 //     da 02. PROGRAMAÇÃO, UM projeto e UMA data (dataReferencia) por item; pode ser repetida com projetos/datas diferentes.
+//     dataReferencia "AUTO" (20/10/2026) = HOJE + PENDÊNCIAS DE ONTEM por disciplina, datas da Bahia recalculadas a cada dia.
 //   • "gestao-vista-tipo2-<slug>" = Gestão à Vista Tipo 2 (reprodução do BI CHS001, biChs001Paginas.ts) — catálogo PRÓPRIO,
 //     fora de PRODUCTION_NAV: só as 10 páginas prioritárias (PRIORIDADE_10), um projeto por item e EXCLUSIVAS da CHS001.
 // Telas "em-desenvolvimento" ficam no catálogo como INDISPONÍVEIS (não selecionáveis, recusadas pelo backend).
@@ -150,6 +151,8 @@ const TELAS_TIPO2: readonly TelaTv[] = BI_CHS001_PAGINAS
 // 02. PROGRAMAÇÃO (a semanal continua intacta no Controle de Produção e na TV).
 // ---------------------------------------------------------------------------------------------
 export const TV_PROGRAMACAO_DIARIA = "gestao-a-vista-programacao-diaria";
+/** 01. VISÃO GERAL da Gestão à Vista (inserida antes das diárias automáticas quando ainda não está na sequência). */
+export const TV_VISAO_GERAL = "gestao-a-vista-visao-geral";
 const FOLHA_PROGRAMACAO = encontrarFolha("gestao-a-vista/programacao");
 const TELA_PROGRAMACAO_DIARIA: TelaTv = {
   id: TV_PROGRAMACAO_DIARIA, label: "Gestão à Vista — Programação Diária (1 projeto · 1 dia)", categoria: "Gestão à Vista", icon: CalendarDays,

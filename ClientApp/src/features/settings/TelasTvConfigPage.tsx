@@ -8,12 +8,12 @@ import { TvPortalAssignments } from "@/features/tv/portal/TvPortalAssignments";
 // Persistência em App_Data/tv-configuration.json (sem tabela nova).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Loader2, MonitorPlay, Play, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, CalendarClock, CheckCircle2, Loader2, MonitorPlay, Play, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  NOME_PROJETO_GESTAO_VISTA_TIPO2, TELAS_TV, TELAS_TV_DATA_OBRIGATORIA, TELAS_TV_PROJETO_EXCLUSIVO, TELAS_TV_PROJETO_UNICO, chavesTelaTv, getTelaTv,
-  telasPorCategoria, type TelaTv,
+  NOME_PROJETO_GESTAO_VISTA_TIPO2, TELAS_TV, TELAS_TV_DATA_OBRIGATORIA, TELAS_TV_PROJETO_EXCLUSIVO, TELAS_TV_PROJETO_UNICO, TV_PROGRAMACAO_DIARIA,
+  TV_VISAO_GERAL, chavesTelaTv, getTelaTv, telasPorCategoria, type TelaTv,
 } from "@/features/tv/tvScreens";
 import SeletorProjetosTv from "@/features/tv/SeletorProjetosTv";
 import { useProjetosPermitidosTv } from "@/features/tv/useProjetosPermitidosTv";
@@ -24,8 +24,9 @@ import { TV_PROJECTS_ENDPOINT } from "@/features/production/productionSelectionL
 import { useProjetoAtual } from "@/features/project/ProjetoAtualContext";
 import { carregarConfiguracaoTv, salvarConfiguracaoTv, TvSaveError } from "@/features/tv/tvApi";
 import {
-  TV_LIMITES, TV_SEGUNDOS_PADRAO, dataReferenciaValida, formatarDataReferencia, gerarIdApresentacao, mesmasApresentacoes, mover, projetosDoSlide,
-  resumoProjetosSlide, resumoTv, slideComProjetos, tvAtiva, validarApresentacoes, type TvSlide, type TvSlideProjeto,
+  ROTULO_DIARIA_AUTO, TV_LIMITES, TV_SEGUNDOS_PADRAO, dataReferenciaAutomatica, dataReferenciaValida, formatarDataReferencia, gerarIdApresentacao,
+  gerarTelasDiariasAutomaticas, mesmasApresentacoes, mover, projetosDoSlide, resumoProjetosSlide, resumoTv, slideComProjetos, tvAtiva,
+  validarApresentacoes, type TvSlide, type TvSlideProjeto,
   type TvConfiguration, type TvPresentation,
 } from "@/features/tv/tvLogic";
 
@@ -37,6 +38,8 @@ export default function TelasTvConfigPage() {
   const [config, setConfig] = useState<TvConfiguration | null>(null);
   const [telasPermitidas, setTelasPermitidas] = useState<string[]>([]);
   const [telasAutorizadas, setTelasAutorizadas] = useState<string[] | null>(null);
+  // Servidor aceita a Programação Diária automática ("AUTO")? Backend anterior não envia o campo → botão desabilitado.
+  const [diariaAutomatica, setDiariaAutomatica] = useState(false);
   const [rascunho, setRascunho] = useState<TvPresentation[]>([]);
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -52,6 +55,7 @@ export default function TelasTvConfigPage() {
       setConfig(r.configuration);
       setTelasPermitidas(Array.isArray(r.telasPermitidas) ? r.telasPermitidas : []);
       setTelasAutorizadas(Array.isArray(r.telasAutorizadas) ? r.telasAutorizadas : null);
+      setDiariaAutomatica(r.diariaAutomatica === true);
       setRascunho(r.configuration.presentations);
       setSelecionada((atual) => (r.configuration.presentations.some((a) => a.id === atual) ? atual : r.configuration.presentations[0]?.id ?? null));
     } catch (e) {
@@ -227,6 +231,7 @@ export default function TelasTvConfigPage() {
               apresentacao={atual}
               candidatas={candidatas}
               opcoesTela={opcoesTela}
+              diariaAutomatica={diariaAutomatica}
               projetoInicial={projetoAtual}
               onChange={(f) => alterar(atual.id, f)}
               onExcluir={() => excluirApresentacao(atual.id)}
@@ -310,12 +315,14 @@ interface EditorProps {
   apresentacao: TvPresentation;
   candidatas: readonly TelaTv[];
   opcoesTela: readonly OpcaoTela[];
+  /** Servidor aceita dataReferencia "AUTO" (GET /api/tv-config → diariaAutomatica). */
+  diariaAutomatica: boolean;
   projetoInicial: { hubId: string; projectId: string } | null;
   onChange: (f: (a: TvPresentation) => TvPresentation) => void;
   onExcluir: () => void;
 }
 
-function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoInicial, onChange, onExcluir }: EditorProps) {
+function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, diariaAutomatica, projetoInicial, onChange, onExcluir }: EditorProps) {
   // Fluxo: PROJETOS → TELA → ADICIONAR. A lista de projetos vem da conta ACC do projeto atual (mesma fonte do seletor
   // do Controle de Produção), filtrada para ATIVOS + permitidos. A seleção fica mantida entre adições.
   // Projetos ELEGÍVEIS da TV (já sincronizados; fonte administrativa interna): sem Autodesk e sem depender dos
@@ -384,6 +391,30 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
     onChange((x) => ({ ...x, slides: [...x.slides, ...cabem] }));
   };
 
+  // Botão "Gerar telas diárias automáticas": um slide AUTO (hoje + pendências de ontem) por projeto + 01 Visão Geral no início.
+  // "Todos permitidos" = SOMENTE os projetos em que o usuário pode abrir a Programação Diária (filtro efetivo
+  // useProjetosPermitidosTv + podeTela), nunca a lista bruta. Só altera o rascunho: o usuário clica em Salvar.
+  const [escopoAuto, setEscopoAuto] = useState<"selecionados" | "todos">("selecionados");
+  const [resultadoAuto, setResultadoAuto] = useState<{ tipo: "ok" | "erro"; textos: string[] } | null>(null);
+  const diariaDisponivel = candidatas.some((t) => t.id === TV_PROGRAMACAO_DIARIA);
+  const todosPermitidosDiaria: TvSlideProjeto[] = opcoes.filter((p) => podeTela(p.id, chavesTelaTv(TV_PROGRAMACAO_DIARIA)))
+    .map((p) => ({ hubId: sel.hubId, projectId: p.id, projectName: p.attributes.name }));
+  const projetosAuto = escopoAuto === "todos" ? todosPermitidosDiaria : projetosSelecionados;
+  const motivoAutoIndisponivel = !diariaAutomatica ? "O servidor em execução ainda não aceita a Programação Diária automática (backend desatualizado)."
+    : !diariaDisponivel ? "Programação Diária indisponível para o seu perfil."
+    : verificando ? "Verificando permissões dos projetos…" : null;
+  const gerarDiariasAutomaticas = () => {
+    if (motivoAutoIndisponivel) return;
+    const r = gerarTelasDiariasAutomaticas({
+      slides: a.slides, projetos: projetosAuto, telaDiaria: TV_PROGRAMACAO_DIARIA, telaVisaoGeral: TV_VISAO_GERAL,
+      podeDiaria: (id) => podeTela(id, chavesTelaTv(TV_PROGRAMACAO_DIARIA)), podeVisaoGeral: (id) => podeTela(id, chavesTelaTv(TV_VISAO_GERAL)),
+      visaoGeralDisponivel: candidatas.some((t) => t.id === TV_VISAO_GERAL),
+    });
+    setResultadoAuto(r.bloqueio ? { tipo: "erro", textos: [r.bloqueio] } : { tipo: "ok", textos: r.mensagens });
+    const novos = r.slides;
+    if (novos) onChange((x) => ({ ...x, slides: novos }));
+  };
+
   const campo = "h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground";
   const rotulo = "text-[10px] font-black uppercase tracking-widest text-muted-foreground";
   return (
@@ -407,6 +438,36 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
         <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onExcluir}>
           <Trash2 className="h-4 w-4" />Excluir TV
         </Button>
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4" data-testid="tv-diarias-automaticas">
+        <h3 className={rotulo}>Telas diárias automáticas</h3>
+        <p className="text-[11px] text-muted-foreground">
+          Uma tela por projeto com o que está PREVISTO HOJE e o que ficou PENDENTE DE ONTEM, por disciplina. As datas mudam sozinhas todo dia
+          (data da Bahia) — ninguém precisa mexer. A 01 Visão Geral entra no início se ainda não estiver na sequência. Depois, clique em Salvar.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs font-bold">
+            <input type="radio" name={`escopo-auto-${a.id}`} className="accent-primary" checked={escopoAuto === "selecionados"} onChange={() => setEscopoAuto("selecionados")} />
+            Projetos selecionados ({projetosSelecionados.length})
+          </label>
+          <label className="flex items-center gap-1.5 text-xs font-bold">
+            <input type="radio" name={`escopo-auto-${a.id}`} className="accent-primary" checked={escopoAuto === "todos"} onChange={() => setEscopoAuto("todos")} />
+            Todos os permitidos ({verificando ? "…" : todosPermitidosDiaria.length})
+          </label>
+          <Button size="sm" className="gap-1 font-bold" data-testid="tv-gerar-diarias-automaticas"
+            disabled={!!motivoAutoIndisponivel || projetosAuto.length === 0} title={motivoAutoIndisponivel ?? undefined} onClick={gerarDiariasAutomaticas}>
+            <CalendarClock className="h-4 w-4" />Gerar telas diárias automáticas
+          </Button>
+          <span className="text-[11px] text-muted-foreground">Sequência: {a.slides.length}/{TV_LIMITES.maxTelas} telas</span>
+        </div>
+        {motivoAutoIndisponivel && !verificando && <p className="text-xs text-amber-600 dark:text-amber-400">{motivoAutoIndisponivel}</p>}
+        {resultadoAuto && (
+          <ul role="status" data-testid="tv-diarias-resultado"
+            className={cn("list-disc space-y-0.5 pl-5 text-xs", resultadoAuto.tipo === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-destructive")}>
+            {resultadoAuto.textos.map((t) => <li key={t}>{t}</li>)}
+          </ul>
+        )}
       </div>
 
       <div className="space-y-3 rounded-lg border border-border bg-background/40 p-4">
@@ -507,11 +568,17 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
                       </details>
                     ) : (
                       <span className="block truncate text-[11px] text-muted-foreground" title={escopo.completo}>
-                        {escopo.texto}{def?.exigeDataReferencia && dataReferenciaValida(s.dataReferencia) ? ` · ${formatarDataReferencia(s.dataReferencia)}` : ""}
+                        {escopo.texto}{def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia) ? ` · ${ROTULO_DIARIA_AUTO}`
+                          : def?.exigeDataReferencia && dataReferenciaValida(s.dataReferencia) ? ` · ${formatarDataReferencia(s.dataReferencia)}` : ""}
                       </span>
                     )}
                   </span>
-                  {def?.exigeDataReferencia && (
+                  {def?.exigeDataReferencia && dataReferenciaAutomatica(s.dataReferencia) ? (
+                    // Item AUTOMÁTICO: sem campo de data (hoje/ontem são calculados na exibição).
+                    <span data-testid="tv-data-referencia-auto" className="rounded-md bg-primary/15 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
+                      {ROTULO_DIARIA_AUTO}
+                    </span>
+                  ) : def?.exigeDataReferencia && (
                     // Data deste item (independente dos demais itens da mesma tela). Obrigatória: vazia/inválida bloqueia o salvar.
                     <input type="date" aria-label={`Data de referência do item ${i + 1}`} data-testid="tv-data-referencia-item" required
                       className={cn("h-7 rounded-md border bg-background px-2 text-xs", dataReferenciaValida(s.dataReferencia) ? "border-border" : "border-destructive")}

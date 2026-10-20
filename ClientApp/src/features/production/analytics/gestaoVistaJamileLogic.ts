@@ -409,24 +409,38 @@ export interface DocumentoProgramadoSemana{chave:string;projectId:string;codigo:
 export interface ContagemVisaoGeral{documentos:number;atividades:number;emitidos:number;semComprovacao:number}
 const codigoDoc=(v:string|null|undefined)=>(v??"").trim().toUpperCase();
 
-function situacaoDoDocumento(codigo:string|null,ldp:readonly DocumentoLdpEmissao[]|undefined,semana:{start:string;end:string},hoje:string):{situacao:SituacaoEmissao;motivo:string|null}{
- if(!codigoDoc(codigo))return {situacao:"sem-comprovacao",motivo:"Atividade sem código de documento"};
- if(!ldp)return {situacao:"sem-comprovacao",motivo:"LDP do projeto indisponível"};
+/** Situação no CORTE: "emitido-depois" = emitido com data posterior ao corte (prova que NÃO estava emitido no corte). */
+export type SituacaoNoCorte=SituacaoEmissao|"emitido-depois";
+/**
+ * Conciliação com a LDP oficial (projeto + código) em relação a um CORTE (dia): base comum da 01 (corte = sábado) e da
+ * Programação Diária automática (corte = ontem). Status atual só prova a emissão no corte se o corte ainda não passou
+ * (hoje ≤ corte); depois disso, emitido SEM data fica sem comprovação. emitidoDepois decide como contar a emissão posterior.
+ */
+export function situacaoEmissaoNoCorte(codigo:string|null,ldp:readonly DocumentoLdpEmissao[]|undefined,corte:string,hoje:string,
+ emitidoDepois:"pendente"|"emitido-depois"):{situacao:SituacaoNoCorte;motivo:string|null;dataEmissao:string|null}{
+ const sem=(motivo:string)=>({situacao:"sem-comprovacao" as const,motivo,dataEmissao:null});
+ if(!codigoDoc(codigo))return sem("Atividade sem código de documento");
+ if(!ldp)return sem("LDP do projeto indisponível");
  const iguais=ldp.filter(d=>!d.isActivity&&codigoDoc(d.codigo)===codigoDoc(codigo));
- if(!iguais.length)return {situacao:"sem-comprovacao",motivo:"Código não encontrado na LDP do projeto"};
+ if(!iguais.length)return sem("Código não encontrado na LDP do projeto");
  const ativos=iguais.filter(d=>!d.cancelado);
- if(!ativos.length)return {situacao:"sem-comprovacao",motivo:"Documento cancelado na LDP"};
- // Status atual só prova a emissão até o fim da semana se a semana ainda não terminou (hoje ≤ sábado).
- const estado=(d:DocumentoLdpEmissao):SituacaoEmissao=>{
+ if(!ativos.length)return sem("Documento cancelado na LDP");
+ const estado=(d:DocumentoLdpEmissao):SituacaoNoCorte=>{
   if(!d.emitido)return "pendente";
   const data=dataValida(d.dataEmissao);
-  if(data)return data<=semana.end?"emitido":"pendente";
-  return hoje<=semana.end?"emitido":"sem-comprovacao";
+  if(data)return data<=corte?"emitido":emitidoDepois;
+  return hoje<=corte?"emitido":"sem-comprovacao";
  };
  const estados=new Set(ativos.map(estado));
- if(estados.size>1)return {situacao:"sem-comprovacao",motivo:"Código repetido na LDP com situações diferentes"};
+ if(estados.size>1)return sem("Código repetido na LDP com situações diferentes");
  const [s]=[...estados];
- return {situacao:s,motivo:s==="sem-comprovacao"?"Emitido na LDP sem data de emissão (não comprova a emissão até o fim da semana)":null};
+ const datas=ativos.map(d=>dataValida(d.dataEmissao)).filter((d):d is string=>!!d).sort();
+ return {situacao:s,motivo:s==="sem-comprovacao"?"Emitido na LDP sem data de emissão (não comprova a emissão até o fim da semana)":null,
+  dataEmissao:s==="emitido"||s==="emitido-depois"?datas[datas.length-1]??null:null};
+}
+function situacaoDoDocumento(codigo:string|null,ldp:readonly DocumentoLdpEmissao[]|undefined,semana:{start:string;end:string},hoje:string):{situacao:SituacaoEmissao;motivo:string|null}{
+ const {situacao,motivo}=situacaoEmissaoNoCorte(codigo,ldp,semana.end,hoje,"pendente");
+ return {situacao:situacao==="emitido-depois"?"pendente":situacao,motivo};
 }
 
 export function visaoGeralDaSemana({dados,projetos,cat,semana,hoje,ldp}:{dados:readonly ProgramacaoResposta[];projetos:readonly {id:string;name:string}[];
@@ -478,4 +492,58 @@ export function mesclarJanelas(respostas:readonly ProgramacaoResposta[]):Program
  const inicios=respostas.map(r=>r.inicio.slice(0,10)).sort(),fins=respostas.map(r=>r.fim.slice(0,10)).sort();
  return {...respostas[0],inicio:inicios[0],fim:fins[fins.length-1],
   linhas:[...linhas.values()].sort((a,b)=>a.dataAtividade.localeCompare(b.dataAtividade)||a.idRegistro-b.idRegistro)};
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV, 20/10/2026) — slide com dataReferencia "AUTO". MESMA fonte da 02 (programação
+ * semanal por projeto, janela [ontem, hoje]), MESMA deduplicação (deduplicarProgramacao) e MESMA classificação de disciplina;
+ * conciliação de emissão da 01 (situacaoEmissaoNoCorte) com corte = ONTEM. Por disciplina:
+ *   • PREVISTO HOJE = atividades programadas para hoje;
+ *   • PENDENTE DE ONTEM = documento programado ONTEM que a LDP oficial COMPROVA não emitido (não emitido hoje, sem data);
+ *   • SEM COMPROVAÇÃO = programado ontem sem prova (sem código, fora da LDP, cancelado, repetido, emitido sem data) —
+ *     nunca chamado de pendente/atrasado;
+ *   • emitidos até ontem e emitidos depois (regularizados) só entram na contagem.
+ * Nada além de ontem (não é histórico).
+ * ---------------------------------------------------------------------------------------------- */
+export interface AtividadeDiaria extends ProgramacaoLinha{projectId:string;chave:string;hh:number|null}
+export interface DocumentoOntem{chave:string;projectId:string;codigo:string|null;disciplina:string;atividades:AtividadeDiaria[];hh:number|null;
+ situacao:SituacaoNoCorte;motivo:string|null;dataEmissao:string|null}
+export interface DisciplinaDiaria{chave:string;nome:string;hoje:AtividadeDiaria[];documentosHoje:number;hhHoje:number|null;
+ pendentes:DocumentoOntem[];hhPendente:number|null;semComprovacao:DocumentoOntem[];emitidosOntem:number;regularizados:number}
+
+const docKey=(l:{projectId:string;documento:string|null;idRegistro:number})=>
+ codigoDoc(l.documento)?`${l.projectId}::${codigoDoc(l.documento)}`:`${l.projectId}::#${l.idRegistro}`;
+const somaHh=(xs:readonly {hh:number|null}[])=>xs.some(x=>x.hh!==null)?xs.reduce((s,x)=>s+(x.hh??0),0):null;
+
+export function analiseDiariaAutomatica({dados,cat,hoje,ldp}:{dados:readonly ProgramacaoResposta[];cat:CatalogoDisciplinas;hoje:string;
+ ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>}){
+ const ontem=addDias(hoje,-1);
+ const todas=dados.flatMap(d=>d.linhas.map(l=>({...l,projectId:d.projectId})));
+ // Só ontem e hoje: qualquer outra data que a consulta devolva é descartada (nunca vira histórico).
+ const naJanela=todas.filter(l=>{const d=l.dataAtividade.slice(0,10);return d===hoje||d===ontem;});
+ const {linhas,repetidos}=deduplicarProgramacao(naJanela);
+ const atividades:AtividadeDiaria[]=linhas.map(l=>({...l,chave:classificarProgramacao(cat,l.projectId,l).chave,hh:hhLinha(l)}));
+ const deHoje=atividades.filter(l=>l.dataAtividade.slice(0,10)===hoje);
+ const porDocOntem=agrupar(atividades.filter(l=>l.dataAtividade.slice(0,10)===ontem),docKey);
+ const ontemDocs:DocumentoOntem[]=[...porDocOntem].map(([chave,xs])=>{
+  const s=situacaoEmissaoNoCorte(xs[0].documento,ldp.get(xs[0].projectId),ontem,hoje,"emitido-depois");
+  return {chave,projectId:xs[0].projectId,codigo:xs[0].documento,disciplina:xs[0].chave,atividades:xs,hh:somaHh(xs),...s,
+   motivo:s.motivo?.replace("até o fim da semana","até ontem")??null};
+ });
+ const documentos=(xs:readonly AtividadeDiaria[])=>new Set(xs.map(docKey)).size;
+ const chaves=[...new Set([...deHoje.map(x=>x.chave),...ontemDocs.map(x=>x.disciplina)])];
+ const disciplinas:DisciplinaDiaria[]=chaves.map(chave=>{
+  const h=deHoje.filter(x=>x.chave===chave).sort((a,b)=>(a.documento??"").localeCompare(b.documento??"","pt-BR")||a.idRegistro-b.idRegistro);
+  const o=ontemDocs.filter(x=>x.disciplina===chave).sort((a,b)=>(a.codigo??"").localeCompare(b.codigo??"","pt-BR"));
+  const pendentes=o.filter(x=>x.situacao==="pendente");
+  return {chave,nome:rotulo(cat,chave),hoje:h,documentosHoje:documentos(h),hhHoje:somaHh(h),pendentes,hhPendente:somaHh(pendentes),
+   semComprovacao:o.filter(x=>x.situacao==="sem-comprovacao"),emitidosOntem:o.filter(x=>x.situacao==="emitido").length,
+   regularizados:o.filter(x=>x.situacao==="emitido-depois").length};
+ }).sort((a,b)=>(a.chave===SEM_DISCIPLINA?1:0)-(b.chave===SEM_DISCIPLINA?1:0)||a.nome.localeCompare(b.nome,"pt-BR"));
+ const pendentes=ontemDocs.filter(x=>x.situacao==="pendente");
+ return {hoje,ontem,repetidos,foraDaJanela:todas.length-naJanela.length,disciplinas,
+  totais:{atividadesHoje:deHoje.length,documentosHoje:documentos(deHoje),hhHoje:somaHh(deHoje),
+   documentosOntem:ontemDocs.length,pendentes:pendentes.length,hhPendente:somaHh(pendentes),
+   semComprovacao:ontemDocs.filter(x=>x.situacao==="sem-comprovacao").length,
+   emitidosOntem:ontemDocs.filter(x=>x.situacao==="emitido").length,regularizados:ontemDocs.filter(x=>x.situacao==="emitido-depois").length}};
 }

@@ -26,6 +26,29 @@ export function dataReferenciaValida(v: string | null | undefined): v is string 
 /** "15/10/2026" para a listagem/cabeçalho (sem fuso: a data é um dia, não um instante). */
 export const formatarDataReferencia = (v: string) => v.split("-").reverse().join("/");
 
+// ---------------------------------------------------------------------------------------------
+// Programação Diária AUTOMÁTICA (20/10/2026): dataReferencia = "AUTO" (espelho de TvDiaAutomatico.Auto no backend).
+// HOJE = data civil de America/Bahia no instante da exibição; ONTEM = hoje − 1. Datas fixas continuam como antes.
+// ---------------------------------------------------------------------------------------------
+export const DATA_REFERENCIA_AUTO = "AUTO";
+export const ROTULO_DIARIA_AUTO = "Hoje + pendências de ontem (automático)";
+export const dataReferenciaAutomatica = (v: string | null | undefined): v is typeof DATA_REFERENCIA_AUTO => v === DATA_REFERENCIA_AUTO;
+/** Data de um item com data: dia fixo ISO real OU "AUTO". Ausente continua inválida. */
+export const dataReferenciaDoSlideValida = (v: string | null | undefined) => dataReferenciaAutomatica(v) || dataReferenciaValida(v);
+
+/** Data civil (AAAA-MM-DD) da Bahia no instante dado. Sem base de fusos no navegador: UTC−3 fixo (sem horário de verão desde 2012). */
+export function dataCivilBahia(instante: Date = new Date()): string {
+  try { return instante.toLocaleDateString("en-CA", { timeZone: "America/Bahia" }); }
+  catch { return new Date(instante.getTime() - 3 * 3_600_000).toISOString().slice(0, 10); }
+}
+export function diaAnterior(dia: string): string {
+  const d = new Date(dia + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+/** Janela consultada pela tela automática: [ontem, hoje] — no domingo cruza a semana numa consulta só (sem duplicar). */
+export const janelaDiariaAutomatica = (hoje: string) => ({ hoje, ontem: diaAnterior(hoje), inicio: diaAnterior(hoje), fim: hoje });
+
 /** Projetos do item, exatamente como configurados (config antiga = só o principal). */
 export const projetosDoSlide = (s: TvSlide): TvSlideProjeto[] =>
   s.projetos && s.projetos.length > 0 ? s.projetos : [{ hubId: s.hubId, projectId: s.projectId, projectName: s.projectName }];
@@ -87,7 +110,9 @@ export interface TvConfiguration {
  * autor). telasAutorizadas = as que o usuário conectado pode abrir em algum projeto (null = servidor antigo ou falha ao
  * resolver permissões — o frontend continua exigindo a permissão local, nunca libera por falta da lista).
  */
-export interface TvConfigResponse { configuration: TvConfiguration; telasPermitidas: string[]; telasAutorizadas?: string[] | null }
+export interface TvConfigResponse { configuration: TvConfiguration; telasPermitidas: string[]; telasAutorizadas?: string[] | null;
+  /** 20/10/2026: servidor aceita dataReferencia "AUTO" (ausente = backend anterior). */
+  diariaAutomatica?: boolean | null }
 
 export const TV_LIMITES = { maxApresentacoes: 20, maxTelas: 50, minSegundos: 10, maxSegundos: 600, maxNome: 80 } as const;
 export const TV_SEGUNDOS_PADRAO = 30;
@@ -143,9 +168,13 @@ export function validarApresentacoes(lista: readonly TvPresentation[], telasPerm
       const exclusivo = Object.hasOwn(telasProjetoExclusivo, s.screenId) ? telasProjetoExclusivo[s.screenId] : undefined;
       if (exclusivo && (s.projectId !== exclusivo || ps.some((p) => p.projectId !== exclusivo)))
         return `"${nome}": a tela "${s.screenId}" é exclusiva do projeto CHS001 (${exclusivo}) — remova o item ou troque o projeto para a CHS001.`;
-      if (telasComData.includes(s.screenId) && !dataReferenciaValida(s.dataReferencia))
+      if (telasComData.includes(s.screenId) && !dataReferenciaDoSlideValida(s.dataReferencia))
         return `"${nome}": informe uma data de referência válida (AAAA-MM-DD) em cada Programação Diária.`;
     }
+    // Programação Diária automática idêntica (mesma tela + mesmo projeto) nunca se repete (mesma regra do backend).
+    const automaticas = a.slides.filter((s) => telasComData.includes(s.screenId) && dataReferenciaAutomatica(s.dataReferencia));
+    const repetida = automaticas.find((s, i) => automaticas.findIndex((x) => x.screenId === s.screenId && x.projectId === s.projectId) !== i);
+    if (repetida) return `"${nome}": Programação Diária automática repetida para ${repetida.projectName ?? repetida.projectId} — remova a cópia.`;
   }
   return null;
 }
@@ -191,3 +220,79 @@ export function pesquisarProjetos<T extends ProjetoOpcao>(projetos: readonly T[]
 export const resumoSelecao = (nomes: readonly { nome: string; id: string }[]) =>
   nomes.length === 0 ? "" : nomes.length === 1 ? codigoProjeto(nomes[0].nome, nomes[0].id)
     : `${codigoProjeto(nomes[0].nome, nomes[0].id)} + ${nomes.length - 1} projeto${nomes.length > 2 ? "s" : ""}`;
+
+// ---------------------------------------------------------------------------------------------
+// Botão "Gerar telas diárias automáticas" (20/10/2026): UMA Programação Diária AUTO por projeto + 01 VISÃO GERAL no início
+// (se ainda não houver). Só altera o RASCUNHO; nada é parcial: acima do limite, nada é adicionado.
+// ---------------------------------------------------------------------------------------------
+export type SituacaoVisaoGeral = "existente" | "inserida" | "sem-permissao" | "indisponivel";
+export interface GeracaoDiariaAutomatica {
+  /** Nova sequência (null = nada muda: bloqueado ou tudo já existia). */
+  slides: TvSlide[] | null;
+  adicionados: TvSlideProjeto[];
+  jaExistentes: TvSlideProjeto[];
+  semPermissao: TvSlideProjeto[];
+  visaoGeral: SituacaoVisaoGeral;
+  /** Projetos sem permissão da 01 (quando ela não pôde ser inserida por isso). */
+  semPermissaoVisaoGeral: TvSlideProjeto[];
+  /** Itens que a sequência teria (para a contagem × limite). */
+  totalResultante: number;
+  bloqueio: string | null;
+  mensagens: string[];
+}
+
+const nomeProjeto = (p: TvSlideProjeto) => codigoProjeto(p.projectName, p.projectId);
+
+export function gerarTelasDiariasAutomaticas({ slides, projetos, telaDiaria, telaVisaoGeral, podeDiaria, podeVisaoGeral, visaoGeralDisponivel,
+  limite = TV_LIMITES.maxTelas }: {
+  slides: readonly TvSlide[];
+  /** Projetos escolhidos (selecionados OU todos os permitidos), na ordem de exibição. */
+  projetos: readonly TvSlideProjeto[];
+  telaDiaria: string; telaVisaoGeral: string;
+  podeDiaria: (projectId: string) => boolean;
+  podeVisaoGeral: (projectId: string) => boolean;
+  /** 01 Visão Geral está entre as telas que o usuário pode adicionar (servidor + permissão). */
+  visaoGeralDisponivel: boolean;
+  limite?: number;
+}): GeracaoDiariaAutomatica {
+  const unicos = projetos.filter((p, i) => projetos.findIndex((x) => x.projectId === p.projectId) === i);
+  const semPermissao = unicos.filter((p) => !podeDiaria(p.projectId));
+  const aptos = unicos.filter((p) => podeDiaria(p.projectId));
+  const existe = (p: TvSlideProjeto) => slides.some((s) => s.screenId === telaDiaria && s.projectId === p.projectId && dataReferenciaAutomatica(s.dataReferencia));
+  const jaExistentes = aptos.filter(existe);
+  const novos = aptos.filter((p) => !existe(p));
+  const semPermissaoVisaoGeral = aptos.filter((p) => !podeVisaoGeral(p.projectId));
+  const visaoGeral: SituacaoVisaoGeral = slides.some((s) => s.screenId === telaVisaoGeral) ? "existente"
+    : !visaoGeralDisponivel ? "indisponivel"
+    : aptos.length === 0 || semPermissaoVisaoGeral.length > 0 ? "sem-permissao" : "inserida";
+  const inserir = visaoGeral === "inserida";
+  const totalResultante = slides.length + (inserir ? 1 : 0) + novos.length;
+  const base = { adicionados: [] as TvSlideProjeto[], jaExistentes, semPermissao, visaoGeral, semPermissaoVisaoGeral, totalResultante };
+  const lista = (ps: readonly TvSlideProjeto[]) => ps.map(nomeProjeto).join(", ");
+
+  if (unicos.length === 0) return { ...base, slides: null, bloqueio: "Nenhum projeto escolhido.", mensagens: [] };
+  if (aptos.length === 0)
+    return { ...base, slides: null, mensagens: [],
+      bloqueio: `Sem permissão para a Programação Diária em nenhum dos ${unicos.length} projeto(s): ${lista(semPermissao)}.` };
+  if (totalResultante > limite)
+    return { ...base, slides: null, mensagens: [],
+      bloqueio: `Limite de ${limite} telas por TV: seriam ${totalResultante} (${slides.length} atuais + ${novos.length} diária(s)${inserir ? " + 01 Visão Geral" : ""}). `
+        + "Nada foi adicionado — escolha menos projetos ou remova telas." };
+
+  const mensagens = [
+    novos.length > 0 ? `${novos.length} tela(s) diária(s) automática(s) adicionada(s): ${lista(novos)}.` : "",
+    jaExistentes.length > 0 ? `${jaExistentes.length} já existia(m) e não foi(ram) duplicada(s): ${lista(jaExistentes)}.` : "",
+    semPermissao.length > 0 ? `${semPermissao.length} projeto(s) ignorado(s) por falta de permissão na Programação Diária: ${lista(semPermissao)}.` : "",
+    visaoGeral === "inserida" ? `01 Visão Geral inserida no início, com os ${aptos.length} projeto(s).`
+      : visaoGeral === "existente" ? "01 Visão Geral já está na sequência (posição mantida)."
+      : visaoGeral === "indisponivel" ? "01 Visão Geral NÃO inserida: tela indisponível para o seu perfil/servidor."
+      : `01 Visão Geral NÃO inserida: sem permissão em ${lista(semPermissaoVisaoGeral)}.`,
+  ].filter(Boolean);
+  if (novos.length === 0 && !inserir)
+    return { ...base, slides: null, bloqueio: null, mensagens: ["Nada a adicionar: todas as telas diárias automáticas já existem.", ...mensagens] };
+  const novosSlides = novos.map((p) => slideComProjetos(telaDiaria, [p], DATA_REFERENCIA_AUTO));
+  return {
+    ...base, adicionados: novos, bloqueio: null, mensagens: [...mensagens, "Clique em Salvar para gravar."],
+    slides: [...(inserir ? [slideComProjetos(telaVisaoGeral, [...aptos])] : []), ...slides, ...novosSlides],
+  };
+}

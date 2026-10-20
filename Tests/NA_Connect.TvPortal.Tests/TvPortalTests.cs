@@ -224,6 +224,38 @@ public class TvPortalTests
         Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource=%2Fapi%2Fbi-chs001%2Fldp&projectId={TvTelas.ProjetoChs001}","GET")).Status);
     }
 
+    // Programação Diária AUTOMÁTICA (20/10/2026): o slide AUTO só lê a programação da janela [ontem, hoje] calculada no
+    // servidor (Bahia), do projeto do PRÓPRIO slide; apresentação não atribuída e projeto de outro slide continuam negados.
+    [Fact] public async Task AutoDailySlideReadsOnlyServerWindowAndItsProject()
+    {
+        await using var setup=await Setup.Create();
+        var config=await setup.Config.ReadAsync();
+        await setup.Config.SaveAsync([
+            new("a","TV",30,[
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO"),
+                new("gestao-a-vista-programacao-diaria","","b.33333333-3333-3333-3333-333333333333","BML011",null,"AUTO"),
+                new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"2026-10-15")]),
+            new("b","OUTRA",30,[new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"AUTO")])],config.Revision,null);
+        var hoje=TvDiaAutomatico.Hoje(DateTimeOffset.UtcNow);var (i,f)=TvDiaAutomatico.Janela(hoje);
+        string Iso(DateOnly d)=>d.ToString("yyyy-MM-dd");
+        string Url(string p,int slide,string projeto,string inicio,string fim)=>$"/api/tv-portal/data/{p}/{slide}?resource={ProgramacaoJamile}&projectId={projeto}&inicio={inicio}&fim={fim}";
+        var ok=await setup.Request(Url("a",0,TvTelas.ProjetoChs001,Iso(i),Iso(f)),"GET");
+        Assert.Equal(200,ok.Status);Assert.True(ok.Passed);Assert.Equal("/api/reports/gestao-vista-jamile/programacao",setup.RewrittenPath);
+        Assert.Equal(200,(await setup.Request(Url("a",1,"b.33333333-3333-3333-3333-333333333333",Iso(i),Iso(f)),"GET")).Status);
+        // Outras janelas, projeto do outro slide, apresentação não atribuída: negados.
+        Assert.Equal(403,(await setup.Request(Url("a",0,TvTelas.ProjetoChs001,Iso(i.AddDays(-7)),Iso(f.AddDays(-7))),"GET")).Status);
+        Assert.Equal(403,(await setup.Request(Url("a",0,TvTelas.ProjetoChs001,Iso(f.AddDays(-30)),Iso(f)),"GET")).Status);
+        Assert.Equal(403,(await setup.Request(Url("a",0,"b.33333333-3333-3333-3333-333333333333",Iso(i),Iso(f)),"GET")).Status);
+        Assert.Equal(403,(await setup.Request(Url("b",0,TvTelas.ProjetoChs001,Iso(i),Iso(f)),"GET")).Status);
+        // Slide de data fixa na mesma apresentação: só a semana da data salva (inalterado), nunca a janela automática.
+        Assert.Equal(200,(await setup.Request(Url("a",2,TvTelas.ProjetoChs001,"2026-10-11","2026-10-17"),"GET")).Status);
+        Assert.Equal(403,(await setup.Request(Url("a",2,TvTelas.ProjetoChs001,Iso(i),Iso(f)),"GET")).Status);
+        // LDP do próprio projeto (conciliação da emissão) liberada; recurso fora da tela negado; escrita negada.
+        Assert.Equal(200,(await setup.Request($"/api/tv-portal/data/a/0?resource=%2Fapi%2Freports%2Fgestao-vista&projectId={TvTelas.ProjetoChs001}","GET")).Status);
+        Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource=%2Fapi%2Fbi-chs001%2Fldp&projectId={TvTelas.ProjetoChs001}","GET")).Status);
+        Assert.Equal(403,(await setup.Request(Url("a",0,TvTelas.ProjetoChs001,Iso(i),Iso(f)),"POST")).Status);
+    }
+
     public class RepoProxy:DispatchProxy
     {
         public Func<MethodInfo, object?[]?, object?> Handler=null!;
