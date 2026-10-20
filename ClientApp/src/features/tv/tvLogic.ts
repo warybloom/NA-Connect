@@ -7,17 +7,37 @@ export interface TvSlideProjeto { hubId: string; projectId: string; projectName:
 /**
  * Item da apresentação. hubId/projectId = projeto PRINCIPAL (formato antigo, um projeto). projetos = seleção multiprojeto
  * do item (só em telas que já consolidam vários projetos); o primeiro é sempre o principal.
+ * dataReferencia (19/10/2026, opcional) = dia "AAAA-MM-DD" do item — OBRIGATÓRIO nas telas com data (Programação Diária) e
+ * ignorado nas demais (o backend o descarta ao salvar, então nunca muda os dados de outra tela).
  */
-export interface TvSlide { screenId: string; hubId: string; projectId: string; projectName: string | null; projetos?: TvSlideProjeto[] | null }
+export interface TvSlide {
+  screenId: string; hubId: string; projectId: string; projectName: string | null; projetos?: TvSlideProjeto[] | null;
+  dataReferencia?: string | null;
+}
+
+/** Data ISO real (AAAA-MM-DD, existe no calendário) — mesma regra do backend (DateOnly.TryParseExact "yyyy-MM-dd"). */
+export function dataReferenciaValida(v: string | null | undefined): v is string {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [a, m, d] = v.split("-").map(Number);
+  const data = new Date(Date.UTC(a, m - 1, d));
+  return a >= 1 && data.getUTCFullYear() === a && data.getUTCMonth() === m - 1 && data.getUTCDate() === d;
+}
+
+/** "15/10/2026" para a listagem/cabeçalho (sem fuso: a data é um dia, não um instante). */
+export const formatarDataReferencia = (v: string) => v.split("-").reverse().join("/");
 
 /** Projetos do item, exatamente como configurados (config antiga = só o principal). */
 export const projetosDoSlide = (s: TvSlide): TvSlideProjeto[] =>
   s.projetos && s.projetos.length > 0 ? s.projetos : [{ hubId: s.hubId, projectId: s.projectId, projectName: s.projectName }];
 
-/** Item a partir de uma seleção (1 projeto = formato antigo; vários = lista com o principal primeiro). */
-export function slideComProjetos(screenId: string, projetos: TvSlideProjeto[]): TvSlide {
+/**
+ * Item a partir de uma seleção (1 projeto = formato antigo; vários = lista com o principal primeiro). dataReferencia só entra
+ * quando informada (telas sem data mantêm exatamente o formato anterior).
+ */
+export function slideComProjetos(screenId: string, projetos: TvSlideProjeto[], dataReferencia?: string | null): TvSlide {
   const [p] = projetos;
-  return { screenId, hubId: p.hubId, projectId: p.projectId, projectName: p.projectName, projetos: projetos.length > 1 ? projetos : null };
+  const slide: TvSlide = { screenId, hubId: p.hubId, projectId: p.projectId, projectName: p.projectName, projetos: projetos.length > 1 ? projetos : null };
+  return dataReferencia ? { ...slide, dataReferencia } : slide;
 }
 
 const codigoProjeto = (nome: string | null, id: string) => {
@@ -94,9 +114,11 @@ export const hubOpcionalValido = (hub: string | null | undefined) => !hub || ehA
  * Primeira mensagem de erro (mesmas regras do backend) ou null se a configuração pode ser salva.
  * telasProjetoUnico = telas que exibem um projeto por vez (TvTelas.MultiProjeto=false no backend).
  * telasProjetoExclusivo = tela → ÚNICO projeto aceito (TvTela.ProjetoExclusivo; Gestão à Vista Tipo 2 = CHS001).
+ * telasComData = telas que exigem dataReferencia válida em cada item (TvTela.DataReferenciaObrigatoria).
  */
 export function validarApresentacoes(lista: readonly TvPresentation[], telasPermitidas: readonly string[],
-  telasProjetoUnico: readonly string[] = [], telasProjetoExclusivo: Readonly<Record<string, string>> = {}): string | null {
+  telasProjetoUnico: readonly string[] = [], telasProjetoExclusivo: Readonly<Record<string, string>> = {},
+  telasComData: readonly string[] = []): string | null {
   if (lista.length > TV_LIMITES.maxApresentacoes) return `Máximo de ${TV_LIMITES.maxApresentacoes} apresentações.`;
   const ids = new Set<string>();
   for (const a of lista) {
@@ -121,6 +143,8 @@ export function validarApresentacoes(lista: readonly TvPresentation[], telasPerm
       const exclusivo = Object.hasOwn(telasProjetoExclusivo, s.screenId) ? telasProjetoExclusivo[s.screenId] : undefined;
       if (exclusivo && (s.projectId !== exclusivo || ps.some((p) => p.projectId !== exclusivo)))
         return `"${nome}": a tela "${s.screenId}" é exclusiva do projeto CHS001 (${exclusivo}) — remova o item ou troque o projeto para a CHS001.`;
+      if (telasComData.includes(s.screenId) && !dataReferenciaValida(s.dataReferencia))
+        return `"${nome}": informe uma data de referência válida (AAAA-MM-DD) em cada Programação Diária.`;
     }
   }
   return null;

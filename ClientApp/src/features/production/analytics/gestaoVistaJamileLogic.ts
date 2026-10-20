@@ -393,6 +393,83 @@ export function janelasDoPeriodo(inicio:string,fim:string,dias=56){
  for(let i=inicio;i<=fim;i=addDias(i,dias)){const f=addDias(i,dias-1);out.push({inicio:i,fim:f<fim?f:fim});}
  return out;
 }
+/* ----------------------------------------------------------------------------------------------
+ * 01. VISÃO GERAL (19/10/2026) — MESMA fonte da 02: dbo.tb_WeeklyEngineeringSchedule por projeto, semana domingo–sábado,
+ * deduplicarProgramacao + classificarProgramacao (Normalizador no consolidado). Nada vem de gates/LDP como "previsto".
+ * Documento = projeto + código (um documento com várias atividades conta uma vez); linha sem código = item próprio (mesma
+ * regra da 02). Emissão: conciliada pelo projeto + código com a LDP oficial (DocumentEmissionRules: status aprovado ou data
+ * de emissão). O fim da semana (sábado) é o corte implícito; sem prova, o documento fica "sem comprovação" — nunca emitido
+ * nem atrasado por suposição.
+ * ---------------------------------------------------------------------------------------------- */
+export type SituacaoEmissao="emitido"|"pendente"|"sem-comprovacao";
+/** Documento da LDP usado SÓ para conciliar a emissão (nunca para prever). */
+export interface DocumentoLdpEmissao{codigo:string|null;emitido:boolean;cancelado:boolean;dataEmissao:string|null;isActivity?:boolean}
+export interface DocumentoProgramadoSemana{chave:string;projectId:string;codigo:string|null;disciplina:string;dias:string[];atividades:number;
+ situacao:SituacaoEmissao;motivo:string|null;atrasado:boolean}
+export interface ContagemVisaoGeral{documentos:number;atividades:number;emitidos:number;semComprovacao:number}
+const codigoDoc=(v:string|null|undefined)=>(v??"").trim().toUpperCase();
+
+function situacaoDoDocumento(codigo:string|null,ldp:readonly DocumentoLdpEmissao[]|undefined,semana:{start:string;end:string},hoje:string):{situacao:SituacaoEmissao;motivo:string|null}{
+ if(!codigoDoc(codigo))return {situacao:"sem-comprovacao",motivo:"Atividade sem código de documento"};
+ if(!ldp)return {situacao:"sem-comprovacao",motivo:"LDP do projeto indisponível"};
+ const iguais=ldp.filter(d=>!d.isActivity&&codigoDoc(d.codigo)===codigoDoc(codigo));
+ if(!iguais.length)return {situacao:"sem-comprovacao",motivo:"Código não encontrado na LDP do projeto"};
+ const ativos=iguais.filter(d=>!d.cancelado);
+ if(!ativos.length)return {situacao:"sem-comprovacao",motivo:"Documento cancelado na LDP"};
+ // Status atual só prova a emissão até o fim da semana se a semana ainda não terminou (hoje ≤ sábado).
+ const estado=(d:DocumentoLdpEmissao):SituacaoEmissao=>{
+  if(!d.emitido)return "pendente";
+  const data=dataValida(d.dataEmissao);
+  if(data)return data<=semana.end?"emitido":"pendente";
+  return hoje<=semana.end?"emitido":"sem-comprovacao";
+ };
+ const estados=new Set(ativos.map(estado));
+ if(estados.size>1)return {situacao:"sem-comprovacao",motivo:"Código repetido na LDP com situações diferentes"};
+ const [s]=[...estados];
+ return {situacao:s,motivo:s==="sem-comprovacao"?"Emitido na LDP sem data de emissão (não comprova a emissão até o fim da semana)":null};
+}
+
+export function visaoGeralDaSemana({dados,projetos,cat,semana,hoje,ldp}:{dados:readonly ProgramacaoResposta[];projetos:readonly {id:string;name:string}[];
+ cat:CatalogoDisciplinas;semana:{start:string;end:string};hoje:string;ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>}){
+ const todas=dados.flatMap(d=>d.linhas.map(l=>({...l,projectId:d.projectId})));
+ // Nunca misturar outra semana: o endpoint já recorta, e aqui se garante pela data da atividade.
+ const daSemana=todas.filter(l=>{const d=l.dataAtividade.slice(0,10);return d>=semana.start&&d<=semana.end;});
+ const {linhas,repetidos}=deduplicarProgramacao(daSemana);
+ // Corte do atraso: semana encerrada = tudo até sábado; semana corrente = antes de hoje (data futura nunca é atraso).
+ const limiteAtraso=hoje>semana.end?addDias(semana.end,1):hoje;
+ const docs=new Map<string,{projectId:string;codigo:string|null;disciplina:string;dias:Set<string>;atividades:number}>();
+ for(const l of linhas){
+  const k=codigoDoc(l.documento)?`${l.projectId}::${codigoDoc(l.documento)}`:`${l.projectId}::#${l.idRegistro}`;
+  const d=docs.get(k)??{projectId:l.projectId,codigo:l.documento,disciplina:classificarProgramacao(cat,l.projectId,l).chave,dias:new Set<string>(),atividades:0};
+  d.dias.add(l.dataAtividade.slice(0,10));d.atividades++;docs.set(k,d);
+ }
+ const documentos:DocumentoProgramadoSemana[]=[...docs].map(([chave,d])=>{
+  const s=situacaoDoDocumento(d.codigo,ldp.get(d.projectId),semana,hoje);
+  const dias=[...d.dias].sort();
+  return {chave,projectId:d.projectId,codigo:d.codigo,disciplina:d.disciplina,dias,atividades:d.atividades,...s,
+   atrasado:s.situacao==="pendente"&&dias[dias.length-1]<limiteAtraso};
+ });
+ const contar=(xs:readonly DocumentoProgramadoSemana[]):ContagemVisaoGeral=>({documentos:xs.length,atividades:xs.reduce((s,x)=>s+x.atividades,0),
+  emitidos:xs.filter(x=>x.situacao==="emitido").length,semComprovacao:xs.filter(x=>x.situacao==="sem-comprovacao").length});
+ const total=contar(documentos);
+ const aderencia=total.documentos>0&&total.semComprovacao===0?total.emitidos/total.documentos*100:null;
+ const motivos=[...agrupar(documentos.filter(x=>x.motivo),x=>x.motivo!)].map(([motivo,xs])=>({motivo,quantidade:xs.length}))
+  .sort((a,b)=>b.quantidade-a.quantidade||a.motivo.localeCompare(b.motivo,"pt-BR"));
+ // TODOS os projetos selecionados, na ordem da seleção — inclusive os sem programação (zero).
+ const porProjeto=projetos.map(p=>({projectId:p.id,nome:p.name||p.id,...contar(documentos.filter(x=>x.projectId===p.id))}));
+ const porDisciplina=[...agrupar(documentos,x=>x.disciplina)].map(([chave,xs])=>({chave,nome:rotulo(cat,chave),...contar(xs)}))
+  .sort((a,b)=>b.documentos-a.documentos||a.nome.localeCompare(b.nome,"pt-BR"));
+ // Por dia: documento distinto NAQUELE dia (com atividades em dois dias, aparece nos dois).
+ const porDia=diasDaSemana(semana.start).map(data=>{const xs=documentos.filter(x=>x.dias.includes(data));
+  return {data,documentos:xs.length,emitidos:xs.filter(x=>x.situacao==="emitido").length,atividades:linhas.filter(l=>l.dataAtividade.slice(0,10)===data).length};});
+ return {semana,linhas,repetidos,foraDaSemana:todas.length-daSemana.length,itens:documentos,...total,
+  pendentes:documentos.filter(x=>x.situacao==="pendente").length,atrasados:documentos.filter(x=>x.atrasado).length,
+  aderencia,desvio:aderencia===null?null:100-aderencia,limiteAtraso,motivos,porProjeto,porDisciplina,porDia};
+}
+/** LDP oficial por projeto (somente para conciliar emissão na 01). */
+export const ldpParaEmissao=(reports:readonly {projectId:string;documentos:readonly DocumentoLdpEmissao[]}[])=>
+ new Map(reports.map(r=>[r.projectId,r.documentos]));
+
 /** Une as janelas de UM projeto: linhas pelo Id_Registro (sem duplicar), resumo do projeto preservado. */
 export function mesclarJanelas(respostas:readonly ProgramacaoResposta[]):ProgramacaoResposta|null{
  if(!respostas.length)return null;

@@ -141,7 +141,7 @@ test("Tela 02: atalhos e indicadores visíveis, modo histórico rotulado e consu
  for(const texto of ["Ver última semana com atividades","Ver todas as atividades importadas","Documentos sem data","Última sincronização",
   "Período disponível","documento(s) importado(s)","com data;","sem data","Não é a programação da semana atual","ATIVIDADES IMPORTADAS COM DATA"])
   assert.ok(pagina.includes(texto),texto);
- assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end,screen==="programacao"\)/);   // semana continua sendo a consulta padrão
+ assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end,screen==="programacao"\|\|/);   // semana continua sendo a consulta padrão
  assert.match(pagina,/setModoProg\("semana"\)/);                                                   // navegar de semana sai do histórico
  assert.match(pagina,/\{screen==="programacao"&&importada\}[\s\S]*<ProjetoFaseAgrupamento idBase="pf-programacao"/); // PROJETO > FASE também recebe o painel
  assert.match(pagina,/agruparProgramacao\(selection,dadosProg,cat,dia\)/);

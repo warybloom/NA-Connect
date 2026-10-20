@@ -106,7 +106,8 @@ test("Salvar: validação (espelho do backend) aceita só a CHS001 nas telas Tip
   assert.equal(validarApresentacoes(tv(slideComProjetos("ldp", [PROJ_BML])), permitidas, TELAS_TV_PROJETO_UNICO, TELAS_TV_PROJETO_EXCLUSIVO), null);
   // O editor usa a regra ao salvar (erroValidacao) e ao adicionar/trocar projeto.
   const config = fonte("src/features/settings/TelasTvConfigPage.tsx");
-  assert.match(config, /validarApresentacoes\(rascunho, telasPermitidas, TELAS_TV_PROJETO_UNICO, TELAS_TV_PROJETO_EXCLUSIVO\)/);
+  // 19/10/2026: + TELAS_TV_DATA_OBRIGATORIA (Programação Diária) como último argumento.
+  assert.match(config, /validarApresentacoes\(rascunho, telasPermitidas, TELAS_TV_PROJETO_UNICO, TELAS_TV_PROJETO_EXCLUSIVO[,)]/);
   assert.match(config, /const fora = projetosForaDaTela\(telaDef, projetosSelecionados\);\s*if \(fora\.length > 0\) \{ setAviso\(avisoProjetoExclusivo\(telaDef, fora\)\); return; \}/);
   assert.match(config, /disabled=\{projetosSelecionados\.length === 0 \|\| foraDaTela\.length > 0/);
 });

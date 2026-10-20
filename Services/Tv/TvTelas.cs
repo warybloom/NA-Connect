@@ -3,10 +3,12 @@ namespace APS.WebApp.Services.Tv;
 /// <summary>
 /// Tela que pode ir para a TV: id estável, se consolida vários projetos e as keys da rota (QUALQUER uma).
 /// ProjetoExclusivo (opcional) = único Project_ID_ACC aceito nos itens desta tela (TvConfigurationRules recusa outro).
+/// DataReferenciaObrigatoria = cada item precisa de TvSlide.DataReferencia ("yyyy-MM-dd" real); nas outras telas o campo é descartado.
 /// </summary>
 public sealed record TvTela(string Id, bool MultiProjeto, IReadOnlyList<string> PermissionKeys)
 {
     public string? ProjetoExclusivo { get; init; }
+    public bool DataReferenciaObrigatoria { get; init; }
 }
 
 /// <summary>
@@ -70,6 +72,10 @@ public static class TvTelas
         T("gestao-a-vista-indicadores", Multi, "production.managerial.hh-custo.view"),
         T("gestao-a-vista-hh-disciplina", Multi, "reports.gestao.view"),
         T("gestao-a-vista-custo-disciplina", Multi, "production.managerial.hh-custo.view"),
+        // Programação Diária (19/10/2026): só na TV — mesmo visual e mesma fonte da 02. PROGRAMAÇÃO (endpoint semanal oficial
+        // filtrado no dia), UM projeto e UMA data por item; mesmas keys da programação comum. Pode repetir com projetos/datas
+        // diferentes. Data obrigatória por item (TvConfigurationRules).
+        T("gestao-a-vista-programacao-diaria", Unico, "reports.gestao.view") with { DataReferenciaObrigatoria = true },
         // Gestão à Vista Tipo 2 (19/10/2026): reprodução do BI CHS001 (ClientApp/src/features/production/biChs001, catálogo
         // próprio em tvScreens.tsx — fora de PRODUCTION_NAV). SOMENTE as 10 páginas prioritárias (PRIORIDADE_10); as outras 13
         // páginas do BI não são aceitas. Um projeto por item e EXCLUSIVAS da CHS001 (outro projeto é recusado ao salvar).

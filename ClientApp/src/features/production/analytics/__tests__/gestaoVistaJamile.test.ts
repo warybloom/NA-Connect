@@ -115,7 +115,8 @@ test("Tela 01: emissão por disciplina = emitidos ÷ previstos da semana; gate C
  const r=entregasDaSemana([report] as never,cat,"2026-08-12");
  assert.equal(r.previstos,2);assert.equal(r.realizados,1);assert.equal(r.aderencia,50);
  const fonte=readFileSync(path.resolve(process.cwd().endsWith("ClientApp")?process.cwd():path.join(process.cwd(),"ClientApp"),"src/features/production/analytics/GestaoVistaJamilePage.tsx"),"utf8");
- assert.ok(fonte.includes("fracao={`${x.actual} de ${x.planned}`}"));
+ // 19/10/2026: a tela 01 passou a usar a programação semanal (visaoGeralProgramacao.test.ts); a fração continua visível.
+ assert.ok(fonte.includes("fracao={`${x.emitidos} de ${x.documentos}"));
 });
 test("Tela 03: setas em grade de 4 colunas iguais, limitada à largura, com texto escalado pelo contêiner",()=>{
  const css=readFileSync(path.resolve(process.cwd().endsWith("ClientApp")?process.cwd():path.join(process.cwd(),"ClientApp"),"src/features/production/analytics/gestaoVistaJamile.css"),"utf8");
@@ -156,7 +157,7 @@ test("02 Programação semanal: semana vazia oferece a semana anterior/seguinte 
  assert.deepEqual(semanasVizinhasComProgramacao(datas,{start:"2026-10-18",end:"2026-10-24"}),{anterior:{start:"2026-10-11",end:"2026-10-17"},proxima:null});
  const pagina=readFileSync(path.resolve(process.cwd(),"src/features/production/analytics/GestaoVistaJamilePage.tsx"),"utf8");
  assert.match(pagina,/programacao:"PROGRAMAÇÃO SEMANAL"/);
- assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end,screen==="programacao"\)/);   // uma consulta por projeto para a semana inteira
+ assert.match(pagina,/useProgramacao\(selection,week\.start,week\.end,screen==="programacao"\|\|screen==="visao-geral"\|\|/);   // uma consulta por projeto para a semana inteira (01, 02 e Diária da TV)
  // Item 3 (19/10/2026): a tabela "Semana Completa" é o componente isolado do Codex, montado pelo contêiner.
  assert.match(pagina,/<GerenciaEngenhariaItem3/);
  const item3=readFileSync(path.resolve(process.cwd(),"src/features/production/analytics/item3/GerenciaEngenhariaItem3.tsx"),"utf8");

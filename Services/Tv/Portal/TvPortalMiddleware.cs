@@ -39,6 +39,7 @@ public sealed class TvPortalMiddleware(RequestDelegate next)
                 var saved = projects.SingleOrDefault(x => x.ProjectId == project);
                 var requestedProjects = new[] { project }.Concat(context.Request.Query["projetos"].Select(x => x ?? "")).ToHashSet(StringComparer.Ordinal);
                 if (saved is null || !TvPortalResources.ForScreen(slide.ScreenId).Contains(resource, StringComparer.Ordinal)
+                    || !TvPortalResources.PeriodoPermitido(slide, resource, context.Request.Query)
                     || context.Request.Query.TryGetValue("hubId", out var hub) && hub.ToString() != saved.HubId
                     || requestedProjects.Any(id => !projects.Any(p => p.ProjectId == id)))
                 { await Deny(context, 403); return; }

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace APS.WebApp.Services.Tv.Portal;
 
 /// <summary>Explicit read-only resources. Unknown screens/resources fail closed, never a generic URL proxy.</summary>
@@ -15,6 +17,20 @@ public static class TvPortalResources
         screen.StartsWith("gestao-a-vista-", StringComparison.Ordinal) ? ["/api/reports/gestao-vista", "/api/reports/production/dashboard/ldp", "/api/reports/gestao-vista-jamile/disciplinas", "/api/reports/gestao-vista-jamile/programacao"] :
         screen is "analise-financeira" or "analise-financeira-projeto" or "analise-financeira-documento" ? ["/api/reports/gestao-vista"] :
         screen == "curva-s" ? ["/api/reports/curva-s"] : [];
+    public const string ProgramacaoJamile = "/api/reports/gestao-vista-jamile/programacao";
+    /// <summary>
+    /// Tela com data por item (Programação Diária): a programação só pode ser lida para a semana (domingo–sábado) da data
+    /// SALVA no slide — a TV não abre outras semanas trocando inicio/fim. Demais telas/recursos: sem restrição extra.
+    /// </summary>
+    public static bool PeriodoPermitido(TvSlide slide, string resource, IQueryCollection query)
+    {
+        if (TvTelas.Obter(slide.ScreenId) is not { DataReferenciaObrigatoria: true }) return true;
+        if (!string.Equals(resource, ProgramacaoJamile, StringComparison.Ordinal)) return true;
+        if (!DateOnly.TryParseExact(slide.DataReferencia, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dia)) return false;
+        var inicio = dia.AddDays(-(int)dia.DayOfWeek);
+        return query["inicio"].ToString() == inicio.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            && query["fim"].ToString() == inicio.AddDays(6).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
     public static bool Supported(TvPresentation p) => p.Slides.Count > 0 && p.Slides.All(s => ForScreen(s.ScreenId).Count > 0);
     public static IReadOnlyList<string> ReadKeys(TvSlide slide) => TvTelas.Obter(slide.ScreenId)!.PermissionKeys
         .Concat(new[] { "production.view", "reports.gestao.view", "production.managerial.ldp.view", "production.operational.ldp.view" }).ToArray();

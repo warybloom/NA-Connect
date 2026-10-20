@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -10,8 +11,11 @@ public sealed record TvSlideProjeto(string HubId, string ProjectId, string? Proj
 /// Um item da apresentação: uma tela e o(s) seu(s) projeto(s). HubId/ProjectId = projeto PRINCIPAL (compatível com arquivos
 /// antigos, que só têm um projeto). Projetos (opcional, 30/09/2026) = seleção multiprojeto do item, só aceita em telas que já
 /// consolidam vários projetos (TvTelas → MultiProjeto); o primeiro é sempre o principal.
+/// DataReferencia (opcional, 19/10/2026) = dia "yyyy-MM-dd" do item: OBRIGATÓRIA nas telas TvTela.DataReferenciaObrigatoria
+/// (Programação Diária) e descartada nas demais — nunca muda os dados de outra tela; arquivos antigos continuam válidos.
 /// </summary>
-public sealed record TvSlide(string ScreenId, string HubId, string ProjectId, string? ProjectName, IReadOnlyList<TvSlideProjeto>? Projetos = null);
+public sealed record TvSlide(string ScreenId, string HubId, string ProjectId, string? ProjectName, IReadOnlyList<TvSlideProjeto>? Projetos = null,
+    string? DataReferencia = null);
 
 /// <summary>
 /// Configuração de UMA TV (Gestão à Vista): Name = "Nome da Tela / TV" (ex.: "TV SALA DE ENGENHARIA"), sequência de telas.
@@ -67,6 +71,10 @@ public static class TvConfigurationRules
     private static bool HubOpcionalValido(string? hub) => string.IsNullOrEmpty(hub) || EhAccId(hub);
     private static bool EhAccId(string? v) => v is { Length: 38 } && v.StartsWith("b.", StringComparison.Ordinal) && Guid.TryParseExact(v[2..], "D", out _);
 
+    /// <summary>Data ISO real ("yyyy-MM-dd", existe no calendário). Sem fallback para hoje.</summary>
+    public static bool DataReferenciaValida(string? v) =>
+        v is { Length: 10 } && DateOnly.TryParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+
     public static TvConfiguration Validate(TvConfiguration c)
     {
         if (c is null) throw new ArgumentException("Configuração vazia.");
@@ -105,6 +113,9 @@ public static class TvConfigurationRules
                     && (!string.Equals(t.ProjectId, exclusivo, StringComparison.Ordinal)
                         || (t.Projetos ?? Array.Empty<TvSlideProjeto>()).Any(p => !string.Equals(p.ProjectId, exclusivo, StringComparison.Ordinal))))
                     throw new ArgumentException($"A tela {t.ScreenId} é exclusiva do projeto CHS001 ({exclusivo}).");
+                // Programação Diária: cada item tem a SUA data (obrigatória, ISO real); hoje nunca é assumido.
+                if (tela.DataReferenciaObrigatoria && !DataReferenciaValida(t.DataReferencia))
+                    throw new ArgumentException($"A tela {t.ScreenId} exige data de referência válida (AAAA-MM-DD) em cada item.");
             }
         }
         return c with
@@ -120,6 +131,8 @@ public static class TvConfigurationRules
                     Projetos = t.Projetos is { Count: > 1 } ps
                         ? ps.Select(p => p with { ProjectName = string.IsNullOrWhiteSpace(p.ProjectName) ? null : p.ProjectName.Trim() }).ToArray()
                         : null,
+                    // Só as telas com data a guardam; nas demais o campo é descartado (não altera dados nem o arquivo antigo).
+                    DataReferencia = TvTelas.Obter(t.ScreenId)!.DataReferenciaObrigatoria ? t.DataReferencia : null,
                 }).ToArray(),
             }).ToArray(),
         };

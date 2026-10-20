@@ -12,7 +12,8 @@ import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Loader2, MonitorPlay, 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  NOME_PROJETO_GESTAO_VISTA_TIPO2, TELAS_TV, TELAS_TV_PROJETO_EXCLUSIVO, TELAS_TV_PROJETO_UNICO, chavesTelaTv, getTelaTv, telasPorCategoria, type TelaTv,
+  NOME_PROJETO_GESTAO_VISTA_TIPO2, TELAS_TV, TELAS_TV_DATA_OBRIGATORIA, TELAS_TV_PROJETO_EXCLUSIVO, TELAS_TV_PROJETO_UNICO, chavesTelaTv, getTelaTv,
+  telasPorCategoria, type TelaTv,
 } from "@/features/tv/tvScreens";
 import SeletorProjetosTv from "@/features/tv/SeletorProjetosTv";
 import { useProjetosPermitidosTv } from "@/features/tv/useProjetosPermitidosTv";
@@ -23,8 +24,8 @@ import { TV_PROJECTS_ENDPOINT } from "@/features/production/productionSelectionL
 import { useProjetoAtual } from "@/features/project/ProjetoAtualContext";
 import { carregarConfiguracaoTv, salvarConfiguracaoTv, TvSaveError } from "@/features/tv/tvApi";
 import {
-  TV_LIMITES, TV_SEGUNDOS_PADRAO, gerarIdApresentacao, mesmasApresentacoes, mover, projetosDoSlide, resumoProjetosSlide, resumoTv,
-  slideComProjetos, tvAtiva, validarApresentacoes, type TvSlide, type TvSlideProjeto,
+  TV_LIMITES, TV_SEGUNDOS_PADRAO, dataReferenciaValida, formatarDataReferencia, gerarIdApresentacao, mesmasApresentacoes, mover, projetosDoSlide,
+  resumoProjetosSlide, resumoTv, slideComProjetos, tvAtiva, validarApresentacoes, type TvSlide, type TvSlideProjeto,
   type TvConfiguration, type TvPresentation,
 } from "@/features/tv/tvLogic";
 
@@ -82,7 +83,8 @@ export default function TelasTvConfigPage() {
   const opcoesTela = useMemo(() => estadosDasTelas(TELAS_TV, telasPermitidas, telasAutorizadas, can), [telasPermitidas, telasAutorizadas, can]);
   const candidatas = useMemo(() => opcoesTela.filter((o) => o.estado === "ok").map((o) => o.tela), [opcoesTela]);
   const naoAceitasPeloServidor = opcoesTela.filter((o) => o.estado === "servidor").length;
-  const erroValidacao = useMemo(() => validarApresentacoes(rascunho, telasPermitidas, TELAS_TV_PROJETO_UNICO, TELAS_TV_PROJETO_EXCLUSIVO), [rascunho, telasPermitidas]);
+  const erroValidacao = useMemo(() => validarApresentacoes(rascunho, telasPermitidas, TELAS_TV_PROJETO_UNICO, TELAS_TV_PROJETO_EXCLUSIVO, TELAS_TV_DATA_OBRIGATORIA),
+    [rascunho, telasPermitidas]);
   const atual = rascunho.find((a) => a.id === selecionada) ?? null;
 
   const alterar = (id: string, f: (a: TvPresentation) => TvPresentation) => {
@@ -261,11 +263,11 @@ const SUFIXO_ESTADO: Record<EstadoTela, string> = {
 };
 
 /**
- * Telas que "Adicionar todas" inclui: as sem dados financeiros e não exclusivas de um projeto (financeiras e Gestão à Vista
- * Tipo 2 só entram adicionadas uma a uma).
+ * Telas que "Adicionar todas" inclui: as sem dados financeiros, não exclusivas de um projeto e sem data por item (financeiras,
+ * Gestão à Vista Tipo 2 e Programação Diária só entram adicionadas uma a uma).
  */
-export const telasEmLote = <T extends Pick<TelaTv, "containsCostData" | "projetoExclusivo">>(telas: readonly T[]): T[] =>
-  telas.filter((t) => !t.containsCostData && !t.projetoExclusivo);
+export const telasEmLote = <T extends Pick<TelaTv, "containsCostData" | "projetoExclusivo"> & Partial<Pick<TelaTv, "exigeDataReferencia">>>(telas: readonly T[]): T[] =>
+  telas.filter((t) => !t.containsCostData && !t.projetoExclusivo && !t.exigeDataReferencia);
 
 /** Projetos selecionados que a tela NÃO aceita (tela exclusiva de um projeto — Gestão à Vista Tipo 2 = CHS001). */
 export const projetosForaDaTela = (tela: Pick<TelaTv, "projetoExclusivo">, projetos: readonly TvSlideProjeto[]): TvSlideProjeto[] =>
@@ -276,8 +278,10 @@ export const avisoProjetoExclusivo = (tela: Pick<TelaTv, "label">, fora: readonl
   `"${tela.label}" é exclusiva do projeto ${NOME_PROJETO_GESTAO_VISTA_TIPO2}: selecione somente a CHS001 `
   + `(não permitido: ${fora.map((p) => p.projectName ?? p.projectId).join(", ")}).`;
 
+/** Mesmo item = mesma tela, mesmos projetos e mesma data (Programação Diária repetida com outra data/projeto é outro item). */
 const mesmoItem = (a: TvSlide, b: TvSlide) =>
-  a.screenId === b.screenId && projetosDoSlide(a).map((p) => p.projectId).join("+") === projetosDoSlide(b).map((p) => p.projectId).join("+");
+  a.screenId === b.screenId && projetosDoSlide(a).map((p) => p.projectId).join("+") === projetosDoSlide(b).map((p) => p.projectId).join("+")
+  && (a.dataReferencia ?? null) === (b.dataReferencia ?? null);
 
 /** "consolidado" = 1 item com todos os projetos; "por-projeto" = 1 item para cada projeto. */
 export type ModoAdicao = "consolidado" | "por-projeto";
@@ -288,12 +292,15 @@ export const ofereceModos = (tela: Pick<TelaTv, "multiProjeto" | "categoria">) =
 /**
  * Itens a adicionar para uma tela com os projetos selecionados. Tela multiprojeto: consolidado (padrão) = 1 item com
  * todos; por projeto = 1 item para cada. Tela de um projeto só: sempre 1 item POR projeto (nunca combina resultados).
- * Itens idênticos aos já existentes são ignorados.
+ * Itens idênticos aos já existentes são ignorados. Tela com data (Programação Diária): exige dataReferencia válida — cada item
+ * leva a data; sem data nada é adicionado (nunca "hoje" implícito).
  */
-export function itensParaAdicionar(tela: Pick<TelaTv, "id" | "multiProjeto">, projetos: readonly TvSlideProjeto[], existentes: readonly TvSlide[],
-  modo: ModoAdicao = "consolidado"): TvSlide[] {
+export function itensParaAdicionar(tela: Pick<TelaTv, "id" | "multiProjeto"> & Partial<Pick<TelaTv, "exigeDataReferencia">>, projetos: readonly TvSlideProjeto[],
+  existentes: readonly TvSlide[], modo: ModoAdicao = "consolidado", dataReferencia: string | null = null): TvSlide[] {
   if (projetos.length === 0) return [];
-  const novos = tela.multiProjeto && modo === "consolidado" ? [slideComProjetos(tela.id, [...projetos])] : projetos.map((p) => slideComProjetos(tela.id, [p]));
+  if (tela.exigeDataReferencia && !dataReferenciaValida(dataReferencia)) return [];
+  const data = tela.exigeDataReferencia ? dataReferencia : null;
+  const novos = tela.multiProjeto && modo === "consolidado" ? [slideComProjetos(tela.id, [...projetos], data)] : projetos.map((p) => slideComProjetos(tela.id, [p], data));
   const out: TvSlide[] = [];
   for (const n of novos) if (![...existentes, ...out].some((e) => mesmoItem(e, n))) out.push(n);
   return out;
@@ -322,6 +329,9 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
   useEffect(() => { if (!candidatas.some((t) => t.id === tela)) setTela(candidatas[0]?.id ?? ""); }, [candidatas, tela]);
   const telaDef = candidatas.find((t) => t.id === tela);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Programação Diária: data de referência do(s) novo(s) item(ns). Começa VAZIA — o usuário escolhe; nunca "hoje" implícito.
+  const [dataNova, setDataNova] = useState("");
+  const faltaData = !!telaDef?.exigeDataReferencia && !dataReferenciaValida(dataNova);
   // Projeto atual (Home) já vem marcado na primeira vez, se estiver entre os permitidos.
   const [iniciado, setIniciado] = useState(false);
   useEffect(() => {
@@ -343,9 +353,10 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
     // Permissão conferida em TODOS os projetos selecionados (consolidado ou por projeto).
     const negados = semPermissao(telaDef.id);
     if (negados.length > 0) { setAviso(`Sem permissão para "${telaDef.label}" em: ${negados.map((p) => p.projectName ?? p.projectId).join(", ")}.`); return; }
-    const novos = itensParaAdicionar(telaDef, projetosSelecionados, a.slides, modo);
+    if (faltaData) { setAviso(`Informe a data de referência (AAAA-MM-DD) de "${telaDef.label}".`); return; }
+    const novos = itensParaAdicionar(telaDef, projetosSelecionados, a.slides, modo, telaDef.exigeDataReferencia ? dataNova : null);
     const cabem = novos.slice(0, Math.max(0, TV_LIMITES.maxTelas - a.slides.length));
-    setAviso(novos.length === 0 ? `"${telaDef.label}" já está na sequência com esses projetos.`
+    setAviso(novos.length === 0 ? `"${telaDef.label}" já está na sequência com esses projetos${telaDef.exigeDataReferencia ? " e essa data" : ""}.`
       : cabem.length < novos.length ? `Limite de ${TV_LIMITES.maxTelas} telas: ${novos.length - cabem.length} item(ns) não adicionado(s).` : null);
     if (cabem.length > 0) onChange((x) => ({ ...x, slides: [...x.slides, ...cabem] }));
   };
@@ -357,7 +368,8 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
     if (projetosSelecionados.length === 0) return;
     const permitidas = emLote.filter((t) => semPermissao(t.id).length === 0);
     const exclusivas = candidatas.filter((t) => t.projetoExclusivo).length;
-    const financeiras = candidatas.length - emLote.length - exclusivas;
+    const comData = candidatas.filter((t) => t.exigeDataReferencia && !t.projetoExclusivo).length;
+    const financeiras = candidatas.length - emLote.length - exclusivas - comData;
     const novos: TvSlide[] = [];
     for (const t of permitidas) novos.push(...itensParaAdicionar(t, projetosSelecionados, [...a.slides, ...novos]));
     const cabem = novos.slice(0, Math.max(0, TV_LIMITES.maxTelas - a.slides.length));
@@ -365,6 +377,7 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
       permitidas.length < emLote.length ? `${emLote.length - permitidas.length} tela(s) ignorada(s) por falta de permissão em algum projeto selecionado.` : "",
       financeiras > 0 ? `${financeiras} tela(s) com dados financeiros não incluída(s) — adicione-as individualmente.` : "",
       exclusivas > 0 ? `${exclusivas} tela(s) Gestão à Vista Tipo 2 (exclusivas da CHS001) não incluída(s) — adicione-as individualmente.` : "",
+      comData > 0 ? `Programação Diária não incluída — adicione-a individualmente, com projeto e data.` : "",
       cabem.length < novos.length ? `Limite de ${TV_LIMITES.maxTelas} telas: ${novos.length - cabem.length} item(ns) não adicionado(s).` : "",
     ].filter(Boolean);
     setAviso(avisos.length ? avisos.join(" ") : null);
@@ -418,6 +431,13 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
               ))}
             </select>
           </label>
+          {telaDef?.exigeDataReferencia && (
+            <label className="flex flex-col gap-1">
+              <span className={rotulo}>Data de referência</span>
+              <input type="date" aria-label="Data de referência" data-testid="tv-data-referencia-nova" required
+                className={cn(campo, "w-44", faltaData && "border-destructive")} value={dataNova} onChange={(e) => setDataNova(e.target.value)} />
+            </label>
+          )}
           {telaDef && ofereceModos(telaDef) && projetosSelecionados.length > 1 ? (<>
             {/* Gestão à Vista com vários projetos: o usuário escolhe consolidar (preferencial) ou uma tela por projeto. */}
             <Button size="sm" className="gap-1" data-testid="tv-adicionar-consolidado" disabled={a.slides.length >= TV_LIMITES.maxTelas} onClick={() => adicionar("consolidado")}
@@ -429,7 +449,8 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
               <Plus className="h-4 w-4" />Adicionar {projetosSelecionados.length} telas (1 por projeto)
             </Button>
           </>) : (
-            <Button size="sm" className="gap-1" disabled={!telaDef || projetosSelecionados.length === 0 || a.slides.length >= TV_LIMITES.maxTelas} onClick={() => adicionar()}>
+            <Button size="sm" className="gap-1" disabled={!telaDef || projetosSelecionados.length === 0 || faltaData || a.slides.length >= TV_LIMITES.maxTelas} onClick={() => adicionar()}
+              title={faltaData ? "Informe a data de referência" : undefined}>
               <Plus className="h-4 w-4" />
               {telaDef && !telaDef.multiProjeto && projetosSelecionados.length > 1 ? `Adicionar ${projetosSelecionados.length} itens (1 por projeto)` : "Adicionar"}
             </Button>
@@ -448,6 +469,7 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
               : "Esta tela exibe um projeto por vez: com vários projetos selecionados, entra um item para cada projeto (os resultados nunca são combinados)."}
             {telaDef.containsCostData && " Contém valores monetários/HH gerenciais: na TV, só aparece para usuários com a permissão de custo da tela."}
             {telaDef.projetoExclusivo && ` Gestão à Vista Tipo 2: reprodução do BI da CHS001 — só pode ser adicionada com o projeto ${NOME_PROJETO_GESTAO_VISTA_TIPO2}.`}
+            {telaDef.exigeDataReferencia && " Programação Diária: documentos programados SOMENTE na data de referência (sem agregação da semana). Pode ser adicionada várias vezes, cada item com o seu projeto e a sua data."}
           </p>
         )}
         {aviso && <p className="text-xs text-amber-600 dark:text-amber-400">{aviso}</p>}
@@ -468,7 +490,7 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
               const escopo = resumoProjetosSlide(s);
               const foraDaTela = def ? projetosForaDaTela(def, projetosSelecionados) : [];
               return (
-                <li key={`${i}-${s.screenId}-${projetosDoSlide(s).map((p) => p.projectId).join("+")}`}
+                <li key={`${i}-${s.screenId}-${projetosDoSlide(s).map((p) => p.projectId).join("+")}-${s.dataReferencia ?? ""}`}
                   className="flex items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2">
                   <span className="w-6 text-right text-xs font-black text-muted-foreground">{i + 1}</span>
                   <Icone className="h-4 w-4 flex-shrink-0 text-primary" />
@@ -484,14 +506,23 @@ function EditorApresentacao({ apresentacao: a, candidatas, opcoesTela, projetoIn
                         <ul className="mt-1 max-h-40 list-disc overflow-auto pl-5">{projetosDoSlide(s).map((p) => <li key={p.projectId}>{p.projectName ?? p.projectId}</li>)}</ul>
                       </details>
                     ) : (
-                      <span className="block truncate text-[11px] text-muted-foreground" title={escopo.completo}>{escopo.texto}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground" title={escopo.completo}>
+                        {escopo.texto}{def?.exigeDataReferencia && dataReferenciaValida(s.dataReferencia) ? ` · ${formatarDataReferencia(s.dataReferencia)}` : ""}
+                      </span>
                     )}
                   </span>
+                  {def?.exigeDataReferencia && (
+                    // Data deste item (independente dos demais itens da mesma tela). Obrigatória: vazia/inválida bloqueia o salvar.
+                    <input type="date" aria-label={`Data de referência do item ${i + 1}`} data-testid="tv-data-referencia-item" required
+                      className={cn("h-7 rounded-md border bg-background px-2 text-xs", dataReferenciaValida(s.dataReferencia) ? "border-border" : "border-destructive")}
+                      value={s.dataReferencia ?? ""}
+                      onChange={(e) => onChange((x) => ({ ...x, slides: x.slides.map((y, j) => (j === i ? { ...y, dataReferencia: e.target.value || null } : y)) }))} />
+                  )}
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
                     title={def && foraDaTela.length > 0 ? avisoProjetoExclusivo(def, foraDaTela)
                       : def && !def.multiProjeto && projetosSelecionados.length > 1 ? "Esta tela exibe um projeto por vez — selecione apenas um projeto" : "Trocar os projetos desta tela pelos projetos selecionados acima"}
                     disabled={projetosSelecionados.length === 0 || foraDaTela.length > 0 || (!!def && !def.multiProjeto && projetosSelecionados.length > 1)}
-                    onClick={() => onChange((x) => ({ ...x, slides: x.slides.map((y, j) => (j === i ? slideComProjetos(y.screenId, projetosSelecionados) : y)) }))}>
+                    onClick={() => onChange((x) => ({ ...x, slides: x.slides.map((y, j) => (j === i ? slideComProjetos(y.screenId, projetosSelecionados, y.dataReferencia) : y)) }))}>
                     Usar seleção
                   </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" title="Subir" disabled={i === 0}

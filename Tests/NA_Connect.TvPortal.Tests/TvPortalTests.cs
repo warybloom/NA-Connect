@@ -199,6 +199,31 @@ public class TvPortalTests
         Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource=%2Fapi%2Fbi-chs001%2Fldp&projectId={TvTelas.ProjetoChs001}","GET")).Status);
     }
 
+    // Programação Diária (19/10/2026): o slide salva projeto + data; o portal só lê a programação da semana dessa data,
+    // do projeto do slide, e cada slide (mesma tela repetida) tem o seu escopo.
+    private static async Task SlidesDiarios(Setup setup)
+    {
+        var config=await setup.Config.ReadAsync();
+        await setup.Config.SaveAsync([new("a","TV",30,[
+            new("gestao-a-vista-programacao-diaria","",TvTelas.ProjetoChs001,"CHS001",null,"2026-10-15"),
+            new("gestao-a-vista-programacao-diaria","","b.33333333-3333-3333-3333-333333333333","BML011",null,"2026-10-21")])],config.Revision,null);
+    }
+    private const string ProgramacaoJamile="%2Fapi%2Freports%2Fgestao-vista-jamile%2Fprogramacao";
+    [Fact] public async Task DailySlideReadsOnlyItsProjectAndWeek()
+    {
+        await using var setup=await Setup.Create(); await SlidesDiarios(setup);
+        var ok=await setup.Request($"/api/tv-portal/data/a/0?resource={ProgramacaoJamile}&projectId={TvTelas.ProjetoChs001}&inicio=2026-10-11&fim=2026-10-17","GET");
+        Assert.Equal(200,ok.Status); Assert.True(ok.Passed); Assert.Equal("/api/reports/gestao-vista-jamile/programacao",setup.RewrittenPath);
+        // Outra semana no mesmo slide, projeto do OUTRO slide e troca de índice: negados.
+        Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource={ProgramacaoJamile}&projectId={TvTelas.ProjetoChs001}&inicio=2026-10-18&fim=2026-10-24","GET")).Status);
+        Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource={ProgramacaoJamile}&projectId=b.33333333-3333-3333-3333-333333333333&inicio=2026-10-11&fim=2026-10-17","GET")).Status);
+        Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/1?resource={ProgramacaoJamile}&projectId={TvTelas.ProjetoChs001}&inicio=2026-10-18&fim=2026-10-24","GET")).Status);
+        // Segundo slide (mesma tela, outro projeto/data): o seu próprio escopo.
+        Assert.Equal(200,(await setup.Request($"/api/tv-portal/data/a/1?resource={ProgramacaoJamile}&projectId=b.33333333-3333-3333-3333-333333333333&inicio=2026-10-18&fim=2026-10-24","GET")).Status);
+        // Recurso fora da lista da tela continua negado.
+        Assert.Equal(403,(await setup.Request($"/api/tv-portal/data/a/0?resource=%2Fapi%2Fbi-chs001%2Fldp&projectId={TvTelas.ProjetoChs001}","GET")).Status);
+    }
+
     public class RepoProxy:DispatchProxy
     {
         public Func<MethodInfo, object?[]?, object?> Handler=null!;

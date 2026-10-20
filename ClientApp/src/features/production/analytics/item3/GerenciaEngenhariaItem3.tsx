@@ -26,7 +26,8 @@ export interface GerenciaEngenhariaItem3Props {
   itens: readonly ItemSemanaEngenharia[];
   grupos: readonly GrupoDisciplinaEngenharia[];
   agruparPorDia: boolean;
-  onAgruparPorDia: (agrupar: boolean) => void;
+  /** Ausente = sem o controle "AGRUPAR POR DIA" (Programação Diária da TV: a tela já é um único dia). */
+  onAgruparPorDia?: (agrupar: boolean) => void;
   descricaoPeriodo: string;
   /** Padrão "SEMANA COMPLETA"; o modo histórico usa outro título para não se passar pela semana atual. */
   titulo?: string;
@@ -82,7 +83,7 @@ export function GerenciaEngenhariaItem3({
       <div className="ge3-tools">
         <strong id={tituloId}>{titulo}</strong>
         <span>{descricaoPeriodo} · {itens.length} atividade(s)</span>
-        <label><input type="checkbox" checked={agruparPorDia} onChange={e => onAgruparPorDia(e.target.checked)} /> AGRUPAR POR DIA</label>
+        {onAgruparPorDia && <label><input type="checkbox" checked={agruparPorDia} onChange={e => onAgruparPorDia(e.target.checked)} /> AGRUPAR POR DIA</label>}
       </div>
       <div className="ge3-table-scroll">
         <table>

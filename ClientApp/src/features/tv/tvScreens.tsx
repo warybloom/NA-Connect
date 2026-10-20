@@ -8,21 +8,24 @@
 //   • "analise-financeira" = Análise Financeira → Visão Geral (id histórico);
 //   • demais folhas → slug com "/" trocado por "-" (ex.: gestao-a-vista/visao-geral → gestao-a-vista-visao-geral);
 //   • "gestao-a-vista" = painel PMO antigo (ViewGestaoAVista), fora do Controle de Produção — mantido por compatibilidade.
+//   • "gestao-a-vista-programacao-diaria" (19/10/2026) = Programação Diária, SÓ na TV (fora de PRODUCTION_NAV): mesmo visual
+//     da 02. PROGRAMAÇÃO, UM projeto e UMA data (dataReferencia) por item; pode ser repetida com projetos/datas diferentes.
 //   • "gestao-vista-tipo2-<slug>" = Gestão à Vista Tipo 2 (reprodução do BI CHS001, biChs001Paginas.ts) — catálogo PRÓPRIO,
 //     fora de PRODUCTION_NAV: só as 10 páginas prioritárias (PRIORIDADE_10), um projeto por item e EXCLUSIVAS da CHS001.
 // Telas "em-desenvolvimento" ficam no catálogo como INDISPONÍVEIS (não selecionáveis, recusadas pelo backend).
 import { Component, Suspense, lazy, type ErrorInfo, type ReactNode } from "react";
 import {
-  BarChart3, ClipboardList, Construction, FileText, Gauge, LayoutDashboard, ListChecks, MonitorPlay, TrendingUp, Users, Wallet,
+  BarChart3, CalendarDays, ClipboardList, Construction, FileText, Gauge, LayoutDashboard, ListChecks, MonitorPlay, TrendingUp, Users, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import ViewGestaoAVista from "@/components/pmo/ViewGestaoAVista";
+import GestaoVistaJamilePage from "@/features/production/analytics/GestaoVistaJamilePage";
 import type { PmoSelecionado } from "@/components/pmo/pmoMultiCore";
 import { ReportState } from "@/components/reports/ReportComponents";
 import { useNavegacaoTv, usePermissaoProjetos, type NavegacaoTv } from "./tvNavegacao";
 import { getProductionScreen } from "@/features/production/productionScreens";
 import { BI_CHS001_GRUPO, BI_CHS001_PAGINAS, PRIORIDADE_10 } from "@/features/production/biChs001/biChs001Paginas";
-import { PRODUCTION_NAV, type ProductionLeaf, type ProductionPage } from "@/features/production/productionRoutes";
+import { PRODUCTION_NAV, encontrarFolha, type ProductionLeaf, type ProductionPage } from "@/features/production/productionRoutes";
 import { ConteudoPaginaProducao, paginaImplementada, type ProductionPageImplementada } from "@/features/production/ProductionPageContent";
 
 export const TV_CURVA_S = "curva-s";
@@ -35,7 +38,7 @@ export const TV_GESTAO_A_VISTA = "gestao-a-vista";
 export const CATEGORIAS_TV = ["Principais", "Produção", "Lançamentos", "Análise Financeira", "Gestão à Vista", "Gestão à Vista Tipo 2", "Outras"] as const;
 export type CategoriaTv = (typeof CATEGORIAS_TV)[number];
 
-type PaginaTv = ProductionPage | { tipo: "pmo-gestao-a-vista" } | { tipo: "gestao-vista-tipo2"; slug: string };
+type PaginaTv = ProductionPage | { tipo: "pmo-gestao-a-vista" } | { tipo: "gestao-vista-tipo2"; slug: string } | { tipo: "programacao-diaria" };
 
 export interface TelaTv {
   id: string;
@@ -58,6 +61,8 @@ export interface TelaTv {
   slug: string | null;
   /** Projeto (Project_ID_ACC) ao qual a tela é EXCLUSIVA; ausente = qualquer projeto. Espelho de TvTela.ProjetoExclusivo. */
   projetoExclusivo?: string;
+  /** true = cada item exige dataReferencia (AAAA-MM-DD). Espelho de TvTela.DataReferenciaObrigatoria. */
+  exigeDataReferencia?: boolean;
 }
 
 /**
@@ -139,9 +144,26 @@ const TELAS_TIPO2: readonly TelaTv[] = BI_CHS001_PAGINAS
     slug: `bi-chs001/${p.slug}`, projetoExclusivo: PROJETO_GESTAO_VISTA_TIPO2,
   }));
 
-/** TODAS as telas: folhas do Controle de Produção (inclusive fora do menu e em desenvolvimento) + Gestão à Vista Tipo 2 + painel PMO. */
+// ---------------------------------------------------------------------------------------------
+// Programação Diária (19/10/2026): só existe na TV. Reutiliza a 02. PROGRAMAÇÃO (mesmo endpoint semanal oficial, filtrado
+// EXATAMENTE no dia do item), com UM projeto e UMA data salvos no slide. Mesmas keys e mesma classificação de custo da
+// 02. PROGRAMAÇÃO (a semanal continua intacta no Controle de Produção e na TV).
+// ---------------------------------------------------------------------------------------------
+export const TV_PROGRAMACAO_DIARIA = "gestao-a-vista-programacao-diaria";
+const FOLHA_PROGRAMACAO = encontrarFolha("gestao-a-vista/programacao");
+const TELA_PROGRAMACAO_DIARIA: TelaTv = {
+  id: TV_PROGRAMACAO_DIARIA, label: "Gestão à Vista — Programação Diária (1 projeto · 1 dia)", categoria: "Gestão à Vista", icon: CalendarDays,
+  tvSelectable: true, containsCostData: FOLHA_PROGRAMACAO?.containsCostData ?? false, multiProjeto: false,
+  chaves: FOLHA_PROGRAMACAO?.permissionKeys ?? ["reports.gestao.view"], page: { tipo: "programacao-diaria" }, slug: null, exigeDataReferencia: true,
+};
+
+/**
+ * TODAS as telas: folhas do Controle de Produção (inclusive fora do menu e em desenvolvimento) + Programação Diária (só TV) +
+ * Gestão à Vista Tipo 2 + painel PMO.
+ */
 export const TELAS_TV: readonly TelaTv[] = [
   ...PRODUCTION_NAV.flatMap((item) => (item.kind === "leaf" ? [telaDaFolha(item, null)] : item.children.map((f) => telaDaFolha(f, item.label)))),
+  TELA_PROGRAMACAO_DIARIA,
   ...TELAS_TIPO2,
   PAINEL_PMO,
 ];
@@ -167,6 +189,9 @@ export const TELAS_TV_PROJETO_UNICO: readonly string[] = TELAS_TV.filter((t) => 
 export const TELAS_TV_PROJETO_EXCLUSIVO: Readonly<Record<string, string>> =
   Object.fromEntries(TELAS_TV.filter((t) => t.projetoExclusivo).map((t) => [t.id, t.projetoExclusivo!]));
 
+/** Telas cujo item exige dataReferencia (Programação Diária). Usado na validação (tvLogic) e no editor. */
+export const TELAS_TV_DATA_OBRIGATORIA: readonly string[] = TELAS_TV.filter((t) => t.exigeDataReferencia).map((t) => t.id);
+
 /** Telas selecionáveis agrupadas por categoria (ordem do Controle de Produção dentro de cada categoria). */
 export function telasPorCategoria<T extends Pick<TelaTv, "categoria">>(telas: readonly T[]): { categoria: CategoriaTv; telas: T[] }[] {
   return CATEGORIAS_TV.map((categoria) => ({ categoria, telas: telas.filter((t) => t.categoria === categoria) })).filter((g) => g.telas.length > 0);
@@ -177,11 +202,14 @@ export function telasPorCategoria<T extends Pick<TelaTv, "categoria">>(telas: re
  * desenvolvimento exibem um aviso explícito. A permissão da tela é conferida no projeto principal (o backend de cada
  * relatório continua validando todos os projetos).
  */
-export function ConteudoTv({ screenId, selection }: { screenId: string; selection: PmoSelecionado[] }) {
+export function ConteudoTv({ screenId, selection, dataReferencia = null }: { screenId: string; selection: PmoSelecionado[];
+  /** Data salva no item (só telas exigeDataReferencia); nunca substituída por "hoje". */
+  dataReferencia?: string | null }) {
   const tela = getTelaTv(screenId);
   if (!tela)
     return <ReportState title="Tela não encontrada" error>A tela “{screenId}” desta apresentação não existe mais no Controle de Produção. Remova-a em Configurações → Configuração de Telas para TV.</ReportState>;
-  if (!tela.tvSelectable || (tela.page.tipo !== "pmo-gestao-a-vista" && tela.page.tipo !== "gestao-vista-tipo2" && !paginaImplementada(tela.page)))
+  if (!tela.tvSelectable || (tela.page.tipo !== "pmo-gestao-a-vista" && tela.page.tipo !== "gestao-vista-tipo2" && tela.page.tipo !== "programacao-diaria"
+    && !paginaImplementada(tela.page)))
     return <ReportState title={`${tela.label} — indisponível`}>Esta tela ainda está em desenvolvimento e não tem conteúdo para exibir.</ReportState>;
   if (selection.length === 0) return <ReportState title="Item sem projeto" error>Configure o projeto desta tela.</ReportState>;
   // Tela de um projeto só: nunca combina (configurações válidas já têm um único projeto; isto é só defesa).
@@ -200,6 +228,8 @@ export function ConteudoTv({ screenId, selection }: { screenId: string; selectio
           ? <ViewGestaoAVista hub={projetos[0].hubId ?? ""} project={projetos[0].id} selection={projetos} />
           : tela.page.tipo === "gestao-vista-tipo2"
           ? <PaginaTipo2Tv slug={tela.page.slug} projectId={projetos[0].id} />
+          : tela.page.tipo === "programacao-diaria"
+          ? <GestaoVistaJamilePage selection={projetos} screen="programacao-diaria" dataReferencia={dataReferencia} />
           : <ConteudoPaginaProducao page={tela.page as ProductionPageImplementada} selection={projetos} />}
       </LimiteErroTv>
     </GuardaPermissaoTv>

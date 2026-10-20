@@ -10,12 +10,13 @@ import {enrichDocuments,type FactsReport} from "@/components/pmo/pmoFacts";
 import {ReportState} from "@/components/reports/ReportComponents";
 import {encontrarFolha,rotaProducao} from "../productionRoutes";
 import {ItemMenuTv,useNavegacaoTv} from "@/features/tv/tvNavegacao";
+import {dataReferenciaValida} from "@/features/tv/tvLogic";
 import {useLdpPorProjeto} from "./useLdpPorProjeto";
 import {
- FASES,addDias,agrupar,classificarDocumento,classificarProgramacao,criarCatalogo,diasDaSemana,entregasDaSemana,faseContagem,
+ FASES,addDias,agrupar,classificarDocumento,classificarProgramacao,criarCatalogo,faseContagem,
  faseHhPrevisto,faseTotalDocumentos,fasePrazos,hhLinha,performancePorDisciplina,recursosDistintos,rotulo,semanaDoCorte,
  deduplicarProgramacao,diaDaSemanaCurto,filtrarDia,atividadesPorDia,semanasVizinhasComProgramacao,
- semanasComEntregas,SEM_DISCIPLINA,type CatalogoDisciplinas,type DisciplinasNorma,type PhaseValues,type ProgramacaoLinha,
+ visaoGeralDaSemana,ldpParaEmissao,type ContagemVisaoGeral,SEM_DISCIPLINA,type CatalogoDisciplinas,type DisciplinasNorma,type PhaseValues,type ProgramacaoLinha,
  type ProgramacaoResposta,resumoProgramacao,ultimaSemanaComProgramacao,janelasDoPeriodo,mesclarJanelas
 } from "./gestaoVistaJamileLogic";
 import "./gestaoVistaJamile.css";
@@ -27,13 +28,15 @@ import {criarNormalizador} from "@/features/disciplinas/normalizadorSiglas";
 import {GerenciaEngenhariaItem3} from "./item3/GerenciaEngenhariaItem3";
 import {criarIndiceTitulosDocumentos,obterTituloDocumentoOficial} from "./item3/documentTitleIndex";
 
-export type JamileScreen="visao-geral"|"programacao"|"documentacao"|"indicadores";
+/** "programacao-diaria" = slide de TV (gestao-a-vista-programacao-diaria): UM projeto e UM dia salvos no slide; fora do menu. */
+export type JamileScreen="visao-geral"|"programacao"|"documentacao"|"indicadores"|"programacao-diaria";
 const SCREENS:{slug:JamileScreen;number:string;title:string}[]=[
  {slug:"visao-geral",number:"01",title:"VISÃO GERAL"},
  {slug:"programacao",number:"02",title:"PROGRAMAÇÃO"},
  {slug:"documentacao",number:"03",title:"DOCUMENTAÇÃO"},
  {slug:"indicadores",number:"04",title:"INDICADORES"}];
-const SUBTITLE:Record<JamileScreen,string>={"visao-geral":"PAINEL À VISTA",programacao:"PROGRAMAÇÃO SEMANAL",documentacao:"FLUXO DE DOCUMENTOS",indicadores:"INDICADOR DE PERFORMANCE"};
+const SUBTITLE:Record<JamileScreen,string>={"visao-geral":"PAINEL À VISTA",programacao:"PROGRAMAÇÃO SEMANAL",documentacao:"FLUXO DE DOCUMENTOS",indicadores:"INDICADOR DE PERFORMANCE",
+ "programacao-diaria":"PROGRAMAÇÃO DIÁRIA"};
 const TODAY=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Bahia"});
 const ACC_ID=/^b\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const GAUGES_POR_PAGINA=10;
@@ -111,68 +114,82 @@ function DiagnosticoNorma({normas,erro}:{normas:DisciplinasNorma[];erro:string|n
 }
 
 /* ---------------------------------------------------------------- 01. VISÃO GERAL */
-function Overview({reports,cutoff,cat,onCutoff}:{reports:FactsReport[];cutoff:string;cat:CatalogoDisciplinas;onCutoff:(d:string)=>void}){
- const prog=entregasDaSemana(reports,cat,cutoff);
- const dias=diasDaSemana(prog.semana.start).map(d=>({d,p:prog.entregas.filter(x=>x.data===d).length,e:prog.entregas.filter(x=>x.data===d&&x.emitido).length}));
- const maxDia=Math.max(1,...dias.map(x=>x.p));
- const porProjeto=[...agrupar(prog.entregas,x=>x.projectId)].map(([k,xs])=>({key:k,name:xs[0].projeto,planned:xs.length,actual:xs.filter(x=>x.emitido).length}));
- const porDisc=[...agrupar(prog.entregas,x=>x.chave)].map(([k,xs])=>({key:k,name:rotulo(cat,k),planned:xs.length,actual:xs.filter(x=>x.emitido).length}))
-  .sort((a,b)=>b.planned-a.planned||a.name.localeCompare(b.name,"pt-BR"));
+/** Linha das barras: documentos distintos (previstos) × emitidos comprovados; atividades e sem comprovação no tooltip. */
+const barraVisaoGeral=(key:string,name:string,c:ContagemVisaoGeral)=>({key,name,planned:c.documentos,actual:c.emitidos,
+ title:`${name} · ${c.documentos} documento(s) distinto(s) · ${c.atividades} atividade(s) · ${c.emitidos} emitido(s)${c.semComprovacao?` · ${c.semComprovacao} sem comprovação de emissão`:""}`});
+function Overview({reports,dados,selection,semana,cat,carregando,onSemana}:{reports:FactsReport[];dados:ProgramacaoResposta[];selection:PmoSelecionado[];
+ semana:{start:string;end:string};cat:CatalogoDisciplinas;carregando:boolean;onSemana:(d:string)=>void}){
+ // MESMA fonte da 02 (programação semanal por projeto); a LDP só concilia a emissão por projeto + código.
+ const vg=visaoGeralDaSemana({dados,projetos:selection,cat,semana,hoje:TODAY(),ldp:ldpParaEmissao(reports)});
+ const maxDia=Math.max(1,...vg.porDia.map(x=>x.documentos));
+ const porProjeto=vg.porProjeto.map(p=>barraVisaoGeral(p.projectId,p.documentos?p.nome:`${p.nome} — sem programação na semana`,p));
+ const porDisc=vg.porDisciplina.map(d=>barraVisaoGeral(d.chave,d.nome,d));
  const [pagina,setPagina]=useState(0);
- const paginas=Math.max(1,Math.ceil(porDisc.length/GAUGES_POR_PAGINA));
- const visiveis=porDisc.slice(Math.min(pagina,paginas-1)*GAUGES_POR_PAGINA,(Math.min(pagina,paginas-1)+1)*GAUGES_POR_PAGINA);
- const semanas=prog.previstos?[]:semanasComEntregas(reports);
- const proxima=semanas.find(s=>s>prog.semana.start),anterior=[...semanas].reverse().find(s=>s<prog.semana.start);
- const vazio=!prog.previstos&&<Empty>Nenhuma entrega prevista entre {br(prog.semana.start)} e {br(prog.semana.end)}.
-  {anterior&&<button onClick={()=>onCutoff(anterior)}>Semana anterior com programação: {br(anterior)}</button>}
-  {proxima&&<button onClick={()=>onCutoff(proxima)}>Próxima semana com programação: {br(proxima)}</button>}</Empty>;
+ const paginas=Math.max(1,Math.ceil(vg.porDisciplina.length/GAUGES_POR_PAGINA));
+ const visiveis=vg.porDisciplina.slice(Math.min(pagina,paginas-1)*GAUGES_POR_PAGINA,(Math.min(pagina,paginas-1)+1)*GAUGES_POR_PAGINA);
+ const vizinhas=semanasVizinhasComProgramacao(dados.flatMap(d=>d.datasComProgramacao.map(x=>x.data)),semana);
+ const semProva=vg.semComprovacao>0;
+ const vazio=!vg.documentos&&<Empty>{carregando?"Carregando a programação semanal…":`Nenhuma atividade programada entre ${br(semana.start)} e ${br(semana.end)} nos ${selection.length} projeto(s).`}
+  {!carregando&&vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
+  {!carregando&&vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}</Empty>;
+ const legenda:[string,string][]=[["gv-dot-navy","Documentos programados"],["gv-dot-teal","Emitidos (LDP)"]];
  return <>
   <div className="gv-kpis gv-five">
-   <Tile title="ENTREGÁVEIS PREVISTOS" value={String(prog.previstos)}/>
-   <Tile title="REALIZADOS" value={prog.realizados?String(prog.realizados):"--"}/>
-   <Tile title="EM ATRASO" value={String(prog.atrasados)}/>
-   <Tile title="%ADERÊNCIA À PROGRAMAÇÃO" value={percent(prog.aderencia)}/>
-   <Tile title="%DESVIO DA PROGRAMAÇÃO" value={percent(prog.desvio)}/>
+   <Tile title="DOCUMENTOS PROGRAMADOS NA SEMANA" value={carregando?"…":String(vg.documentos)}/>
+   <Tile title="EMITIDOS ATÉ O FIM DA SEMANA" value={carregando?"…":String(vg.emitidos)}/>
+   <Tile title="EM ATRASO" value={carregando?"…":String(vg.atrasados)}/>
+   <Tile title="%ADERÊNCIA À PROGRAMAÇÃO" value={carregando?"…":percent(vg.aderencia)}/>
+   <Tile title="%DESVIO DA PROGRAMAÇÃO" value={carregando?"…":percent(vg.desvio)}/>
   </div>
+  {!carregando&&vg.documentos>0&&<p className="gv-rule" data-testid="gv-vg-contagem">{vg.documentos} documento(s) distinto(s) (projeto + código) em {vg.atividades} atividade(s) programada(s)
+   {vg.repetidos>0&&<>; {vg.repetidos} registro(s) repetido(s) da importação contado(s) uma vez</>}.
+   {" "}Conciliação com a LDP: {vg.emitidos} emitido(s), {vg.pendentes} não emitido(s){semProva&&<>, <b>{vg.semComprovacao} sem comprovação</b> ({vg.motivos.map(m=>`${m.motivo}: ${m.quantidade}`).join("; ")})</>}.
+   {semProva&&<> Aderência e desvio ficam indisponíveis enquanto houver documento sem comprovação de emissão.</>}</p>}
   <div className="gv-overview">
    <Section title="EVOLUÇÃO DIÁRIA DA PROGRAMAÇÃO" cls="gv-ov-evolution">
-    <Legend items={[["gv-dot-sky","Previstos"],["gv-dot-navy","Emitidos"]]}/>
-    {prog.previstos?<div className="gv-columns">{dias.map(x=><div key={x.d} className="gv-col" title={`${br(x.d)} · Previstos ${x.p} · Emitidos ${x.e}`}>
+    <Legend items={[["gv-dot-sky","Documentos programados no dia"],["gv-dot-navy","Emitidos"]]}/>
+    {vg.documentos?<div className="gv-columns">{vg.porDia.map(x=><div key={x.data} className="gv-col" title={`${br(x.data)} · ${x.documentos} documento(s) · ${x.atividades} atividade(s) · Emitidos ${x.emitidos}`}>
       <div className="gv-col-bars">
-       <span className="gv-bar-sky" style={{height:`${x.p/maxDia*100}%`}}>{x.p>0&&<b>{x.p}</b>}</span>
-       <span className="gv-bar-navy" style={{height:`${x.e/maxDia*100}%`}}>{x.e>0&&<b>{x.e}</b>}</span>
+       <span className="gv-bar-sky" style={{height:`${x.documentos/maxDia*100}%`}}>{x.documentos>0&&<b>{x.documentos}</b>}</span>
+       <span className="gv-bar-navy" style={{height:`${x.emitidos/maxDia*100}%`}}>{x.emitidos>0&&<b>{x.emitidos}</b>}</span>
       </div>
-      <small>{DIA[new Date(x.d+"T12:00:00Z").getUTCDay()]} {x.d.slice(8)}/{x.d.slice(5,7)}</small>
+      <small>{DIA[new Date(x.data+"T12:00:00Z").getUTCDay()]} {x.data.slice(8)}/{x.data.slice(5,7)}</small>
      </div>)}</div>:vazio}
    </Section>
-   <Section title="ATIVIDADES/DOCUMENTOS POR PROJETO" cls="gv-ov-project">
-    <Legend items={[["gv-dot-navy","Previstos"],["gv-dot-teal","Emitidos"]]}/>
-    {porProjeto.length?<HBars rows={porProjeto} max={Math.max(1,...porProjeto.map(x=>x.planned))}/>:<Empty>Sem entregas na semana.</Empty>}
+   <Section title={`DOCUMENTOS POR PROJETO (${selection.length})`} cls="gv-ov-project">
+    <Legend items={legenda}/>
+    <HBars rows={porProjeto} max={Math.max(1,...porProjeto.map(x=>x.planned))}/>
    </Section>
-   <Section title="ATIVIDADES/DOCUMENTOS POR DISCIPLINA" cls="gv-ov-discipline">
-    <Legend items={[["gv-dot-navy","Previstos"],["gv-dot-teal","Emitidos"]]}/>
-    {porDisc.length?<HBars rows={porDisc} max={Math.max(1,...porDisc.map(x=>x.planned))}/>:<Empty>Sem entregas na semana.</Empty>}
+   <Section title="DOCUMENTOS POR DISCIPLINA" cls="gv-ov-discipline">
+    <Legend items={legenda}/>
+    {porDisc.length?<HBars rows={porDisc} max={Math.max(1,...porDisc.map(x=>x.planned))}/>:<Empty>Sem programação na semana.</Empty>}
    </Section>
    <Section title="% EMISSÃO POR DISCIPLINA" cls="gv-ov-gauges">
-    {porDisc.length?<div className="gv-gauge-grid">{visiveis.map(x=><Gauge key={x.key} title={x.name} value={x.planned?x.actual/x.planned*100:null}
-      fracao={`${x.actual} de ${x.planned}`}
-      detail={`${x.name}: ${x.actual} emitido(s) de ${x.planned} previsto(s) na semana`}/>)}</div>:<Empty>Sem entregas previstas na semana.</Empty>}
+    {porDisc.length?<div className="gv-gauge-grid">{visiveis.map(x=><Gauge key={x.chave} title={x.nome}
+      value={x.documentos&&!x.semComprovacao?x.emitidos/x.documentos*100:null}
+      fracao={`${x.emitidos} de ${x.documentos}${x.semComprovacao?` · ${x.semComprovacao} s/ comprov.`:""}`}
+      detail={`${x.nome}: ${x.emitidos} emitido(s) de ${x.documentos} documento(s) programado(s) na semana${x.semComprovacao?`; ${x.semComprovacao} sem comprovação de emissão (percentual indisponível)`:""}`}/>)}</div>:<Empty>Sem programação na semana.</Empty>}
     {paginas>1&&<div className="gv-pager"><button disabled={pagina<=0} onClick={()=>setPagina(p=>p-1)} aria-label="Página anterior"><ChevronLeft size={14}/></button>
      <span>{Math.min(pagina,paginas-1)+1}/{paginas}</span>
      <button disabled={pagina>=paginas-1} onClick={()=>setPagina(p=>p+1)} aria-label="Próxima página"><ChevronRight size={14}/></button></div>}
    </Section>
   </div>
-  <p className="gv-rule">Semana oficial domingo–sábado. Os indicadores consolidados mostram atividades e documentos no período selecionado, agrupados por disciplina; não são exibidas subdivisões por fase ou gate.</p>
+  <p className="gv-rule">Fonte: programação semanal (mesma da 02. PROGRAMAÇÃO), semana domingo–sábado; o sábado é o corte. Documento = projeto + código
+   (várias atividades do mesmo documento contam uma vez; atividade sem código conta como item próprio). Emitido = emissão oficial da LDP do mesmo
+   projeto e código (status aprovado ou data de emissão) até o fim da semana. Em atraso = não emitido cuja última atividade programada já passou
+   {vg.limiteAtraso<=semana.end?` (semana em curso: datas anteriores a ${br(vg.limiteAtraso)})`:""}. Sem fases ou gates.</p>
  </>;
 }
 
 /* ---------------------------------------------------------------- 02. PROGRAMAÇÃO */
 type ProgLinha=ProgramacaoLinha&{projectId:string};
 const cobertura=(xs:readonly ProgLinha[],f:(l:ProgLinha)=>string|null)=>`${xs.filter(l=>(f(l)??"").trim()!=="").length}/${xs.length}`;
-function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,historico=false}:{reports:FactsReport[];semana:{start:string;end:string};dia:string|null;
+function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,historico=false,diario=false}:{reports:FactsReport[];semana:{start:string;end:string};dia:string|null;
  cat:CatalogoDisciplinas;dados:ProgramacaoResposta[];erro:string|null;carregando:boolean;onSemana:(data:string)=>void;
  /** Modo histórico: TODAS as atividades importadas com a data real de cada uma (semana = período disponível). */
- historico?:boolean}){
+ historico?:boolean;
+ /** Programação Diária da TV: somente o dia do slide (dia obrigatório), sem agrupamento por dia nem navegação de semana. */
+ diario?:boolean}){
  const [agruparDia,setAgruparDia]=useState(true);
  const noPeriodo=(d:string|null|undefined)=>!!d&&d>=semana.start&&d<=semana.end&&(!dia||d===dia);
  // Semana inteira (domingo–sábado) sem repetições; o filtro de dia é opcional e só recorta a semana já carregada.
@@ -203,27 +220,27 @@ function Programming({reports,semana,dia,cat,dados,erro,carregando,onSemana,hist
  // Item 3 (Codex): Semana Completa no topo (largura total, com título do documento) e, abaixo, Entregáveis × HH por disciplina.
  return <div className="gv-program-item3" style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,gap:"1em"}}>
   <div className="gv-kpis gv-three">
-   <Tile title={historico?"DOCUMENTOS IMPORTADOS COM DATA":"DOCUMENTOS DA SEMANA"} value={String(totalDocumentos)}/>
+   <Tile title={historico?"DOCUMENTOS IMPORTADOS COM DATA":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA"} value={String(totalDocumentos)}/>
    <Tile title={dia?"HH PLANEJADO DO DIA":"HH PLANEJADO DA SEMANA"} value={fmt2(totalHh)}/>
    <Tile title="RECURSOS" value={linhas.length?String(recursosDistintos(linhas)):"—"}/>
   </div>
-  {itensSemHh>0&&<p className="gv-rule" role="status">HH planejado {totalHh===null?"não informado":"parcial"}: {itensSemHh} atividade(s) sem horas na programação semanal. O total considera apenas os HH disponíveis da semana.</p>}
+  {itensSemHh>0&&<p className="gv-rule" role="status">HH planejado {totalHh===null?"não informado":"parcial"}: {itensSemHh} atividade(s) sem horas na programação semanal. O total considera apenas os HH disponíveis {diario?"do dia":"da semana"}.</p>}
   <GerenciaEngenhariaItem3
    itens={itens.map(x=>({key:x.key,data:x.data,dia:`${diaDaSemanaCurto(x.data)} ${brCurta(x.data).slice(0,5)}`,disciplina:rotulo(cat,x.chave),
     codigoDocumento:x.codigo,tituloDocumento:x.tituloDocumento,elaborador:x.elaborador,verificador:x.verificador,aprovador:x.aprovador,situacao:x.status,hhPrevisto:x.hh}))}
    grupos={grupos.map(x=>({key:x.key,nome:x.name,entregaveis:x.planned,hh:x.hh}))}
-   agruparPorDia={agruparDia}
-   onAgruparPorDia={setAgruparDia}
-   descricaoPeriodo={dia?`Filtro: ${diaDaSemanaCurto(dia)} ${br(dia)}`:historico?`Datas reais de ${br(semana.start)} a ${br(semana.end)} — não é a semana atual`:`${br(semana.start)} a ${br(semana.end)}`}
-   titulo={historico?"TODAS AS ATIVIDADES IMPORTADAS":"DOCUMENTOS DA SEMANA"}
+   agruparPorDia={diario?false:agruparDia}
+   onAgruparPorDia={diario?undefined:setAgruparDia}
+   descricaoPeriodo={diario&&dia?`${diaDaSemanaCurto(dia)} ${br(dia)}`:dia?`Filtro: ${diaDaSemanaCurto(dia)} ${br(dia)}`:historico?`Datas reais de ${br(semana.start)} a ${br(semana.end)} — não é a semana atual`:`${br(semana.start)} a ${br(semana.end)}`}
+   titulo={historico?"TODAS AS ATIVIDADES IMPORTADAS":diario?"DOCUMENTOS DO DIA":"DOCUMENTOS DA SEMANA"}
    carregando={carregando}
    mensagemVazia={<Empty>
     {registros?`Nenhuma atividade programada para ${periodo} (${registros} registro(s) na programação do projeto).`:"O projeto não possui programação semanal importada."}
-    {!historico&&vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
-    {!historico&&vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}
+    {!historico&&!diario&&vizinhas.anterior&&<button onClick={()=>onSemana(vizinhas.anterior!.start)}>Semana anterior com programação: {br(vizinhas.anterior.start)} a {br(vizinhas.anterior.end)}</button>}
+    {!historico&&!diario&&vizinhas.proxima&&<button onClick={()=>onSemana(vizinhas.proxima!.start)}>Próxima semana com programação: {br(vizinhas.proxima.start)} a {br(vizinhas.proxima.end)}</button>}
    </Empty>}
    aviso={erro?<p className="gv-warning">Programação detalhada indisponível ({erro}); exibindo datas-alvo da LDP, sem responsáveis.</p>:undefined}
-   rodape={!erro&&dados.length>0?<p className="gv-rule">Fonte: programação semanal (data da atividade = Reprogramada › Baseline), semana domingo a sábado. HH previsto = elaboração + verificação + aprovação. TBD não conta como recurso.
+   rodape={!erro&&dados.length>0?<p className="gv-rule">Fonte: programação semanal (data da atividade = Reprogramada › Baseline), {diario&&dia?`somente as atividades de ${br(dia)} (sem agregação da semana)`:"semana domingo a sábado"}. HH previsto = elaboração + verificação + aprovação. TBD não conta como recurso.
     {semanaDedup.repetidos>0&&<> {semanaDedup.repetidos} registro(s) repetido(s) (mesmo documento, tarefa, fase e dia) contado(s) uma vez.</>}
     {linhas.length>0&&<> Preenchimento na planilha semanal: elaborador {cobertura(linhas,l=>l.elaborador)}, verificador {cobertura(linhas,l=>l.verificador)}, aprovador {cobertura(linhas,l=>l.aprovador)}, situação {cobertura(linhas,l=>l.status)}. "—" = campo vazio na fonte (Recurso / Weekly_Responsible_Verification / Weekly_Responsible_Approval / Weekly_Progress_Status).</>}
     {" "}Título do documento = LDP (Document_Title) do mesmo projeto e código; "—" = sem título na LDP.</p>:undefined}
@@ -378,7 +395,8 @@ function useNormas(ids:string[]){
 interface FalhaProjeto{projectId:string;projectName:string;message:string}
 function useProgramacao(selection:PmoSelecionado[],inicio:string,fim:string,ativo:boolean){
  const chave=JSON.stringify(selection.map(p=>[p.id,p.name]));
- const [estado,setEstado]=useState<{dados:ProgramacaoResposta[];erro:string|null;falhas:FalhaProjeto[];carregando:boolean}>({dados:[],erro:null,falhas:[],carregando:false});
+ // carregando começa em `ativo`: a 01/02 nunca exibem "sem programação" antes da primeira consulta.
+ const [estado,setEstado]=useState<{dados:ProgramacaoResposta[];erro:string|null;falhas:FalhaProjeto[];carregando:boolean}>({dados:[],erro:null,falhas:[],carregando:ativo});
  const [tentativa,setTentativa]=useState(0);
  useEffect(()=>{
   if(!ativo)return;
@@ -436,15 +454,21 @@ function ConsolidacaoIncompleta({falhas,total,onRetry}:{falhas:FalhaProjeto[];to
  </div>;
 }
 
-export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoSelecionado[];screen:JamileScreen}){
+export default function GestaoVistaJamilePage({selection,screen,dataReferencia=null}:{selection:PmoSelecionado[];screen:JamileScreen;
+ /** Só "programacao-diaria": dia (YYYY-MM-DD) salvo no slide da TV. Ausente/inválido = aviso; nunca vira "hoje". */
+ dataReferencia?:string|null}){
  const {reports,falhas,loading,error,retry}=usePmoReports("gestao-vista",{hub:"",project:"",selection});
  const ldp=useLdpPorProjeto(selection);
  const ids=useMemo(()=>selection.map(x=>x.id),[selection]);
  const normas=useNormas(ids);
  const [cutoff,setCutoff]=useState(TODAY);
- const valid=/^\d{4}-\d{2}-\d{2}$/.test(cutoff)?cutoff:TODAY(),week=semanaDoCorte(valid);
- // 02: semana oficial (domingo–sábado) da data escolhida; filtro opcional de um dia dentro dela.
- const prog=useProgramacao(selection,week.start,week.end,screen==="programacao");
+ // Programação Diária (TV): o dia vem do slide; sem data válida nada é consultado (nunca cai em "hoje").
+ const diaria=screen==="programacao-diaria";
+ const diaFixo=diaria&&dataReferenciaValida(dataReferencia)?dataReferencia:null;
+ const valid=diaFixo??(/^\d{4}-\d{2}-\d{2}$/.test(cutoff)?cutoff:TODAY()),week=semanaDoCorte(valid);
+ // 01 e 02: MESMA fonte — programação semanal oficial (domingo–sábado) de cada projeto; na 02, filtro opcional de um dia.
+ // Diária: o MESMO endpoint semanal, filtrado exatamente no dia do slide.
+ const prog=useProgramacao(selection,week.start,week.end,screen==="programacao"||screen==="visao-geral"||diaFixo!==null);
  const [diaFiltro,setDiaFiltro]=useState<string|null>(null);
  // "todas" = modo histórico (todas as atividades importadas, data real); qualquer navegação de semana volta ao modo semana.
  const [,setModoProg]=useState<ModoProgramacao>("semana");
@@ -469,6 +493,10 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
  const falhasTela:FalhaProjeto[]=[
   ...falhas,
   ...(screen==="programacao"&&prog.falhas.length<selection.length?prog.falhas:[]),
+  // 01: sem fallback — qualquer projeto sem programação carregada bloqueia os números (nunca total parcial como total).
+  ...(screen==="visao-geral"?prog.falhas:[]),
+  // Diária: um projeto, sem fallback para a LDP — falha mostra o erro e o botão de nova tentativa.
+  ...(diaria?prog.falhas:[]),
   ...(historico?todas.falhas:[]),
   ...((screen==="documentacao"||screen==="indicadores")&&ldp.erro&&!ldp.carregando
    ?[{projectId:"__ldp__",projectName:"Aba LDP (fases 30/60/90)",message:ldp.erro}]:[]),
@@ -482,7 +510,10 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
   ?<ProgramacaoImportada dados={prog.dados} selection={selection} reports={reports as FactsReport[]} cat={cat} semana={week} modo={historico?"todas":"semana"}
     onSemana={irParaSemana} onModo={setModoProg}/>:null;
  let content:ReactNode;
- if(loading||normas.carregando||siglas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
+ if(diaria&&!diaFixo)content=<ReportState title="Programação Diária sem data de referência" error>
+  {dataReferencia?`A data "${dataReferencia}" deste slide não é uma data válida (AAAA-MM-DD).`:"Este slide não tem data de referência."} Configure-a em
+  Configurações → Configuração de Telas para TV. A data de hoje nunca é usada no lugar.</ReportState>;
+ else if(loading||normas.carregando||siglas.carregando)content=<ReportState title="Carregando Gestão à Vista…">Consultando os dados do projeto.</ReportState>;
  else if(error)content=<ReportState title={error} error><button className="gv-link" onClick={retry}>Tentar novamente</button></ReportState>;
  else if(falhasTela.length>0)content=<ConsolidacaoIncompleta falhas={falhasTela} total={selection.length} onRetry={()=>{retry();prog.retry();todas.retry();}}/>;
  else if(porProjetoFase){
@@ -499,10 +530,12 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
  else{
   const fr=reports as FactsReport[];
   content=<>
-   {screen==="visao-geral"&&<Overview reports={fr} cutoff={week.end} cat={cat} onCutoff={setCutoff}/>}
+   {screen==="visao-geral"&&<Overview reports={fr} dados={prog.dados} selection={selection} semana={week} cat={cat} carregando={prog.carregando} onSemana={setCutoff}/>}
    {screen==="programacao"&&exibirDiagnosticoImportacao&&importada}
    {screen==="programacao"&&<Programming reports={fr} semana={semanaProg} dia={dia} cat={cat} dados={dadosProg} erro={prog.erro}
     carregando={prog.carregando||(historico&&todas.carregando)} onSemana={irParaSemana} historico={historico}/>}
+   {diaria&&diaFixo&&<Programming reports={fr} semana={week} dia={diaFixo} cat={cat} dados={prog.dados} erro={null}
+    carregando={prog.carregando} onSemana={()=>undefined} diario/>}
    {screen==="documentacao"&&<Documentation reports={fr} ldp={ldp} cat={cat}/>}
    {screen==="indicadores"&&<Indicators reports={fr} cutoff={valid} ldp={ldp} cat={cat}/>}
    {consolidado&&<p className="gv-rule" data-testid="gv-normalizador">{siglas.aviso??(normalizador?.ativo
@@ -541,6 +574,11 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
      <label><small>IR PARA DATA</small>
       <span className="gv-date-input"><input type="date" value={valid} onChange={e=>e.target.value&&irParaSemana(e.target.value)}/></span></label>
     </div>}
+    {diaria&&<div className="gv-date" aria-label="Dia de referência da programação diária">
+     <CalendarDays className="gv-date-icon" aria-hidden/>
+     <div><small>DIA DE REFERÊNCIA</small>
+      <span className="gv-date-input"><b data-testid="gv-dia-referencia">{diaFixo?`${diaDaSemanaCurto(diaFixo)} ${br(diaFixo)}`:"SEM DATA"}</b></span></div>
+    </div>}
     {screen==="visao-geral"&&<div className="gv-date gv-date-semana" aria-label="Semana de referência da visão geral">
      <CalendarDays className="gv-date-icon" aria-hidden/>
      <div><small>SEMANA DE REFERÊNCIA</small>
@@ -561,7 +599,7 @@ export default function GestaoVistaJamilePage({selection,screen}:{selection:PmoS
       </span></label>
     </div>}
    </header>
-   <main className={"gv-content gv-content-"+screen}>{content}</main>
+   <main className={"gv-content gv-content-"+screen+(diaria?" gv-content-programacao":"")}>{content}</main>
   </div>
  </div>;
 }

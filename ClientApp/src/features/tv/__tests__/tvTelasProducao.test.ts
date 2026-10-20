@@ -39,7 +39,8 @@ const TIPO2 = ["gestao-vista-tipo2-resumo-30", "gestao-vista-tipo2-resumo-60", "
 
 test("Catálogo = TODAS as folhas do Controle de Produção (inclusive fora do menu) + 10 Gestão à Vista Tipo 2 + painel PMO antigo; ids únicos", () => {
   const folhas = folhasProducao();
-  assert.equal(TELAS_TV.length, folhas.length + TIPO2.length + 1);
+  // + Programação Diária (19/10/2026, só TV — tvProgramacaoDiaria.test.ts) + painel PMO antigo.
+  assert.equal(TELAS_TV.length, folhas.length + TIPO2.length + 2);
   assert.deepEqual(TELAS_TV.filter((t) => t.categoria === "Gestão à Vista Tipo 2").map((t) => t.id), TIPO2);
   for (const f of folhas) {
     const t = getTelaTv(idTelaTv(f));
@@ -78,8 +79,9 @@ test("Telas pedidas: principais, produção, lançamentos, análise financeira e
     { tipo: "jamile", screen: "indicadores" }, { tipo: "jamile-disciplina", mode: "hh" }, { tipo: "jamile-disciplina", mode: "custo" }]);
   assert.ok(JAMILE.every((id) => getTelaTv(id)?.categoria === "Gestão à Vista"));
   // 31 do Controle de Produção + painel PMO (antes de 19/10/2026) + 10 Gestão à Vista Tipo 2.
-  assert.equal(TELAS_TV_SELECIONAVEIS.length, 41);
-  assert.equal(TELAS_TV_SELECIONAVEIS.filter((t) => !TIPO2.includes(t.id)).length, 31);
+  // + Programação Diária (19/10/2026, só TV).
+  assert.equal(TELAS_TV_SELECIONAVEIS.length, 42);
+  assert.equal(TELAS_TV_SELECIONAVEIS.filter((t) => !TIPO2.includes(t.id)).length, 32);
 });
 
 test("Em desenvolvimento: no catálogo como indisponível, nunca selecionável nem aceito na validação", () => {

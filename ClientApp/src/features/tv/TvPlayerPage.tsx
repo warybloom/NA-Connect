@@ -10,7 +10,7 @@ import { ThemeLogo } from "@/features/theme/ThemeLogo";
 import { ConteudoTv, getTelaTv } from "./tvScreens";
 import { usePermissions } from "@/features/permissions/PermissionProvider";
 import { carregarConfiguracaoTv } from "./tvApi";
-import { escolherApresentacao, projetosDoSlide, proximoIndice, resumoProjetosSlide, tvAtiva, type TvPresentation } from "./tvLogic";
+import { escolherApresentacao, formatarDataReferencia, projetosDoSlide, proximoIndice, resumoProjetosSlide, tvAtiva, type TvPresentation } from "./tvLogic";
 import { sairDaTelaCheia, useTelaCheia, type DocumentoTelaCheia } from "./telaCheia";
 import { NavegacaoTvProvider, destinoNaApresentacao, type NavegacaoTv } from "./tvNavegacao";
 
@@ -131,7 +131,9 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
         <div className="min-w-0 max-w-[28%] flex-1">
           <p className="truncate text-sm font-black tracking-tight" data-testid="tv-identificacao"
             title={`Configuração: ${apresentacao.name} · id ${apresentacao.id}`}>{apresentacao.name}</p>
-          <p className="truncate text-[11px] font-medium text-muted-foreground" title={resumoProjetosSlide(slide).completo}>{resumoProjetosSlide(slide).texto}</p>
+          <p className="truncate text-[11px] font-medium text-muted-foreground" title={resumoProjetosSlide(slide).completo} data-testid="tv-escopo-slide">
+            {resumoProjetosSlide(slide).texto}{def?.exigeDataReferencia && slide.dataReferencia ? ` · ${formatarDataReferencia(slide.dataReferencia)}` : ""}
+          </p>
         </div>
         <h1 className="pointer-events-none absolute left-1/2 top-1/2 max-w-[40%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-xl font-bold uppercase tracking-wide text-foreground"
           data-testid="tv-tela-atual">
@@ -162,8 +164,9 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
             trocar de slide remonta a tela e nenhuma seleção anterior vaza. */}
         <NavegacaoTvProvider valor={navegacaoTv}>
           <ConteudoTv
-            key={`${indice}-${slide.screenId}-${projetosDoSlide(slide).map((p) => p.projectId).join("+")}`}
+            key={`${indice}-${slide.screenId}-${projetosDoSlide(slide).map((p) => p.projectId).join("+")}-${slide.dataReferencia ?? ""}`}
             screenId={slide.screenId}
+            dataReferencia={def?.exigeDataReferencia ? slide.dataReferencia ?? null : null}
             selection={projetosDoSlide(slide).map((p) => ({ id: p.projectId, hubId: p.hubId, name: p.projectName ?? p.projectId }))}
           />
         </NavegacaoTvProvider>
