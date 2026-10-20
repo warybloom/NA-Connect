@@ -127,24 +127,11 @@ namespace APS.WebApp.Services
         if (string.IsNullOrWhiteSpace(label))
             continue;
 
-        // 3) Normaliza/mapeia para o padrão da LDP
-        string upper = label.ToUpperInvariant();
-
-        // Rejeitado
-        if (upper.Contains("REJEIT") || upper.Contains("REJECT"))
-            return "REJEITADO";
-
-        // Aprovado com comentário/observação
-        if (upper.Contains("COMENT") || upper.Contains("COMMENT") || upper.Contains("OBS"))
-            return "APROV. C/ OBS";
-
-        // Aprovado
-        if (upper.Contains("APROV") || upper.Contains("APPROV"))
-            return "APROVADO";
-
-        // fallback seguro: devolve o label em PT/EN “como veio” (se quiser)
-        // mas eu recomendo manter padrão:
-        return "APROVADO";
+        // Campo de sistema "Status da revisão" do ACC (approveStatus.label) — devolvido EXATAMENTE como
+        // veio (idioma, acentos, maiúsculas/minúsculas). Nunca traduzido, nunca normalizado, nunca
+        // mapeado para um valor hardcoded ("APROVADO"/"REJEITADO"/etc.): um Review em inglês retornando
+        // "Approved" deve chegar como "Approved" na LDP, nunca "Aprovado".
+        return label;
     }
 
     // _logger?.LogDebug($"[Resolver] Doc '{docCodeExcel}' teve reviews fechadas, mas nenhuma versão trouxe approveStatus.");

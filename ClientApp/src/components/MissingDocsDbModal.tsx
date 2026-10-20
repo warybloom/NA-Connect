@@ -1,20 +1,20 @@
-// Caminho: src/components/MissingDocsDbModal.tsx (VERSÃO SHADCN/UI)
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from "./ui/dialog"; // ✅ Caminho corrigido para relativo
+import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
+import { FileWarning } from "lucide-react";
+import { cn } from "../lib/utils";
 
-import React from 'react';
-// Importa os componentes necessários do Shadcn/UI
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription, // Usaremos para a descrição
-  DialogFooter
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Para a lista rolável
-import { FileWarning } from 'lucide-react'; // Ícone para destaque (opcional)
-
-// --- Interface para as props (inalterada) ---
+/**
+ * Interface para a listagem de inconsistências entre a LDP e o Banco de Dados.
+ * Utilizada após a execução do método UpdateLdpFromDatabase.
+ */
 interface MissingDocsDbModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,46 +22,58 @@ interface MissingDocsDbModalProps {
 }
 
 export function MissingDocsDbModal({ isOpen, onClose, documents }: MissingDocsDbModalProps) {
-  // Não renderiza nada se não estiver aberto (inalterado)
-  // O controle `open` e `onOpenChange` do Dialog lida com isso internamente também
-  // if (!isOpen) {
-  //   return null; 
-  // }
-
   return (
-    // Usa o Dialog do Shadcn para controlar a abertura/fechamento
-    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      {/* sm:max-w-[600px] define uma largura máxima similar aos outros modais */}
-      <DialogContent className="sm:max-w-[600px] bg-card border-border flex flex-col max-h-[85vh]"> {/* Adiciona flexbox e max-height */}
+    <Dialog 
+      open={isOpen} 
+      // ✅ CORREÇÃO: Tipagem explícita 'boolean' para evitar o erro 'Unexpected any'
+      onOpenChange={(open: boolean) => !open && onClose()}
+    >
+      {/* Aplicada a classe glass-card para manter o padrão visual do Dashboard e Files */}
+      <DialogContent className="sm:max-w-[600px] flex flex-col max-h-[85vh] glass-card border-border/50">
         <DialogHeader>
-          <DialogTitle className="flex items-center"> {/* Alinha ícone e título */}
-            <FileWarning className="w-5 h-5 mr-2 text-destructive" /> {/* Ícone de aviso */}
-            Documentos da LDP Não Encontrados no Banco
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+            <FileWarning className="w-5 h-5 text-destructive" />
+            Inconsistência de Dados (Banco)
           </DialogTitle>
-          <DialogDescription>
-            Os seguintes documentos listados na LDP não tiveram correspondência no banco de dados para atualização do HH Realizado:
+          <DialogDescription className="text-muted-foreground">
+            Os seguintes documentos listados na LDP do projeto não possuem registro correspondente no banco de dados corporativo:
           </DialogDescription>
         </DialogHeader>
 
-        {/* Área rolável para a lista de documentos */}
-        {/* Adiciona my-4 para espaçamento vertical e flex-grow para ocupar espaço */}
-        <ScrollArea className="h-auto max-h-[50vh] w-full rounded-md border p-4 my-4 flex-grow bg-muted/30"> {/* Ajusta altura e fundo */}
-           {documents && documents.length > 0 ? (
-             <ul className="list-disc pl-5 space-y-1"> {/* Adiciona espaço entre itens */}
-               {documents.map((doc, index) => (
-                 <li key={index} className="text-sm text-muted-foreground"> {/* Estilo do texto */}
+        
+
+        <ScrollArea className="h-auto max-h-[50vh] w-full rounded-md border border-border/50 bg-background/40 p-4 my-4 flex-grow custom-scrollbar">
+          {documents && documents.length > 0 ? (
+            <ul className="space-y-2">
+              {/* Mapeamento seguro das strings recebidas do DataController */}
+              {documents.map((doc, i) => (
+                <li 
+                  key={`${doc}-${i}`} 
+                  className="text-sm text-muted-foreground bg-muted/20 px-3 py-2 rounded border-l-2 border-primary/50 transition-colors hover:bg-muted/30"
+                >
+                  <span className="font-mono text-[11px] opacity-70 mr-2">DOC:</span>
                   {doc}
-                 </li>
-               ))}
-             </ul>
-           ) : (
-             <p className="text-sm text-muted-foreground text-center">Nenhum documento não encontrado reportado.</p> // Fallback
-           )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 opacity-50">
+              <p className="text-sm text-muted-foreground font-medium">Nenhuma inconsistência encontrada.</p>
+            </div>
+          )}
         </ScrollArea>
 
-        {/* Rodapé padrão com o botão de fechar */}
-        <DialogFooter className="mt-auto"> {/* Garante que o rodapé fique no fundo */}
-          <Button onClick={onClose}>Fechar</Button>
+        <DialogFooter className="gap-2">
+          <p className="mr-auto text-[10px] text-muted-foreground/50 uppercase tracking-widest hidden sm:block">
+            Forges Sync Connect • Data Integrity
+          </p>
+          <Button 
+            onClick={onClose}
+            className="font-bold min-w-[120px] shadow-lg shadow-primary/10"
+            title="Fechar relatório de inconsistências"
+          >
+            ENTENDIDO
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

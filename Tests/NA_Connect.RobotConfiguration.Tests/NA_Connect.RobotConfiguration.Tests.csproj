@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
+    <Using Include="Xunit" /><Using Include="Microsoft.Extensions.Configuration" /><Using Include="Microsoft.Extensions.Logging" /><Using Include="Microsoft.AspNetCore.Http" />
+    <Compile Include="../../Services/RobotRun/*.cs" Link="Services/%(Filename)%(Extension)" />
+    <Compile Include="../../Controllers/RobotRunController.cs" Link="RobotRunController.cs" />
+    <Compile Include="../../Controllers/RobotConfigurationController.cs" Link="RobotConfigurationController.cs" />
+    <Compile Include="../../Services/Reports/WeeklyReport.cs" Link="ExistingAccessContract.cs" />
+    <Compile Include="../../Services/Permissions/PermissionContracts.cs" Link="Permissions/PermissionContracts.cs" />
+    <Compile Include="../../Services/Permissions/RequirePermissionAttribute.cs" Link="Permissions/RequirePermissionAttribute.cs" />
+  </ItemGroup>
+</Project>

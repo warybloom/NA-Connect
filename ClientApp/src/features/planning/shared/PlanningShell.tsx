@@ -1,0 +1,9 @@
+import { useEffect, useState } from 'react';
+import { DEMO_PROJECTS } from './constants';
+import { dateLabel } from './utils';
+import type { PlanningWeek } from './types';
+import './planning.css';
+export function PlanningShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) { return <main className="planning-workspace"><header className="planning-heading"><div><p className="planning-eyebrow">PLANEJAMENTO · ENGENHARIA</p><h1>{title}</h1><p>{subtitle}</p></div><span className="planning-demo-tag">MODO DE DEMONSTRAÇÃO</span></header><aside className="planning-notice">Dados fictícios · alterações somente em memória, compartilhadas entre estas páginas e perdidas ao recarregar. Nenhuma submissão ou aprovação é enviada ao servidor.</aside>{children}</main>; }
+export function Badge({ value }: { value: string }) { return <span className={`planning-badge planning-badge-${value.toLowerCase().split(' ')[0]}`}>{value.replaceAll('_', ' ')}</span>; }
+export function PlanningFilters({ weeks, projectId, weekId, onProject, onWeek, children }: { weeks: PlanningWeek[]; projectId: string; weekId: string; onProject: (id: string) => void; onWeek: (id: string) => void; children?: React.ReactNode }) { return <div className="planning-filters"><label>Projeto<select value={projectId} onChange={e => onProject(e.target.value)}>{DEMO_PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Semana<select value={weekId} onChange={e => onWeek(e.target.value)}><option value="">Selecione uma semana</option>{weeks.filter(w => w.projectId === projectId).map(w => <option key={w.id} value={w.id}>{dateLabel(w.start)} → {dateLabel(w.end)}</option>)}</select></label>{children}</div>; }
+export function useNow() { const [now, setNow] = useState(Date.now()); useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), 30000); return () => window.clearInterval(id); }, []); return now; }

@@ -1,21 +1,3 @@
 // Caminho: ClientApp/src/components/ui/logo.tsx
-// AJUSTE A ALTURA DA IMAGEM
-
-import { cn } from "@/lib/utils";
-
-interface LogoProps {
-  className?: string;
-}
-
-export function Logo({ className }: LogoProps) {
-  return (
-    <div className={cn("flex items-center", className)}>
-      <img
-        src="/logo-na-30anos.png"
-        alt="N&A Consultores 30 Anos"
-        // 👇👇 AJUSTE ESTA ALTURA CONFORME NECESSÁRIO 👇👇
-        className="h-16 w-auto object-contain" // h-12 = 3rem. Tente h-10, h-14, etc.
-      />
-    </div>
-  );
-}
+// Compatibilidade: a logo N&A agora é o ThemeLogo (troca de arquivo conforme o tema). Use ThemeLogo em código novo.
+export { ThemeLogo as Logo } from "@/features/theme/ThemeLogo";

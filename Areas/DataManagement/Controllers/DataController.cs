@@ -1,7 +1,9 @@
+using APS.WebApp.Services.Permissions;
 // Ficheiro: Areas/DataManagement/Controllers/DataController.cs
 
 using APS.WebApp.Models;
 using APS.WebApp.Services;
+using APS.WebApp.Services.AutodeskAuth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -44,6 +46,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
         private readonly ILogger<DataController> _logger;
         private readonly DatabaseService _dbService;
         private readonly AccScheduleSyncService _scheduleService;
+        private readonly IAutodeskUserTokenProvider _autodeskUserTokens;
         public DataController(
             AutodeskApiService autodeskApi,
             IConfiguration configuration,
@@ -55,7 +58,8 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             LdpUpdateService ldpUpdateService,
             ILogger<DataController> logger,
             DatabaseService dbService,
-            AccScheduleSyncService scheduleService)
+            AccScheduleSyncService scheduleService,
+            IAutodeskUserTokenProvider autodeskUserTokens)
         {
             _autodeskApi = autodeskApi;
             _configuration = configuration;
@@ -68,6 +72,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             _logger = logger;
             _dbService = dbService;
             _scheduleService = scheduleService;
+            _autodeskUserTokens = autodeskUserTokens;
         }
 
         // Ficheiro: Areas/DataManagement/Controllers/DataController.cs
@@ -76,6 +81,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
         // Ficheiro: Areas/DataManagement/Controllers/DataController.cs
         // Dentro da classe DataController
 
+        [RequirePermission("projects.create")]
         [HttpPost]
     public async Task<IActionResult> CreateProjectFromTemplate([FromForm] string hubId, [FromForm] string templateId, IFormFile memberSheet)
     {
@@ -429,6 +435,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
 
         // Em DataController.cs
 
+        [RequirePermission("projects.create")]
         [HttpGet]
         // Adiciona [FromQuery] string hubId
         public async Task<IActionResult> GetProjectTemplates([FromQuery] string hubId)
@@ -463,6 +470,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
         }
 
 
+        [RequirePermission("projects.create")]
         [HttpGet]
         public async Task<IActionResult> ListAccountRoles(string hubId)
         {
@@ -482,16 +490,19 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [PermissionExempt("Lista os hubs do PRÓPRIO usuário na Autodesk (o ACC já restringe); base de todos os seletores de projeto.")]
         [HttpGet]
         public async Task<IActionResult> Hubs()
         {
-            var accessToken = HttpContext.Session.GetString("AccessToken");
-            if (string.IsNullOrEmpty(accessToken))
-                return Unauthorized(new { message = "Sessão não encontrada ou expirada." });
             try
             {
-                var hubsData = await _autodeskApi.GetHubsAsync(accessToken);
+                var hubsData = await AutodeskUserRequestExecutor.ExecuteAsync(_autodeskUserTokens,
+                    (token, ct) => _autodeskApi.GetHubsAsync(token), HttpContext.RequestAborted);
                 return Ok(hubsData);
+            }
+            catch (AutodeskUserReconnectRequiredException)
+            {
+                return Conflict(new { autodeskReconnectRequired = true, code = "autodeskReconnectRequired", message = "Reconecte a Autodesk para continuar." });
             }
             catch (Exception ex)
             {
@@ -499,15 +510,19 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [PermissionExempt("Lista os projetos ACC do PRÓPRIO usuário (o ACC já restringe); base de todos os seletores de projeto.")]
         [HttpGet]
         public async Task<IActionResult> Projetos(string hubId)
         {
-            var accessToken = HttpContext.Session.GetString("AccessToken");
-            if (string.IsNullOrEmpty(accessToken)) return Unauthorized(new { message = "Sessão não encontrada ou expirada." });
             try
             {
-                var projectsData = await _autodeskApi.GetHubProjectsAsync(hubId, accessToken);
+                var projectsData = await AutodeskUserRequestExecutor.ExecuteAsync(_autodeskUserTokens,
+                    (token, ct) => _autodeskApi.GetHubProjectsAsync(hubId, token), HttpContext.RequestAborted);
                 return Ok(projectsData);
+            }
+            catch (AutodeskUserReconnectRequiredException)
+            {
+                return Conflict(new { autodeskReconnectRequired = true, code = "autodeskReconnectRequired", message = "Reconecte a Autodesk para continuar." });
             }
             catch (Exception ex)
             {
@@ -515,6 +530,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [RequirePermission("cde.docs.view")]
         [HttpGet]
         public async Task<IActionResult> GetProjectRootFolder(string hubId, string projectId)
         {
@@ -536,6 +552,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
 
         public class BreadcrumbItem { public string Id { get; set; } = string.Empty; public string Name { get; set; } = string.Empty; }
 
+        [RequirePermission("cde.docs.view")]
         [HttpGet]
         [HttpGet]
         public async Task<IActionResult> GetFolderPath(string projectId, string folderId)
@@ -607,6 +624,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             return Ok(path);
         }
 
+        [RequirePermission("cde.docs.view")]
         [HttpGet]
         public async Task<IActionResult> GetItemVersions(string projectId, string itemId)
         {
@@ -623,6 +641,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [RequirePermission("cde.docs.upload")]
         [HttpPost]
         public async Task<IActionResult> UploadNewVersion(string projectId, string itemId, string folderId, IFormFile newVersionFile)
         {
@@ -641,6 +660,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [RequirePermission("cde.docs.download", AnyProject = true)]
         [HttpGet]
         public async Task<IActionResult> DownloadArquivo(string storageUrn)
         {
@@ -658,6 +678,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
             }
         }
 
+        [RequirePermission("cde.docs.view")]
         [HttpGet]
         public async Task<IActionResult> ConteudoPasta(string projectId, string folderId)
         {
@@ -676,6 +697,7 @@ namespace APS.WebApp.Areas.DataManagement.Controllers
         // EM: DataController.cs
         // SUBSTITUA A AÇÃO INTEIRA PELA VERSÃO ABAIXO
 
+        [RequirePermission("ldp.sync.execute")]
         [HttpPost]
 public async Task<IActionResult> SyncFromProjectLdp(string hubId, string projectId)
 {
@@ -850,6 +872,7 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
 
         public class WebhookInstallRequest { public string NgrokUrl { get; set; } }
 
+        [RequirePermission("ldp.sync.execute")]
         [HttpPost]
         public async Task<IActionResult> InstallWebhookForLdp(string hubId, string projectId, [FromBody] WebhookInstallRequest data)
         {
@@ -894,6 +917,7 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
             }
         }
 
+        [RequirePermission("system.diagnostics.execute")]
         [HttpPost]
         public async Task<IActionResult> TesteCriacaoPasta()
         {
@@ -928,6 +952,7 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
         }
 
         // ▼▼▼ ACTION MODIFICADA ▼▼▼
+        [RequirePermission("ldp.sync.execute")]
         [HttpPost]
         // [Route("CreatePlaceholdersFromLdp")] // Removido ou comentado, usaremos o nome da action
         // Removemos [FromForm] IFormFile ldpFile
@@ -983,6 +1008,7 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
         }
     
 
+        [RequirePermission("system.commercial.view")]
         [HttpGet]
         public async Task<IActionResult> GetDadosComerciais()
         {
@@ -997,6 +1023,7 @@ public async Task<IActionResult> SyncFromProjectLdp(string hubId, string project
             }
         }
 
+        [RequirePermission("ldp.sync.execute")]
         [HttpPost]
         public async Task<IActionResult> UpdateLdpFromDatabase([FromQuery] string hubId, [FromQuery] string projectId)
         {

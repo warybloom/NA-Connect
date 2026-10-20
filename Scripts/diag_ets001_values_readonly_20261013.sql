@@ -1,0 +1,16 @@
+SET NOCOUNT ON;
+DECLARE @p nvarchar(100)=N'b.9907135f-ff67-43bb-887b-20c3a7f75807';
+PRINT '== PACOTE DISCIPLINAS ==';
+SELECT Disciplina,Abrangencia,HHPrevisto,CustoPrevisto,Ativo FROM costs.PackageDiscipline WHERE PackageId=2;
+PRINT '== FONTE RESUMO GESTAO CANONICA TOTAL ==';
+SELECT COUNT(*) AS Linhas, SUM(HorasTrabalhadas) AS HH, SUM(CustoCalculado) AS Custo FROM gestao.VW_TimeSheet_Corrigido_Espelho_Gerencial WHERE Project_ID_ACC=@p;
+PRINT '== FONTE RESUMO EVERTON ==';
+SELECT NomeProfissional,COUNT(*) AS Linhas,SUM(HorasTrabalhadas) AS HH,SUM(CustoCalculado) AS Custo FROM gestao.VW_TimeSheet_Corrigido_Espelho_Gerencial WHERE Project_ID_ACC=@p AND NomeProfissional LIKE '%EVERTON%' GROUP BY NomeProfissional;
+PRINT '== GESTAO EVERTON POR DOCUMENTO ==';
+SELECT COALESCE(DocumentoCodigo_Corrigido,N'(SEM DOCUMENTO)') AS Doc,COUNT(*) AS Linhas,SUM(HorasTrabalhadas) AS HH,SUM(CustoCalculado) AS Custo FROM gestao.VW_TimeSheet_Corrigido_Espelho_Gerencial WHERE Project_ID_ACC=@p AND NomeProfissional LIKE '%EVERTON%' GROUP BY DocumentoCodigo_Corrigido ORDER BY HH DESC;
+PRINT '== FONTE PACOTES EVERTON POR STATUS MAPEAMENTO ==';
+SELECT Status_Mapeamento_CR_OS,COUNT(*) AS Linhas,SUM(Trabalhadas) AS HH FROM dbo.VW_TimeSheet_NA_Corrigida_Projeto WHERE Project_ID_ACC_Canonico=@p AND Nome LIKE '%EVERTON%' GROUP BY Status_Mapeamento_CR_OS ORDER BY Status_Mapeamento_CR_OS;
+PRINT '== FONTE PACOTES EVERTON POR DOCUMENTO ==';
+SELECT ISNULL(DocumentoCodigo,N'(SEM DOCUMENTO)') AS Doc,COUNT(*) AS Linhas,SUM(Trabalhadas) AS HH FROM dbo.VW_TimeSheet_NA_Corrigida_Projeto WHERE Project_ID_ACC_Canonico=@p AND Nome LIKE '%EVERTON%' AND Status_Mapeamento_CR_OS IN ('UNICO','ATIVO_UNICO') GROUP BY DocumentoCodigo ORDER BY HH DESC;
+PRINT '== TODOS PROJECT IDs EVERTON no status ==';
+SELECT TOP (12) Project_ID_ACC_Canonico,Status_Mapeamento_CR_OS,COUNT(*) AS Linhas,SUM(Trabalhadas) AS HH FROM dbo.VW_TimeSheet_NA_Corrigida_Projeto WHERE Nome LIKE '%EVERTON%' GROUP BY Project_ID_ACC_Canonico,Status_Mapeamento_CR_OS ORDER BY HH DESC;

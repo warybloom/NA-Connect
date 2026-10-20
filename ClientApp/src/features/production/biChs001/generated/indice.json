@@ -1,0 +1,215 @@
+{
+ "fonte": "CHS001-000-PM0-RT-002-01.pbix (PBIR extraído)",
+ "paginas": [
+  {
+   "ordem": 1,
+   "id": "0e0a3ca00d8598b7bb84",
+   "nome": "Capa",
+   "slug": "capa",
+   "arquivo": "p01.json",
+   "visuais": 12
+  },
+  {
+   "ordem": 2,
+   "id": "38a3182809330acffc14",
+   "nome": "Resumo Geral",
+   "slug": "resumo-geral",
+   "arquivo": "p02.json",
+   "visuais": 44
+  },
+  {
+   "ordem": 3,
+   "id": "03af0eebc780428b46b2",
+   "nome": "Resumo 30%",
+   "slug": "resumo-30",
+   "arquivo": "p03.json",
+   "visuais": 44
+  },
+  {
+   "ordem": 4,
+   "id": "dbdd8baab8e8eb03281f",
+   "nome": "Resumo 60%",
+   "slug": "resumo-60",
+   "arquivo": "p04.json",
+   "visuais": 44
+  },
+  {
+   "ordem": 5,
+   "id": "7340affd805e6aa3300a",
+   "nome": "Resumo 90%",
+   "slug": "resumo-90",
+   "arquivo": "p05.json",
+   "visuais": 44
+  },
+  {
+   "ordem": 6,
+   "id": "72f80a88315cee7fb168",
+   "nome": "Progress to Date",
+   "slug": "progress-to-date",
+   "arquivo": "p06.json",
+   "visuais": 22
+  },
+  {
+   "ordem": 7,
+   "id": "69e8cff8f68548a04ce0",
+   "nome": "Planned Activities",
+   "slug": "planned-activities",
+   "arquivo": "p07.json",
+   "visuais": 22
+  },
+  {
+   "ordem": 8,
+   "id": "fbeec2691dbe6e33e5ce",
+   "nome": "LDP - 3D - 30%",
+   "slug": "ldp-3d-30",
+   "arquivo": "p08.json",
+   "visuais": 29
+  },
+  {
+   "ordem": 9,
+   "id": "95b26829169a5f2d0252",
+   "nome": "LDP - 3D - 60%",
+   "slug": "ldp-3d-60",
+   "arquivo": "p09.json",
+   "visuais": 29
+  },
+  {
+   "ordem": 10,
+   "id": "f7e070ab93ba4e1aa3bd",
+   "nome": "LDP - 3D - 90%",
+   "slug": "ldp-3d-90",
+   "arquivo": "p10.json",
+   "visuais": 29
+  },
+  {
+   "ordem": 11,
+   "id": "2090864dbc6a0b1171c5",
+   "nome": "3D - MODEL",
+   "slug": "3d-model",
+   "arquivo": "p11.json",
+   "visuais": 21
+  },
+  {
+   "ordem": 12,
+   "id": "4d0c3d1a40ad48f4ead6",
+   "nome": "LDP - Engineering - 30%",
+   "slug": "ldp-engineering-30",
+   "arquivo": "p12.json",
+   "visuais": 25
+  },
+  {
+   "ordem": 13,
+   "id": "24ea8fc081207ebc9c38",
+   "nome": "LDP - Engineering - 60%",
+   "slug": "ldp-engineering-60",
+   "arquivo": "p13.json",
+   "visuais": 25
+  },
+  {
+   "ordem": 14,
+   "id": "a549eb6c70bd79a484e7",
+   "nome": "LDP - Engineering - 90%",
+   "slug": "ldp-engineering-90",
+   "arquivo": "p14.json",
+   "visuais": 25
+  },
+  {
+   "ordem": 15,
+   "id": "86343ea67302a67c5d0a",
+   "nome": "CAP externo",
+   "slug": "cap-externo",
+   "arquivo": "p15.json",
+   "visuais": 18
+  },
+  {
+   "ordem": 16,
+   "id": "26a62bc7c692b2e1249a",
+   "nome": "CAP Interno",
+   "slug": "cap-interno",
+   "arquivo": "p16.json",
+   "visuais": 22
+  },
+  {
+   "ordem": 17,
+   "id": "2511ad67d65b7a106a91",
+   "nome": "Programação",
+   "slug": "programacao",
+   "arquivo": "p17.json",
+   "visuais": 23
+  },
+  {
+   "ordem": 18,
+   "id": "e1f2e870d2d2db344ee4",
+   "nome": "Controle de Desvio",
+   "slug": "controle-de-desvio",
+   "arquivo": "p18.json",
+   "visuais": 25
+  },
+  {
+   "ordem": 19,
+   "id": "4befc41400931dca0e77",
+   "nome": "Controle de Holds",
+   "slug": "controle-de-holds",
+   "arquivo": "p19.json",
+   "visuais": 21
+  },
+  {
+   "ordem": 20,
+   "id": "30d64d433d0e63e4dda4",
+   "nome": "Não Conformidades",
+   "slug": "nao-conformidades",
+   "arquivo": "p20.json",
+   "visuais": 27
+  },
+  {
+   "ordem": 21,
+   "id": "61c7be92626b5cc9a9ec",
+   "nome": "Controle de Hora e Custo",
+   "slug": "controle-de-hora-e-custo",
+   "arquivo": "p21.json",
+   "visuais": 38
+  },
+  {
+   "ordem": 22,
+   "id": "5b89c18d21476e277c0e",
+   "nome": "Controle de Hora e Custo Gestão",
+   "slug": "controle-de-hora-e-custo-gestao",
+   "arquivo": "p22.json",
+   "visuais": 38
+  },
+  {
+   "ordem": 23,
+   "id": "7241d736d086a0990512",
+   "nome": "Controle de Qualidade",
+   "slug": "controle-de-qualidade",
+   "arquivo": "p23.json",
+   "visuais": 24
+  }
+ ],
+ "bookmarks": [
+  {
+   "id": "50b6b3a399c6490b7000",
+   "nome": "Resumo",
+   "pagina": "38a3182809330acffc14",
+   "ocultos": {
+    "38a3182809330acffc14": []
+   }
+  },
+  {
+   "id": "5cbde33083902a556cd9",
+   "nome": "Clear CAP",
+   "pagina": "86343ea67302a67c5d0a",
+   "ocultos": {
+    "86343ea67302a67c5d0a": []
+   }
+  },
+  {
+   "id": "d2b1c01d7ad4525d3b55",
+   "nome": "LDP",
+   "pagina": "755020d27e930bb94b5d",
+   "ocultos": {
+    "755020d27e930bb94b5d": []
+   }
+  }
+ ]
+}

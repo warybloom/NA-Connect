@@ -1,0 +1,386 @@
+/* Gestão à Vista (Jamile) — réplica das 4 páginas do PDF "Painel Gestão À VIsta".
+   Tudo é isolado em .gv-shell. Cores ficam SOMENTE nos tokens abaixo. Tema CLARO = aparência do PDF (tokens padrão);
+   tema ESCURO = bloco ".dark .gv-shell" no fim do arquivo, que só redefine tokens — o layout é o mesmo nos dois.
+   Tamanhos em em, relativos ao font-size do shell, que escala com a largura (1080p → 4K). */
+.gv-shell{
+  --gv-bg:#f7f8fa;--gv-surface:#fff;--gv-sidebar:#5380a8;--gv-sidebar-border:#2c4f72;--gv-nav-active-bg:#fff;--gv-nav-active-fg:#111a33;
+  --gv-ink:#101a52;--gv-ink-soft:#4a5d78;--gv-line:#cfd5dc;--gv-line-strong:#9aa6b4;--gv-header-line:#bcd0e4;
+  --gv-steel:#5f8bb3;--gv-steel-dark:#4b6888;--gv-navy:#0b1150;--gv-sky:#1a72c9;--gv-teal:#0e9b84;--gv-gauge-track:#c9c7c5;
+  --gv-gauge-fill:#1f78c8;--gv-gauge-over:#d9480f;--gv-date-bg:#dbe7f3;--gv-date-border:#8fb0d0;--gv-warn:#9a5b00;--gv-warn-bg:#fff7e6;
+  --gv-chevron-0:#04294a;--gv-chevron-1:#0b4f86;--gv-chevron-2:#1474cb;--gv-chevron-3:#2e98f5;
+  --gv-on-color:#fff;--gv-navy-surface:var(--gv-navy);--gv-bar-steel:#0d4a83;--gv-gauge-bg:#fff;--gv-gauge-border:#4d6f96;
+  --gv-frame:#1b1b1b;--gv-rule:#222;--gv-foot-bg:#f3f5f8;--gv-fase-border:#aac1d4;--gv-warn-border:#f0d199;--gv-hover:#c8daee;
+  --gv-date-hover:#ffffff80;--gv-shadow:#0000001f;
+  /* Tokens globais (shadcn) para componentes compartilhados renderizados aqui dentro (ReportState etc.). */
+  --background:0 0% 100%;--foreground:232 76% 19%;--card:0 0% 100%;--card-foreground:232 76% 19%;--muted:210 20% 96%;
+  --muted-foreground:215 20% 38%;--border:210 14% 84%;--primary:209 72% 45%;
+  color-scheme:light;
+  height:calc(100dvh - 172px);min-height:620px;width:100%;min-width:0;
+  display:grid;grid-template-columns:clamp(150px,13.5%,420px) minmax(0,1fr);
+  overflow:hidden;background:var(--gv-bg);color:var(--gv-ink);border:1px solid var(--gv-line);
+  font-family:"Segoe UI",Arial,sans-serif;font-size:clamp(11px,.7vw,26px);line-height:1.25;
+}
+.gv-shell *{box-sizing:border-box}
+.gv-shell button{font:inherit;color:inherit;cursor:pointer}
+
+/* ------------------------------------------------------------------ sidebar */
+.gv-sidebar{min-width:0;display:flex;flex-direction:column;background:var(--gv-sidebar);padding:0 .9em 1.2em}
+.gv-brand{flex:0 0 auto;height:8.5em;display:flex;align-items:center;justify-content:center;padding:.8em .2em}
+.gv-brand img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.gv-sidebar nav{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2.6em;padding-bottom:4em}
+.gv-sidebar nav :is(a,button,span){min-height:5.6em;display:flex;align-items:center;justify-content:center;text-align:center;padding:.6em .5em;text-decoration:none;
+  background:var(--gv-sidebar);border:1px solid var(--gv-sidebar-border);color:var(--gv-on-color);font-size:1.02em;font-weight:700;letter-spacing:.01em;transition:background .15s}
+.gv-sidebar nav :is(a,button):hover{background:color-mix(in srgb,var(--gv-sidebar) 82%,#000)}
+.gv-sidebar nav :is(a,button).gv-active{background:var(--gv-nav-active-bg);color:var(--gv-nav-active-fg);border-color:var(--gv-sidebar-border)}
+/* Player de TV: item fora da apresentação (ou sem permissão) — visível, estático e discreto. */
+.gv-sidebar nav button{font:inherit;cursor:pointer;width:100%}
+.gv-sidebar nav span.gv-nav-indisponivel{opacity:.38;cursor:default;pointer-events:none}
+.gv-sidebar nav :is(a,button):focus-visible{outline:2px solid var(--gv-on-color);outline-offset:2px}
+
+/* ------------------------------------------------------------------ cabeçalho */
+.gv-main{min-height:0;min-width:0;display:flex;flex-direction:column;padding:0 1.4em 1em}
+.gv-page-header{flex:0 0 auto;min-height:6.4em;display:flex;align-items:center;justify-content:space-between;gap:1em;border-bottom:2px solid var(--gv-header-line);padding:.6em .2em}
+.gv-header-text{min-width:0}
+.gv-header-text>b{display:block;font-size:1.75em;font-weight:800;line-height:1.1;white-space:nowrap}
+.gv-header-text h1{margin:.08em 0 0;font-size:1.95em;font-weight:400;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gv-ink)}
+.gv-header-text small{display:block;margin-top:.2em;font-size:.82em;color:var(--gv-ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+.gv-date{flex:0 0 auto;display:flex;align-items:center;gap:1em;padding:.55em 1.1em;border:1px solid var(--gv-date-border);background:var(--gv-date-bg);border-radius:1em;color:var(--gv-ink)}
+.gv-date-icon{width:2em;height:2em;flex:0 0 auto}
+.gv-date>div,.gv-date label{display:flex;flex-direction:column;align-items:center;gap:.15em}
+.gv-date small{font-size:.78em;font-weight:800;letter-spacing:.02em}
+.gv-date b{font-size:.92em;font-weight:600;white-space:nowrap}
+.gv-date-input{display:flex;align-items:center;gap:.2em}
+.gv-date-input button{border:0;background:transparent;padding:.1em;display:flex;border-radius:.3em}
+.gv-date-input button:hover{background:var(--gv-date-hover)}
+.gv-date input{font:inherit;font-size:.92em;font-weight:600;width:9.6em;color:var(--gv-ink);background:transparent;border:0;padding:0;text-align:center;color-scheme:inherit}
+
+/* ------------------------------------------------------------------ blocos comuns */
+.gv-content{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;gap:1em;padding-top:1.1em;overflow:hidden}
+.gv-kpis{display:grid;gap:1.6em;flex:0 0 auto}
+.gv-three{grid-template-columns:repeat(3,minmax(0,1fr));gap:1.1em}
+.gv-four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.gv-five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.gv-six{grid-template-columns:repeat(6,minmax(0,1fr));gap:1.1em}
+.gv-tile{min-width:0;min-height:5.4em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25em;padding:.55em .5em;
+  background:var(--gv-surface);border:1px solid var(--gv-line-strong);border-radius:.25em;box-shadow:0 1px 3px var(--gv-shadow);text-align:center}
+.gv-tile-title{font-size:.95em;font-weight:700;line-height:1.15;max-width:100%;overflow-wrap:anywhere}
+.gv-tile-value{font-size:2.1em;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.gv-gates{display:grid;width:100%;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--gv-line);margin-top:.2em}
+.gv-gates>div{display:flex;flex-direction:column;align-items:center;padding:.2em 0;border-right:1px solid var(--gv-line)}
+.gv-gates>div:last-child{border-right:0}
+.gv-gates small{font-size:.75em;font-weight:700;color:var(--gv-steel)}
+.gv-gates b{font-size:.95em;font-weight:800}
+/* Planned HH: intrinsic phase widths wrap as whole numbers in narrow cards. */
+.gv-content:has(>.gv-indicator-kpis){container:gv-indicators / inline-size}
+.gv-kpis.gv-indicator-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+@container gv-indicators (max-width:52em){
+  .gv-kpis.gv-indicator-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container gv-indicators (max-width:26em){
+  .gv-kpis.gv-indicator-kpis{grid-template-columns:minmax(0,1fr)}
+}
+.gv-planned-hh .gv-gates{display:flex;flex-wrap:wrap;gap:.2em .4em}
+.gv-planned-hh .gv-gates>div{flex:1 1 max-content;padding:.3em .45em;border-right:0}
+.gv-planned-hh .gv-gates b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.gv-planned-hh .gv-tile-value{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:normal}
+.gv-section{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--gv-surface);border:1px solid var(--gv-line-strong);overflow:hidden}
+.gv-section>header{flex:0 0 auto;padding:.45em .6em;text-align:center;color:var(--gv-on-color);font-weight:600;font-size:1.02em;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gv-section-steel>header{background:var(--gv-steel)}
+.gv-section-navy{border-color:var(--gv-navy-surface)}
+.gv-section-navy>header{background:var(--gv-navy-surface)}
+.gv-section-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.gv-legend{flex:0 0 auto;display:flex;justify-content:center;gap:1em;padding:.35em;font-size:.92em;font-weight:600;white-space:nowrap}
+.gv-legend span{display:inline-flex;align-items:center;gap:.3em}
+.gv-legend i{display:inline-block;width:.6em;height:.6em;border-radius:50%}
+.gv-dot-sky{background:var(--gv-sky)}.gv-dot-navy{background:var(--gv-navy)}.gv-dot-teal{background:var(--gv-teal)}
+.gv-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5em;padding:1em;text-align:center;color:var(--gv-ink-soft);font-size:.95em}
+.gv-empty button{border:1px solid var(--gv-date-border);background:var(--gv-date-bg);color:var(--gv-ink);border-radius:.4em;padding:.3em .8em;font-size:.95em;font-weight:600}
+.gv-empty button:hover{background:var(--gv-hover)}
+.gv-rule{flex:0 0 auto;margin:0;font-size:.78em;color:var(--gv-ink-soft);line-height:1.3}
+.gv-warning{margin:.4em 0 0;padding:.4em .6em;font-size:.85em;color:var(--gv-warn);background:var(--gv-warn-bg);border-radius:.3em}
+.gv-link{color:var(--gv-sky);text-decoration:underline;background:none;border:0}
+
+/* barras horizontais */
+.gv-hbars{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:.45em;padding:.5em .9em .7em .4em}
+.gv-hbar{display:grid;grid-template-columns:minmax(5em,34%) minmax(0,1fr) 2.6em;align-items:center;gap:.4em;min-width:0}
+.gv-hbar label{text-align:right;font-size:.82em;font-weight:700;line-height:1.1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.gv-htrack{position:relative;height:1.7em;max-height:3em}
+.gv-htrack i,.gv-htrack em{position:absolute;left:0;top:0;height:100%;display:block}
+.gv-htrack i{background:var(--gv-navy)}
+.gv-htrack em{top:auto;bottom:0;height:28%;background:var(--gv-teal)}
+.gv-hbar strong{font-size:1.05em;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* colunas verticais */
+.gv-columns{flex:1;min-height:0;display:flex;align-items:stretch;justify-content:space-around;gap:.5em;padding:.4em 1em .5em}
+.gv-col{flex:1 1 0;min-width:0;max-width:9em;display:flex;flex-direction:column;align-items:stretch}
+.gv-col-bars{flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;gap:.2em;border-bottom:1px solid var(--gv-line)}
+.gv-col-bars span{flex:0 1 42%;min-height:0;display:flex;justify-content:center;align-items:flex-start;position:relative}
+.gv-col-bars b{position:absolute;bottom:100%;font-size:.9em;font-weight:700;color:var(--gv-ink);white-space:nowrap;padding-bottom:.1em}
+.gv-bar-sky{background:var(--gv-sky)}.gv-bar-navy{background:var(--gv-navy)}.gv-bar-steel{background:var(--gv-bar-steel)}
+.gv-col small{flex:0 0 auto;margin-top:.3em;text-align:center;font-size:.78em;font-weight:700;line-height:1.1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.gv-columns-single .gv-col-bars span{flex-basis:56%}
+.gv-columns-single .gv-col-bars b{position:static;color:var(--gv-on-color);padding-top:.2em;font-weight:600}
+.gv-columns-single .gv-col-bars span{min-height:1.6em}
+
+/* ------------------------------------------------------------------ 01. VISÃO GERAL */
+.gv-overview{flex:1;min-height:0;display:grid;gap:1em;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr);grid-template-rows:minmax(0,.85fr) minmax(0,1.15fr);
+  grid-template-areas:"evo evo gauges" "proj disc gauges"}
+.gv-ov-evolution{grid-area:evo}.gv-ov-project{grid-area:proj}.gv-ov-discipline{grid-area:disc}
+.gv-ov-gauges{grid-area:gauges;border:2px solid var(--gv-frame)}
+.gv-ov-gauges>header{background:var(--gv-steel)}
+.gv-gauge-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:.7em;padding:.7em}
+.gv-gauge-grid:has(> :nth-child(5)){grid-template-rows:repeat(5,minmax(0,1fr))}
+.gv-gauge-grid:not(:has(> :nth-child(5))){grid-template-rows:repeat(2,minmax(0,1fr))}
+.gv-gauge{margin:0;min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--gv-gauge-border);background:var(--gv-gauge-bg);overflow:hidden}
+.gv-gauge figcaption{flex:0 0 auto;padding:.3em .3em;background:var(--gv-steel-dark);color:var(--gv-on-color);text-align:center;font-weight:700;font-size:.92em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gv-gauge svg{flex:1;min-height:0;width:100%;height:100%;display:block;padding:.25em .3em .1em}
+.gv-gauge-track,.gv-gauge-fill{fill:none;stroke-width:30;stroke-linecap:butt}
+.gv-gauge-track{stroke:var(--gv-gauge-track)}
+.gv-gauge-fill{stroke:var(--gv-gauge-fill)}
+.gv-gauge-over .gv-gauge-fill{stroke:var(--gv-gauge-over)}
+.gv-gauge-value{fill:var(--gv-ink);font-size:21px;font-weight:600;font-family:inherit}
+.gv-gauge-end{fill:var(--gv-ink);font-size:11px;font-weight:600;font-family:inherit}
+.gv-gauge-fracao{fill:var(--gv-ink-soft);font-size:10px;font-weight:600;font-family:inherit}
+.gv-gauge-over-label{fill:var(--gv-gauge-over);font-size:9px;font-weight:800;font-family:inherit;letter-spacing:.04em}
+.gv-pager{flex:0 0 auto;display:flex;justify-content:center;align-items:center;gap:.6em;padding:0 0 .5em;font-size:.9em;font-weight:700}
+.gv-pager button{display:flex;border:1px solid var(--gv-line-strong);background:var(--gv-surface);border-radius:.3em;padding:.15em .3em}
+.gv-pager button:disabled{opacity:.35;cursor:default}
+
+/* ------------------------------------------------------------------ 02. PROGRAMAÇÃO */
+.gv-program{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,39%) minmax(0,1fr);gap:1.8em}
+.gv-program-left{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);gap:1.1em}
+.gv-program-left .gv-tile-value{font-size:1.9em}
+.gv-program-table{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--gv-surface);border:1px solid var(--gv-line);padding:.8em}
+.gv-table-scroll{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.gv-shell table{width:100%;border-collapse:collapse;font-size:1em;color:var(--gv-ink);font-variant-numeric:tabular-nums}
+.gv-shell th{position:sticky;top:0;z-index:1;font-weight:700;white-space:nowrap;text-align:left}
+.gv-shell th,.gv-shell td{padding:.45em .6em}
+/* Consolidado incompleto (algum projeto sem dados): bloqueio explícito, sem números parciais. */
+.gv-incompleto{margin:2em auto;max-width:60em;display:flex;flex-direction:column;align-items:center;gap:.6em;text-align:center;padding:1.6em;
+  border:1px solid var(--gv-warn);background:var(--gv-warn-bg);color:var(--gv-warn)}
+.gv-incompleto b{font-size:1.15em}
+.gv-incompleto ul{margin:0;padding:0;list-style:none;color:var(--gv-ink);font-size:.95em;max-height:14em;overflow:auto}
+/* 02. Programação semanal: barra da tabela (filtro/agrupamento) e linha de cabeçalho de cada dia */
+.gv-program-tools{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:1em;padding:0 .2em .5em;font-size:.9em;font-weight:700;color:var(--gv-ink)}
+.gv-program-tools label{display:flex;align-items:center;gap:.4em;cursor:pointer}
+.gv-program-table tr.gv-day-row td{background:var(--gv-date-bg);color:var(--gv-ink);font-weight:800;text-align:left;letter-spacing:.02em}
+.gv-date-semana select{font:inherit;font-size:.92em;font-weight:600;color:var(--gv-ink);background:transparent;border:0;padding:0;text-align:center;color-scheme:inherit;cursor:pointer}
+.gv-date-semana select option{color:#000}
+.gv-program-table th{background:var(--gv-steel);color:var(--gv-on-color);font-weight:500;font-size:1.02em}
+.gv-program-table td{white-space:nowrap}
+/* Colunas: DIA | DISCIPLINA | CÓDIGO | ELAB. | VERIF. | APROV. | SITUAÇÃO | HH. Disciplina e situação quebram linha para a
+   semana inteira caber na largura da TV sem rolagem horizontal; código e nomes ficam em uma linha. */
+.gv-program-table td:nth-child(3){text-align:center}
+.gv-program-table td:is(:nth-child(2),:nth-child(7)){white-space:normal;min-width:6.5em;line-height:1.15}
+.gv-program-table tr.gv-day-row td{white-space:nowrap}
+.gv-program-table th{white-space:normal;line-height:1.15}
+.gv-program-table th:last-child,.gv-program-table td:last-child{text-align:right}
+
+/* ------------------------------------------------------------------ 03. DOCUMENTAÇÃO */
+.gv-content-documentacao .gv-kpis{width:min(100%,92em);align-self:center}
+/* Setas: grade de 4 colunas IGUAIS limitada à largura útil (nunca ultrapassa a página). A altura acompanha a largura
+   (aspect-ratio) e o texto escala pela largura do bloco (container query), então título e número sempre cabem centralizados. */
+.gv-flow{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1em;width:min(100%,72em);align-self:center;padding:.4em 0;container-type:inline-size}
+.gv-chevron{--notch:14%;min-width:0;width:100%;aspect-ratio:3.1/1;max-height:6.4em;min-height:3.4em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.05em;overflow:hidden;
+  padding:0 var(--notch);color:var(--gv-on-color);text-align:center;clip-path:polygon(0 0,calc(100% - var(--notch)) 0,100% 50%,calc(100% - var(--notch)) 100%,0 100%,var(--notch) 50%)}
+.gv-chevron b{font-size:min(1.1em,2.3cqi);font-weight:600;line-height:1.1;white-space:nowrap;max-width:100%}
+.gv-chevron strong{font-size:min(2.3em,4.6cqi);font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gv-chevron-0{background:var(--gv-chevron-0)}.gv-chevron-1{background:var(--gv-chevron-1)}.gv-chevron-2{background:var(--gv-chevron-2)}.gv-chevron-3{background:var(--gv-chevron-3)}
+.gv-document-table,.gv-performance-table{flex:1}
+.gv-document-table th,.gv-performance-table th{background:var(--gv-surface);border-bottom:1px solid var(--gv-rule);box-shadow:inset 0 -1px 0 var(--gv-rule)}
+.gv-document-table th,.gv-document-table td{text-align:center;border-right:1px solid var(--gv-line)}
+.gv-document-table th:first-child,.gv-document-table td:first-child{text-align:left}
+.gv-document-table td,.gv-performance-table td{border-bottom:1px solid var(--gv-line)}
+.gv-shell tfoot td{font-weight:800;border-top:1px solid var(--gv-rule);background:var(--gv-foot-bg)}
+
+/* ------------------------------------------------------------------ 04. INDICADORES */
+.gv-content-indicadores .gv-kpis{width:min(100%,58em);align-self:center}
+.gv-performance-table{width:min(100%,104em);align-self:center}
+.gv-performance-table th:not(:first-child),.gv-performance-table td:not(:first-child){text-align:right}
+.gv-performance-table th,.gv-performance-table td{border-right:1px solid var(--gv-line)}
+.gv-row-sem td{color:var(--gv-ink-soft);font-style:italic}
+.gv-row-reconciliacao td{color:var(--gv-warn);background:var(--gv-warn-bg)}
+.gv-inline-alert{display:inline;margin-left:.35em;vertical-align:-.1em;color:var(--gv-warn)}
+.gv-extra-gates{flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(10em,1fr));gap:.6em}
+.gv-fase-box{min-width:0;display:flex;flex-direction:column;gap:.2em;padding:.35em;background:var(--gv-surface);border:1px solid var(--gv-fase-border)}
+.gv-fase-box>strong{font-size:.8em;text-align:center}
+
+/* ------------------------------------------------------------------ diagnóstico da Norma */
+.gv-diagnostico{flex:0 0 auto;font-size:.85em;color:var(--gv-warn);background:var(--gv-warn-bg);border:1px solid var(--gv-warn-border);border-radius:.3em;padding:.3em .6em;max-height:9em;overflow:auto}
+.gv-diagnostico summary{display:flex;align-items:center;gap:.4em;cursor:pointer;font-weight:700}
+.gv-diagnostico ul{margin:.3em 0;padding-left:1.2em}
+.gv-diagnostico p{margin:.3em 0}
+.gv-diagnostico small{color:var(--gv-ink-soft)}
+.gv-diagnostico-nota{font-style:italic}
+
+/* ------------------------------------------------------------------ responsividade */
+@media (max-height:820px){
+  .gv-shell{height:calc(100dvh - 140px);min-height:560px}
+  .gv-brand{height:6.5em}.gv-sidebar nav{gap:1.6em}.gv-sidebar nav :is(a,button,span){min-height:4.4em}
+  .gv-page-header{min-height:5.2em}.gv-content{gap:.7em;padding-top:.7em}
+  .gv-tile{min-height:4.4em}.gv-chevron{max-height:5em}
+}
+@media (max-width:1100px){
+  .gv-shell{font-size:11px;grid-template-columns:130px minmax(0,1fr)}
+  .gv-six{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .gv-five{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  .gv-shell{height:auto;min-height:0;grid-template-columns:minmax(0,1fr);overflow:visible}
+  .gv-sidebar{padding:.5em}.gv-brand{height:4.5em}
+  .gv-sidebar nav{flex-direction:row;flex-wrap:wrap;gap:.4em;padding:0}
+  .gv-sidebar nav :is(a,button,span){flex:1 1 40%;min-height:3em}
+  .gv-content{overflow:visible}
+  .gv-overview{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-template-areas:"evo" "proj" "disc" "gauges"}
+  .gv-overview>*{min-height:16em}
+  .gv-ov-gauges{min-height:40em}
+  .gv-program{grid-template-columns:minmax(0,1fr)}
+  .gv-program-left{grid-template-rows:auto 16em 16em}
+  .gv-program-table{min-height:24em}
+  .gv-four,.gv-five,.gv-six{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gv-flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gv-chevron b{font-size:min(1.1em,4.6cqi)}.gv-chevron strong{font-size:min(2.3em,9cqi)}
+  .gv-document-table,.gv-performance-table{min-height:22em}
+}
+
+/* ------------------------------------------------------------------ tema ESCURO (global .dark)
+   Mesma organização das 4 telas; só cores/contrastes mudam. Séries dos gráficos clareadas para ficarem visíveis
+   sobre fundo escuro; textos sobre cabeçalhos/setas continuam brancos. */
+.dark .gv-shell{
+  --gv-bg:#0e1625;--gv-surface:#152033;--gv-sidebar:#24486f;--gv-sidebar-border:#13304d;--gv-nav-active-bg:#e3ecf7;--gv-nav-active-fg:#0b1150;
+  --gv-ink:#e4ebf5;--gv-ink-soft:#9fb1c9;--gv-line:#2a3a52;--gv-line-strong:#3c5173;--gv-header-line:#2e4c6f;
+  --gv-steel:#3b6790;--gv-steel-dark:#33597f;--gv-navy:#8ea4ff;--gv-sky:#4aa3f2;--gv-teal:#2fc6a8;--gv-gauge-track:#39465a;
+  --gv-gauge-fill:#3d95ea;--gv-gauge-over:#ff7b3a;--gv-date-bg:#1b2c45;--gv-date-border:#3e6592;--gv-warn:#ffc46b;--gv-warn-bg:#35270c;
+  --gv-chevron-0:#0b3a66;--gv-chevron-1:#115796;--gv-chevron-2:#1a72c6;--gv-chevron-3:#3393e6;
+  --gv-navy-surface:#1d2f6b;--gv-bar-steel:#3f74b8;--gv-gauge-bg:#152033;--gv-gauge-border:#3c5a80;
+  --gv-frame:#4a6283;--gv-rule:#7186a5;--gv-foot-bg:#1b2940;--gv-fase-border:#34506f;--gv-warn-border:#6b5220;--gv-hover:#26405f;
+  --gv-date-hover:#ffffff1f;--gv-shadow:#00000066;--gv-on-color:#fff;
+  --background:220 45% 10%;--foreground:214 45% 93%;--card:218 42% 14%;--card-foreground:214 45% 93%;--muted:218 35% 18%;
+  --muted-foreground:215 25% 70%;--border:216 32% 25%;--primary:209 85% 60%;
+  color-scheme:dark;
+}
+/* 02 — programação importada: contadores, período, atalhos (semana real / modo histórico) e documentos sem data. */
+.gv-prog-importada{flex:0 0 auto;display:flex;flex-direction:column;gap:.35em;padding:.45em .7em;font-size:.8em;line-height:1.35;color:var(--gv-ink);background:var(--gv-surface);border:1px solid var(--gv-line);border-radius:.3em}
+.gv-prog-importada-linha{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2em 1em}.gv-prog-importada-linha b{color:var(--gv-steel);letter-spacing:.035em}
+.gv-prog-importada-linha em{font-style:normal;font-weight:700}
+.gv-prog-importada-acoes{display:flex;flex-wrap:wrap;gap:.4em}
+.gv-prog-importada-acoes .gv-link{text-decoration:none;border:1px solid var(--gv-date-border);background:var(--gv-date-bg);color:var(--gv-ink);border-radius:.4em;padding:.25em .75em;font-weight:600;cursor:pointer}
+.gv-prog-importada-acoes .gv-link:hover:not(:disabled){background:var(--gv-hover)}.gv-prog-importada-acoes .gv-link:disabled{opacity:.55;cursor:default}
+.gv-prog-importada .gv-warning{margin:0}
+.gv-sem-data summary{cursor:pointer;font-weight:700;color:var(--gv-warn)}
+.gv-sem-data .gv-table-scroll{max-height:11em;overflow:auto;margin-top:.35em}
+.gv-sem-data table{width:100%;border-collapse:collapse}.gv-sem-data th,.gv-sem-data td{padding:.22em .45em;border-bottom:1px solid var(--gv-line);text-align:left;vertical-align:top}
+.gv-sem-data th{position:sticky;top:0;background:var(--gv-steel);color:var(--gv-on-color);font-weight:650}
+
+/* ------------------------------------------------------------------ PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV, 20/10/2026)
+   Mesma hierarquia da 02 nas três exibições: tabela de documentos em largura total EM CIMA (rola por dentro) e resumos/gráficos
+   EMBAIXO, numa faixa de altura própria que nunca é empurrada para fora da TV. Cartões de totais compactos. */
+.gv-diaria-auto{flex:1;min-height:0;display:flex;flex-direction:column;gap:.7em}
+.gv-diaria-kpis{gap:.7em}
+.gv-diaria-kpis .gv-tile{min-height:3.7em;padding:.3em .5em;gap:.1em}
+.gv-diaria-kpis .gv-tile-title{font-size:.8em}
+.gv-diaria-kpis .gv-tile-value{font-size:1.6em}
+.gv-diaria-vazia{flex:1;display:flex}
+.ge3-layout.gv-diaria-ge3{grid-template-rows:minmax(13em,1.5fr) minmax(11em,1fr) auto}
+.ge3-layout.gv-diaria-ge3-sem-inferior{grid-template-rows:minmax(13em,1fr) auto}
+.gv-diaria-ge3-sem-inferior>.ge3-discipline-grid{display:none}
+.gv-diaria-resumo .gv-diaria-cards{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(13em,1fr));gap:.6em;align-content:start}
+.gv-diaria-card{min-width:0;border:1px solid var(--gv-line);background:var(--gv-surface)}
+.gv-diaria-card>header{padding:.3em .6em;background:var(--gv-steel);color:var(--gv-on-color);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gv-diaria-card-grade{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:.05em .9em;padding:.35em .6em .1em}
+.gv-diaria-card-grade>small{font-size:.66em;font-weight:800;letter-spacing:.04em;color:var(--gv-ink-soft);text-align:right}
+.gv-diaria-card-grade>span{min-width:0;font-size:.74em;font-weight:700;line-height:1.1;color:var(--gv-steel);overflow-wrap:anywhere}
+.gv-diaria-card-grade>strong{font-size:1.2em;font-weight:650;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:var(--gv-ink)}
+.gv-diaria-card>p{margin:0;padding:.1em .6em .4em;font-size:.68em;line-height:1.3;color:var(--gv-ink-soft)}
+.gv-diaria-uma{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,4fr);gap:1.2em;align-content:start}
+.gv-diaria-uma h4{margin:0 0 .4em;font-size:.85em;font-weight:800;letter-spacing:.04em;color:var(--gv-steel)}
+@media (max-width:1100px){.gv-diaria-uma{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.ge3-layout.gv-diaria-ge3{grid-template-rows:minmax(24rem,auto) auto auto}}
+
+/* ------------------------------------------------------------------ 01. VISÃO GERAL — metas e layout (20/10/2026)
+   Só a 01 recebe .gv-shell-vg (e, no player da TV, .gv-shell-vg-tv): sidebar mais estreita, menos respiro vertical, 6 cartões
+   numa linha, barras por projeto com os dois números e gauges maiores com a marca vermelha da meta acumulada.
+   As outras telas não recebem estas classes; cor nova = só o vermelho da meta (tokens --gv-alvo*). */
+.gv-shell{--gv-alvo:#d32f2f;--gv-alvo-texto:#b71c1c}
+.dark .gv-shell{--gv-alvo:#f04848;--gv-alvo-texto:#ff9090}
+/* Situação da disciplina = cor do arco do gauge da 01 (adendo 20/10): adiantada verde, no prazo azul (= --gv-gauge-fill),
+   atrasada vermelho, indeterminada cinza. -faixa = tom da faixa de fundo, para a situação aparecer também com 0% (indeterminada
+   mantém a faixa cinza neutra).
+   --gv-alvo-halo = contorno claro da seta da meta (sempre vermelha) quando o arco é vermelho. */
+.gv-shell{--gv-sit-adiantada:#1b9a52;--gv-sit-adiantada-faixa:#cdeedb;--gv-sit-no-prazo-faixa:#d3e4f5;--gv-sit-atrasada:#e5483f;--gv-sit-atrasada-faixa:#f7d3d0;
+  --gv-sit-indeterminada:#6b7684;--gv-alvo-halo:var(--gv-gauge-bg)}
+.dark .gv-shell{--gv-sit-adiantada:#3fcf7f;--gv-sit-adiantada-faixa:#1c4633;--gv-sit-no-prazo-faixa:#1d3550;--gv-sit-atrasada:#e5484d;--gv-sit-atrasada-faixa:#4d2329;
+  --gv-sit-indeterminada:#a3aebd;--gv-alvo-halo:#f4f7fb}
+.gv-shell.gv-shell-vg{grid-template-columns:clamp(104px,7.6%,300px) minmax(0,1fr)}
+/* Player da TV: cabeçalho (≈57 px) + barra de progresso (4 px) + respiro do <main> (2 × 24 px) = 109 px. */
+.gv-shell.gv-shell-vg-tv{height:calc(100dvh - 112px);min-height:520px}
+.gv-shell-vg .gv-sidebar{padding:0 .5em .8em}
+.gv-shell-vg .gv-brand{height:5.8em;padding:.6em .1em}
+.gv-shell-vg .gv-sidebar nav{gap:1.3em;padding-bottom:2em}
+.gv-shell-vg .gv-sidebar nav :is(a,button,span){min-height:4.4em;padding:.5em .3em;font-size:.98em;line-height:1.15}
+.gv-shell-vg .gv-main{padding:0 1em .5em}
+.gv-shell-vg .gv-page-header{min-height:5em;padding:.35em .2em}
+.gv-shell-vg .gv-content{gap:.55em;padding-top:.6em}
+.gv-vg-kpis{gap:.9em}
+.gv-vg-kpis .gv-tile{min-height:4.6em;padding:.4em .5em;gap:.15em}
+.gv-tile-nota{font-size:.74em;font-weight:700;line-height:1.1;color:var(--gv-warn)}
+.gv-tile-nota .gv-tile-nota-neutra{color:var(--gv-ink-soft)}
+.gv-shell-vg .gv-overview{gap:.7em;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr);grid-template-rows:minmax(0,.8fr) minmax(0,1.2fr)}
+/* DOCUMENTOS POR PROJETO e POR DISCIPLINA: duas barras por linha, mesma escala, número no fim de cada barra (zero também). */
+.gv-pbars{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:.4em;padding:.4em .8em .6em .4em}
+.gv-pbar{display:grid;grid-template-columns:minmax(5em,34%) minmax(0,1fr);align-items:center;gap:.5em;min-width:0}
+.gv-pbar label{text-align:right;font-size:.82em;font-weight:700;line-height:1.1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.gv-pbar-linhas{min-width:0;display:flex;flex-direction:column;gap:.15em}
+.gv-pbar-linha{min-width:0;height:1.15em;display:flex;align-items:center;gap:.35em}
+.gv-pbar-linha i{flex:0 0 auto;display:block;height:100%}
+.gv-pbar-prog i{background:var(--gv-navy)}
+.gv-pbar-emit i{background:var(--gv-teal)}
+.gv-pbar-linha b{flex:0 0 auto;font-size:1em;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--gv-ink)}
+/* Mais de 6 linhas: mesmas barras, mais finas, rótulo em 1 linha — 9 disciplinas cabem sem rolagem (rolagem só como último recurso). */
+.gv-pbars-compacto{gap:.2em;padding-top:.25em;padding-bottom:.35em}
+.gv-pbars-compacto .gv-pbar label{font-size:.76em;-webkit-line-clamp:1}
+.gv-pbars-compacto .gv-pbar-linhas{gap:.08em}
+.gv-pbars-compacto .gv-pbar-linha{height:.8em}
+.gv-pbars-compacto .gv-pbar-linha b{font-size:.84em}
+/* % EMISSÃO POR DISCIPLINA: legenda do quadro (realizado × meta) e gauge com marca da meta. */
+.gv-legend-meta{flex-wrap:wrap;justify-content:center;align-items:center;text-align:center;row-gap:.1em;padding:.3em .4em 0;font-size:.86em}
+.gv-legend-meta .gv-legend-situacoes{gap:.8em;font-size:.92em}
+.gv-legend-meta .gv-dot-sit-adiantada{background:var(--gv-sit-adiantada)}
+.gv-legend-meta .gv-dot-sit-no-prazo{background:var(--gv-gauge-fill)}
+.gv-legend-meta .gv-dot-sit-atrasada{background:var(--gv-sit-atrasada)}
+.gv-legend-meta .gv-dot-sit-indeterminada{background:var(--gv-sit-indeterminada)}
+.gv-shell-vg .gv-gauge-grid{gap:.55em;padding:.45em .6em .55em}
+.gv-gauge-com-meta svg{padding:.1em .2em 0}
+/* Percentual central menor (y 87 no SVG) e fração moderada (y 109): não cobrem o arco nem a marca vermelha. */
+.gv-gauge-com-meta .gv-gauge-value{font-size:17px}
+.gv-gauge-com-meta .gv-gauge-fracao{font-size:13px;font-weight:700;fill:var(--gv-ink)}
+.gv-gauge-alvo line{stroke:var(--gv-alvo);stroke-width:3.5;stroke-linecap:round}
+.gv-gauge-alvo line.gv-gauge-alvo-halo{stroke:var(--gv-gauge-bg);stroke-width:7}
+.gv-gauge-alvo polygon{fill:var(--gv-alvo);stroke:var(--gv-gauge-bg);stroke-width:1.2;stroke-linejoin:round}
+/* Cor do arco pela situação (no prazo = azul padrão). A seta da meta continua SEMPRE vermelha (--gv-alvo). */
+.gv-gauge-com-meta.gv-gauge-sit-adiantada .gv-gauge-fill{stroke:var(--gv-sit-adiantada)}
+.gv-gauge-com-meta.gv-gauge-sit-adiantada .gv-gauge-track{stroke:var(--gv-sit-adiantada-faixa)}
+.gv-gauge-com-meta.gv-gauge-sit-no-prazo .gv-gauge-track{stroke:var(--gv-sit-no-prazo-faixa)}
+.gv-gauge-com-meta.gv-gauge-sit-atrasada .gv-gauge-fill{stroke:var(--gv-sit-atrasada)}
+.gv-gauge-com-meta.gv-gauge-sit-atrasada .gv-gauge-track{stroke:var(--gv-sit-atrasada-faixa)}
+.gv-gauge-com-meta.gv-gauge-sit-indeterminada .gv-gauge-fill{stroke:var(--gv-sit-indeterminada)}
+/* Arco vermelho: halo claro mais largo em volta do traço e contorno claro na seta, para a meta não se confundir com o arco. */
+.gv-gauge-com-meta.gv-gauge-sit-atrasada .gv-gauge-alvo line.gv-gauge-alvo-halo{stroke:var(--gv-alvo-halo);stroke-width:9}
+.gv-gauge-com-meta.gv-gauge-sit-atrasada .gv-gauge-alvo polygon{stroke:var(--gv-alvo-halo);stroke-width:2}
+.gv-gauge-meta{flex:0 0 auto;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 .4em .25em;font-size:.82em;font-weight:800;line-height:1.2}
+.gv-gauge-meta>span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gv-gauge-meta-nota{font-size:.9em;font-weight:700;color:var(--gv-ink-soft)}
+.gv-shell-vg .gv-columns{padding-top:1.5em}
+@media (max-height:820px){
+  .gv-shell-vg .gv-brand{height:4.6em}
+  .gv-shell-vg .gv-sidebar nav{gap:.9em;padding-bottom:1em}
+  .gv-shell-vg .gv-sidebar nav :is(a,button,span){min-height:3.6em}
+  .gv-shell-vg .gv-page-header{min-height:4.4em}
+  .gv-vg-kpis .gv-tile{min-height:3.9em}
+}
+@media (max-width:820px){
+  .gv-shell.gv-shell-vg{grid-template-columns:minmax(0,1fr)}
+  .gv-shell.gv-shell-vg-tv{height:auto;min-height:0}
+  .gv-shell-vg .gv-overview{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+}

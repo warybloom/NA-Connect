@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Segredos locais de desenvolvimento (ex.: ConnectionStrings:AuditRepositoryConnection) ficam em user-secrets, fora do repositório. -->
+    <UserSecretsId>na-connect-webapp-7d3c1e52-6a0b-4f3e-9c41-2b8e5f0a9d17</UserSecretsId>
+    <!-- Artefatos de validação isolada fora de bin/obj não fazem parte do código-fonte. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj-stage02/**;obj_test_alt/**;bin_test_alt/**;obj_test_05a/**;bin_test_05a/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tests/ tem seu próprio csproj (xUnit) e referencia este projeto — nunca o contrário, senão o
+         glob padrão do SDK Web puxa os arquivos de teste para dentro deste build. -->
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <!-- Tools/ (Checkpoint 4 — executor manual da auditoria) também tem seu próprio csproj (Console) e
+         referencia este projeto — mesmo motivo: nunca deixar o glob do SDK Web puxar o Program.cs do CLI
+         para dentro deste build (colidiria com o Program.cs do site). -->
+    <Compile Remove="Tools\**" />
+    <Content Remove="Tools\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+  <PackageReference Include="Autodesk.DataManagement" Version="2.1.2" />
+  <PackageReference Include="Autodesk.Forge" Version="1.9.9" />
+  <PackageReference Include="EPPlus" Version="7.1.3" />
+  <PackageReference Include="Microsoft.AspNetCore.Session" Version="2.3.0" />
+  <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="9.0.7" />
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PrivateAssets>all</PrivateAssets>
+  </PackageReference>
+  <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9">
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PrivateAssets>all</PrivateAssets>
+  </PackageReference>
+  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
+  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  <PackageReference Include="Polly.Core" Version="8.7.0" />
+
+  <PackageReference Include="MPXJ.Net" Version="13.5.0" />
+  
+  <PackageReference Include="PdfPig" Version="0.1.9" />
+</ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Templates\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,10 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Segredos locais de desenvolvimento (ex.: ConnectionStrings:AuditRepositoryConnection) ficam em user-secrets, fora do repositório. -->
+    <UserSecretsId>na-connect-webapp-7d3c1e52-6a0b-4f3e-9c41-2b8e5f0a9d17</UserSecretsId>
+    <!-- Artefatos de validação isolada fora de bin/obj não fazem parte do código-fonte. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj-stage02/**;obj_test_alt/**;bin_test_alt/**;obj_test_05a/**;bin_test_05a/**;artifacts_*/**;ClientApp/node_modules/**;node_modules/**;ClientApp/dist/**;graphify-out/**;ClientApp/graphify-out/**;build-stage02/**;_backups/**;_build_verify/**</DefaultItemExcludes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tests/ tem seu próprio csproj (xUnit) e referencia este projeto — nunca o contrário, senão o
+         glob padrão do SDK Web puxa os arquivos de teste para dentro deste build. -->
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <!-- Tools/ (Checkpoint 4 — executor manual da auditoria) também tem seu próprio csproj (Console) e
+         referencia este projeto — mesmo motivo: nunca deixar o glob do SDK Web puxar o Program.cs do CLI
+         para dentro deste build (colidiria com o Program.cs do site). -->
+    <Compile Remove="Tools\**" />
+    <Content Remove="Tools\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="Tools\**" />
+  </ItemGroup>
 
   <ItemGroup>
   <PackageReference Include="Autodesk.DataManagement" Version="2.1.2" />
@@ -21,8 +41,10 @@
     <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     <PrivateAssets>all</PrivateAssets>
   </PackageReference>
+  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
   <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-  
+  <PackageReference Include="Polly.Core" Version="8.7.0" />
+
   <PackageReference Include="MPXJ.Net" Version="13.5.0" />
   
   <PackageReference Include="PdfPig" Version="0.1.9" />
@@ -46,4 +68,12 @@
     </None>
   </ItemGroup>
 
+  <!-- Compilação de validação isolada: evita varredura de artefatos gerados e node_modules.
+       Não se aplica à publicação normal, somente quando -p:SidebarCompileOnly=true. -->
+  <PropertyGroup Condition="'$(SidebarCompileOnly)' == 'true'">
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(SidebarCompileOnly)' == 'true'">
+    <Compile Include="Program.cs;Properties/**/*.cs;Areas/**/*.cs;Controllers/**/*.cs;Services/**/*.cs;Models/**/*.cs;Data/**/*.cs;Migrations/**/*.cs" />
+  </ItemGroup>
 </Project>

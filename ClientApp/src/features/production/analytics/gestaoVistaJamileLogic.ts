@@ -1,0 +1,686 @@
+import type { FactsReport } from "@/components/pmo/pmoFacts";
+import type { PmoDocument } from "@/components/pmo/pmoData";
+import { consumption, projectFacts } from "@/components/pmo/pmoFacts";
+import { somaConhecida } from "@/components/pmo/pmoMultiCore";
+import type { LdpProjeto } from "./resumoLogic";
+import { chave as chaveSigla, type FonteDisciplina, type NormalizadorSiglas } from "@/features/disciplinas/normalizadorSiglas";
+
+export const FASES = [30,60,90] as const;
+export type Fase = typeof FASES[number];
+export type PhaseValues = Record<Fase,number|null>;
+export const emptyPhases=():PhaseValues=>({30:null,60:null,90:null});
+const nonNullSum=(a:(number|null|undefined)[])=>{const v=a.filter((x):x is number=>typeof x==="number"&&Number.isFinite(x));return v.length?v.reduce((s,n)=>s+n,0):null;};
+export const pct=(a:number|null|undefined,b:number|null|undefined)=>typeof a==="number"&&typeof b==="number"&&b>0?a/b*100:null;
+const normalize=(s:string)=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim().toUpperCase();
+
+/* ------------------------------------------------------------------------------------------------
+ * FASES 30/60/90 (LDP Tipo 2) — somente o que o backend já entrega; nada é rateado.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Status por gate: somente as células que o backend da própria aba LDP fornece. */
+export function faseContagem(projetos:readonly LdpProjeto[],row:string):PhaseValues{
+ const out=emptyPhases();
+ for(const gate of FASES){
+   const values=projetos.filter(p=>p.tipoLdp===2).flatMap(p=>p.celulas
+     .filter(c=>Number(c.column)===gate&&normalize(c.row)===normalize(row)).map(c=>c.value));
+   out[gate]=nonNullSum(values);
+ }
+ return out;
+}
+export function faseTotalDocumentos(reports:readonly FactsReport[]):PhaseValues {
+ const out=emptyPhases();
+ for(const gate of FASES){
+   const docs=reports.filter(r=>r.tipoLdp===2).flatMap(r=>r.documentos
+     .filter(d=>!d.isActivity&&d.gates?.some(g=>g.percentual===gate&&g.ativo)));
+   out[gate]=reports.some(r=>r.tipoLdp===2)?docs.length:null;
+ }
+ return out;
+}
+export function faseHhPrevisto(reports:readonly FactsReport[],filter?:(doc:PmoDocument)=>boolean):PhaseValues{
+ const out=emptyPhases();
+ for(const gate of FASES){
+  const values=reports.filter(r=>r.tipoLdp===2).flatMap(r=>r.documentos.filter(d=>!d.isActivity&&(!filter||filter(d)))
+   .flatMap(d=>d.gates?.filter(g=>g.percentual===gate&&g.ativo&&!g.cancelado).map(g=>g.esforcoHoras)??[]));
+  out[gate]=nonNullSum(values);
+ }
+ return out;
+}
+/** Sem gate nos lançamentos originais do Timesheet: nunca ratear automaticamente. */
+export function faseHhRealizado():PhaseValues{return emptyPhases();}
+export function dataISO(v:string|null|undefined){return v?.slice(0,10)??null;}
+const dataValida=(v:string|null|undefined)=>{const d=dataISO(v);return d&&d>="2000"?d:null;};
+
+/** Prazo exclusivamente por gate ativo: mesma prioridade Replanned > Baseline da LDP.
+ * Cancelado e Emitido saem do cálculo de pendência. Sem data válida não inventar atraso.
+ */
+export function fasePrazos(reports:readonly FactsReport[],cutoff:string){
+ const atraso=emptyPhases(),noPrazo=emptyPhases();
+ for(const g of FASES){
+   const gates=reports.filter(r=>r.tipoLdp===2).flatMap(r=>r.documentos
+     .filter(d=>!d.isActivity).flatMap(d=>d.gates?.filter(x=>x.percentual===g&&x.ativo&&!x.cancelado&&!x.emitido)??[]));
+   const valid=gates.filter(x=>!!dataValida(x.reprogramada??x.baseline));
+   atraso[g]=valid.length?valid.filter(x=>dataValida(x.reprogramada??x.baseline)!<cutoff).length:null;
+   noPrazo[g]=valid.length?valid.filter(x=>dataValida(x.reprogramada??x.baseline)!>=cutoff).length:null;
+ }
+ return {atraso,noPrazo};
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * SEMANA — regra oficial do backend (PmoAvancoRules.SemanaVigente / ProductionDashboards.InicioSemana):
+ * domingo a sábado.
+ * ---------------------------------------------------------------------------------------------- */
+export function addDias(date:string,dias:number){const d=new Date(date+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+dias);return d.toISOString().slice(0,10);}
+export function semanaDoCorte(date:string){
+ const d=new Date(date+"T12:00:00Z");if(Number.isNaN(d.valueOf()))return {start:date,end:date};
+ const start=addDias(date,-d.getUTCDay());
+ return {start,end:addDias(start,6)};
+}
+export const diasDaSemana=(start:string)=>Array.from({length:7},(_,i)=>addDias(start,i));
+
+/* ------------------------------------------------------------------------------------------------
+ * DISCIPLINA — DOC3 → sigla → Norma de Coordenação do projeto → nome da Norma.
+ * O backend resolve o nome (CoordinationDisciplineResolver) e devolve, por sigla, o canônico global
+ * que agrupa o REALIZADO oficial. Aqui só se AGRUPA e ROTULA; nenhum valor é recalculado ou escondido.
+ * ---------------------------------------------------------------------------------------------- */
+export interface NormaSigla{sigla:string;disciplina:string;canonica:string|null}
+export interface NormaDiagnostico{tipo:string;mensagem:string;disciplinas:string[];siglas:string[]}
+export interface DisciplinasNorma{projectId:string;normaId:number|null;normaNome:string|null;siglas:NormaSigla[];diagnosticos:NormaDiagnostico[]}
+
+export const SEM_DISCIPLINA="__SEM_DISCIPLINA__";
+export const SEM_DISCIPLINA_ROTULO="SEM DISCIPLINA";
+/** Mesmo rótulo devolvido pelo backend (CoordinationDisciplineResolver.SemDisciplinaLabel). */
+const SEM_DISCIPLINA_BACKEND=["SEM DISCIPLINA","__PMO_NULL__",""];
+
+export interface CatalogoDisciplinas{
+ /**
+  * Projetos da análise (>1 = consolidado). No consolidado, só a disciplina PADRÃO oficial (canônico que o backend resolve
+  * pela Norma de cada projeto) une projetos; nome da Norma sem padrão ou disciplina fora da Norma fica separado POR
+  * PROJETO — nunca se força equivalência por semelhança de texto entre Normas diferentes.
+  */
+ projetos:Map<string,string>;
+ /** projectId → (nome da Norma normalizado → chave do grupo) */
+ porNome:Map<string,Map<string,string>>;
+ /** projectId → (canônico → chave do grupo) — liga o realizado oficial ao nome da Norma. */
+ porCanonica:Map<string,Map<string,string>>;
+ rotulos:Map<string,Set<string>>;
+ normas:DisciplinasNorma[];
+ /**
+  * Normalizador de Siglas (Configurações): SÓ no consolidado (>1 projeto). Siglas diferentes com o mesmo nome canônico
+  * PT-BR passam a somar na mesma linha ("S:<nome>"); sem regra, conflito ou 1 projeto → classificação original intacta.
+  */
+ normalizador?:NormalizadorSiglas|null;
+}
+/** Código curto do projeto ("CHS001 - ETHANOL PLANT" → "CHS001") para rotular disciplinas separadas por projeto. */
+const codigoDoProjeto=(nome:string|undefined,id:string)=>{const m=/^\s*([A-Z]{2,5}\d{2,4}(?:\.\d{1,3})*)\s*[-–—]/i.exec(nome??"");return m?m[1].toUpperCase():(nome?.trim()||id);};
+const consolidado=(cat:Pick<CatalogoDisciplinas,"projetos">)=>cat.projetos.size>1;
+/** Chave sem disciplina padrão oficial: no consolidado ganha o projeto (escopo da Norma daquele projeto). */
+const chaveLocal=(cat:Pick<CatalogoDisciplinas,"projetos">,prefixo:"N:"|"X:",projectId:string,nome:string)=>
+ consolidado(cat)?`${prefixo}${projectId}|${normalize(nome)}`:prefixo+normalize(nome);
+const rotuloLocal=(cat:Pick<CatalogoDisciplinas,"projetos">,projectId:string,nome:string)=>
+ consolidado(cat)?`${nome.trim()} (${codigoDoProjeto(cat.projetos.get(projectId),projectId)})`:nome.trim();
+
+/** projetos = projetos da análise (id + nome); com mais de um, o catálogo trabalha no modo consolidado. */
+export function criarCatalogo(normas:readonly DisciplinasNorma[],projetos:readonly {id:string;name?:string}[]=[],
+ normalizador?:NormalizadorSiglas|null):CatalogoDisciplinas{
+ const base={projetos:new Map(projetos.map(p=>[p.id,p.name??p.id]))};
+ const porNome=new Map<string,Map<string,string>>(),porCanonica=new Map<string,Map<string,string>>(),rotulos=new Map<string,Set<string>>();
+ for(const n of normas){
+  const nomes=new Map<string,string>(),canonicas=new Map<string,string>();
+  for(const s of n.siglas){
+   const k=s.canonica?"C:"+normalize(s.canonica):chaveLocal(base,"N:",n.projectId,s.disciplina);
+   nomes.set(normalize(s.disciplina),k);
+   if(s.canonica)canonicas.set(normalize(s.canonica),k);
+   if(!rotulos.has(k))rotulos.set(k,new Set());
+   rotulos.get(k)!.add(s.canonica?s.disciplina.trim():rotuloLocal(base,n.projectId,s.disciplina));
+  }
+  porNome.set(n.projectId,nomes);porCanonica.set(n.projectId,canonicas);
+ }
+ return {...base,porNome,porCanonica,rotulos,normas:[...normas],normalizador:consolidado(base)&&normalizador?.ativo?normalizador:null};
+}
+export interface Classificacao{chave:string;motivo:string|null}
+/** Documento da LDP: o nome da Norma já vem resolvido do backend pelo DOC3 (`disciplinaNorma`). */
+type DocClassificavel={projectId:string;disciplinaNorma?:string|null;disciplinaCanonica?:string|null;siglaDoc3?:string|null;fonteDisciplinaNorma?:string|null;codigo:string|null};
+/** Aplica o Normalizador de Siglas (só existe no catálogo consolidado). Cada item cai em UMA chave: sem dupla contagem. */
+function normalizarClassificacao(cat:CatalogoDisciplinas,c:Classificacao,projectId:string,fonte:FonteDisciplina,sigla:string|null|undefined,rotuloOriginal:string|null|undefined):Classificacao{
+ // DOC3 válido também deve passar pelo Normalizador se a Norma do projeto não
+ // tiver resolvido o nome. Não criar disciplina quando nem sigla nem rótulo existem.
+ if(!cat.normalizador)return c;
+ const rotulo=rotuloOriginal?.trim()||sigla?.trim();
+ if(!rotulo)return c;
+ const r=cat.normalizador.resolver({projectId,projectName:cat.projetos.get(projectId),fonte,sigla,rotulo});
+ if(r.conflito)return {chave:c.chave,motivo:c.motivo??r.conflito};
+ if(r.origem==="Original")return c;
+ const chave="S:"+chaveSigla(r.nome);
+ if(!cat.rotulos.get(chave)?.size)cat.rotulos.set(chave,new Set([r.nome]));
+ return {chave,motivo:c.motivo};
+}
+export function classificarDocumento(cat:CatalogoDisciplinas,doc:DocClassificavel,fonte:FonteDisciplina="LDP"):Classificacao{
+ return normalizarClassificacao(cat,classificarDocumentoOriginal(cat,doc),doc.projectId,fonte,doc.siglaDoc3,doc.disciplinaNorma??doc.disciplinaCanonica);
+}
+function classificarDocumentoOriginal(cat:CatalogoDisciplinas,doc:DocClassificavel):Classificacao{
+ const nome=doc.disciplinaNorma?.trim();
+ if(nome){
+  // Catálogo da Norma indisponível para o projeto: usa o canônico OFICIAL que o backend resolveu para o mesmo DOC3
+  // (o mesmo que classifica o realizado) — previsto e realizado caem na mesma linha, sem comparação textual.
+  const canonica=doc.disciplinaCanonica?.trim();
+  if(!cat.porNome.has(doc.projectId)&&canonica){
+   const chave="X:"+normalize(canonica);
+   if(!cat.rotulos.has(chave))cat.rotulos.set(chave,new Set([nome]));
+   return {chave,motivo:null};
+  }
+  const chave=cat.porNome.get(doc.projectId)?.get(normalize(nome))??chaveLocal(cat,"N:",doc.projectId,nome);
+  if(!cat.rotulos.has(chave))cat.rotulos.set(chave,new Set([rotuloLocal(cat,doc.projectId,nome)]));
+  return {chave,motivo:null};
+ }
+ const sigla=doc.siglaDoc3?.trim();
+ return {chave:SEM_DISCIPLINA,motivo:!doc.codigo?.trim()?"Documento sem código":!sigla?"Código sem DOC3":
+  cat.normas.some(n=>n.projectId===doc.projectId&&n.normaId!==null)?`DOC3 '${sigla}' não cadastrado na Norma`:"Projeto sem Norma de Coordenação"};
+}
+/** Realizado oficial: o backend agrupa por canônico global da sigla. Volta ao nome da Norma do mesmo projeto. */
+export function classificarRealizado(cat:CatalogoDisciplinas,projectId:string,disciplina:string|null):Classificacao{
+ return normalizarClassificacao(cat,classificarRealizadoOriginal(cat,projectId,disciplina),projectId,"TIMESHEET",null,disciplina);
+}
+function classificarRealizadoOriginal(cat:CatalogoDisciplinas,projectId:string,disciplina:string|null):Classificacao{
+ const nome=(disciplina??"").trim();
+ if(SEM_DISCIPLINA_BACKEND.includes(normalize(nome)))return {chave:SEM_DISCIPLINA,motivo:"Lançamento sem DOC3 cadastrado na Norma"};
+ const k=normalize(nome);
+ const chave=cat.porCanonica.get(projectId)?.get(k)??cat.porNome.get(projectId)?.get(k);
+ if(chave)return {chave,motivo:null};
+ // Disciplina informada fora da Norma (AT manual, medição histórica): preservada com o nome da origem.
+ const fora=chaveLocal(cat,"X:",projectId,nome);
+ if(!cat.rotulos.has(fora))cat.rotulos.set(fora,new Set([rotuloLocal(cat,projectId,nome)]));
+ return {chave:fora,motivo:"Disciplina informada fora da Norma (AT manual ou medição histórica)"};
+}
+export function rotulo(cat:CatalogoDisciplinas,chave:string){
+ if(chave===SEM_DISCIPLINA)return SEM_DISCIPLINA_ROTULO;
+ const nomes=[...(cat.rotulos.get(chave)??[])];
+ return nomes.length?nomes.sort((a,b)=>a.localeCompare(b,"pt-BR")).join(" / "):chave.slice(2).replace(/^[^|]*\|/,"");
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * PERFORMANCE POR DISCIPLINA (tela 04) — previsto por documento da LDP, realizado oficial do backend.
+ * Linhas somam exatamente os totais gerenciais; qualquer diferença vira linha explícita.
+ * ---------------------------------------------------------------------------------------------- */
+export interface LinhaPerformance{chave:string;disciplina:string;hhPrevisto:number|null;hhRealizado:number|null;
+ custoPrevisto:number|null;custoRealizado:number|null;consumoHh:number|null;consumoCusto:number|null;documentos:number;
+ diagnosticos:string[];reconciliacao?:boolean}
+const custoRealizadoOficial=(r:FactsReport)=>r.hhRealizado?.custoOficial===true;
+const TOLERANCIA=0.005;
+
+export function performancePorDisciplina(reports:readonly FactsReport[],cat:CatalogoDisciplinas){
+ const linhas=new Map<string,{hp:(number|null)[];hr:(number|null)[];cp:(number|null)[];cr:(number|null)[];docs:number;diag:Set<string>}>();
+ const linha=(k:string)=>{if(!linhas.has(k))linhas.set(k,{hp:[],hr:[],cp:[],cr:[],docs:0,diag:new Set()});return linhas.get(k)!;};
+ for(const r of reports){
+  for(const d of r.documentos){
+   const c=classificarDocumento(cat,d),l=linha(c.chave);
+   l.hp.push(d.hhPrevisto);l.cp.push(d.custoPrevisto);if(!d.isActivity)l.docs++;
+   if(c.motivo)l.diag.add(c.motivo);
+  }
+  const hh=r.hhRealizado?r.hhRealizado.porDisciplina.map(x=>({d:x.disciplina,hh:x.hh,custo:x.custo??null}))
+   :r.actual?.byDiscipline.map(x=>({d:x.discipline,hh:x.values.hh,custo:x.values.knownCalculatedCostSubtotal}))??[];
+  const custoLegado=!custoRealizadoOficial(r)&&r.hhRealizado?r.actual?.byDiscipline.map(x=>({d:x.discipline,custo:x.values.knownCalculatedCostSubtotal}))??[]:null;
+  for(const x of hh){
+   const c=classificarRealizado(cat,r.projectId,x.d),l=linha(c.chave);
+   l.hr.push(x.hh);if(!custoLegado)l.cr.push(x.custo);
+   if(c.motivo)l.diag.add(c.motivo);
+  }
+  for(const x of custoLegado??[]){const c=classificarRealizado(cat,r.projectId,x.d);linha(c.chave).cr.push(x.custo);}
+ }
+ const facts=projectFacts([...reports]);
+ const rows:LinhaPerformance[]=[...linhas].map(([chave,l])=>{
+  const hp=somaConhecida(l.hp),hr=somaConhecida(l.hr),cp=somaConhecida(l.cp),cr=somaConhecida(l.cr);
+  return {chave,disciplina:rotulo(cat,chave),hhPrevisto:hp,hhRealizado:hr,custoPrevisto:cp,custoRealizado:cr,
+   consumoHh:consumption(hr,hp),consumoCusto:consumption(cr,cp),documentos:l.docs,diagnosticos:[...l.diag]};
+ }).sort((a,b)=>(a.chave===SEM_DISCIPLINA?1:0)-(b.chave===SEM_DISCIPLINA?1:0)||a.disciplina.localeCompare(b.disciplina,"pt-BR"));
+ const soma=(f:(x:LinhaPerformance)=>number|null)=>somaConhecida(rows.map(f));
+ const dif=(total:number|null,parcial:number|null)=>total!==null&&parcial!==null&&Math.abs(total-parcial)>TOLERANCIA?total-parcial:null;
+ const ajuste={hp:dif(facts.cards.HH_Previsto,soma(x=>x.hhPrevisto)),hr:dif(facts.cards.HH_Realizado,soma(x=>x.hhRealizado)),
+  cp:dif(facts.cards.Custo_Previsto,soma(x=>x.custoPrevisto)),cr:dif(facts.cards.Custo_Realizado,soma(x=>x.custoRealizado))};
+ if(ajuste.hp!==null||ajuste.hr!==null||ajuste.cp!==null||ajuste.cr!==null)rows.push({chave:"__RECONCILIACAO__",
+  disciplina:"DIFERENÇA DE RECONCILIAÇÃO",hhPrevisto:ajuste.hp,hhRealizado:ajuste.hr,custoPrevisto:ajuste.cp,custoRealizado:ajuste.cr,
+  consumoHh:null,consumoCusto:null,documentos:0,reconciliacao:true,
+  diagnosticos:["Diferença entre o total gerencial oficial e a soma por documento/disciplina; exibida para manter o total auditável."]});
+ return {rows,cards:facts.cards};
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * PROGRAMAÇÃO DA SEMANA (tela 01).
+ * Tipo 1: documento (sem AT, sem cancelado) com data-alvo oficial do backend (Reprogramada LDP > término
+ * do Cronograma > Baseline LDP > baseline do Cronograma) dentro da semana.
+ * Tipo 2: cada gate 30/60/90 ativo e não cancelado com data (Reprogramada > Baseline do gate) na semana.
+ * Realizado = emitido; Em atraso = não emitido com data anterior à data de corte.
+ * ---------------------------------------------------------------------------------------------- */
+export interface EntregaSemana{projectId:string;projeto:string;codigo:string|null;gate:number|null;data:string;emitido:boolean;atrasado:boolean;chave:string}
+export function entregasDaSemana(reports:readonly FactsReport[],cat:CatalogoDisciplinas,cutoff:string){
+ const semana=semanaDoCorte(cutoff),out:EntregaSemana[]=[];
+ const dentro=(d:string|null)=>!!d&&d>=semana.start&&d<=semana.end;
+ for(const r of reports)for(const d of r.documentos){
+  if(d.isActivity)continue;
+  const {chave}=classificarDocumento(cat,d);
+  if(r.tipoLdp===2){
+   for(const g of d.gates??[]){
+    const data=dataValida(g.reprogramada??g.baseline);
+    if(!g.ativo||g.cancelado||!dentro(data))continue;
+    const emitido=g.emitido===true;
+    out.push({projectId:r.projectId,projeto:r.nomeProjeto,codigo:d.codigo,gate:g.percentual,data:data!,emitido,atrasado:!emitido&&data!<cutoff,chave});
+   }
+  }else{
+   const data=dataValida(d.dataAlvo);
+   if(d.cancelado||!dentro(data))continue;
+   out.push({projectId:r.projectId,projeto:r.nomeProjeto,codigo:d.codigo,gate:null,data:data!,emitido:d.emitido,atrasado:!d.emitido&&data!<cutoff,chave});
+  }
+ }
+ const previstos=out.length,realizados=out.filter(x=>x.emitido).length,atrasados=out.filter(x=>x.atrasado).length;
+ const aderencia=pct(realizados,previstos);
+ return {semana,entregas:out,previstos,realizados,atrasados,aderencia,desvio:aderencia===null?null:100-aderencia};
+}
+/** Próxima/anterior semana com entregas previstas — orienta o usuário quando a semana escolhida está vazia. */
+export function semanasComEntregas(reports:readonly FactsReport[]){
+ const datas=new Set<string>();
+ for(const r of reports)for(const d of r.documentos){
+  if(d.isActivity)continue;
+  if(r.tipoLdp===2)(d.gates??[]).forEach(g=>{const x=dataValida(g.reprogramada??g.baseline);if(g.ativo&&!g.cancelado&&x)datas.add(semanaDoCorte(x).start);});
+  else{const x=dataValida(d.dataAlvo);if(!d.cancelado&&x)datas.add(semanaDoCorte(x).start);}
+ }
+ return [...datas].sort();
+}
+export function agrupar<T>(itens:readonly T[],chave:(x:T)=>string){
+ const m=new Map<string,T[]>();for(const x of itens){const k=chave(x);if(!m.has(k))m.set(k,[]);m.get(k)!.push(x);}return m;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * PROGRAMAÇÃO DIÁRIA (tela 02) — dbo.tb_WeeklyEngineeringSchedule via /api/reports/gestao-vista-jamile/programacao.
+ * HH previsto da linha = HH elaboração + HH verificação + HH aprovação (componentes conhecidos).
+ * ---------------------------------------------------------------------------------------------- */
+export interface ProgramacaoLinha{idRegistro:number;documento:string|null;tarefa:string|null;disciplinaWeekly:string|null;
+ siglaDoc3:string|null;disciplinaNorma:string|null;disciplinaCanonica:string|null;fonteDisciplina:string;
+ elaborador:string|null;verificador:string|null;aprovador:string|null;
+ hhElaboracao:number|null;hhVerificacao:number|null;hhAprovacao:number|null;
+ baseline:string|null;reprogramado:string|null;dataAtividade:string;status:string|null;fase:string|null}
+/** Registro importado sem Replanned nem Baseline: não pertence a semana alguma e nunca recebe data artificial. */
+export interface ProgramacaoSemData{idRegistro:number;documento:string|null;tarefa:string|null;disciplinaWeekly:string|null;
+ siglaDoc3:string|null;disciplinaNorma:string|null;disciplinaCanonica:string|null;fonteDisciplina:string;
+ elaborador:string|null;status:string|null;fase:string|null;linhaExcel:number|null}
+export interface ProgramacaoResposta{projectId:string;inicio:string;fim:string;ultimaSincronizacao:string|null;registrosProjeto:number;
+ registrosSemData:number;datasComProgramacao:{data:string;quantidade:number}[];linhas:ProgramacaoLinha[];
+ /** Opcionais: backend anterior a 19/10/2026 não os devolve (a tela informa só a contagem). */
+ arquivoOrigem?:string|null;linhasSemData?:ProgramacaoSemData[]}
+export const hhLinha=(l:Pick<ProgramacaoLinha,"hhElaboracao"|"hhVerificacao"|"hhAprovacao">)=>somaConhecida([l.hhElaboracao,l.hhVerificacao,l.hhAprovacao]);
+const NAO_RECURSO=new Set(["TBD","-","—","N/A","NA"]);
+export function recursosDistintos(linhas:readonly ProgramacaoLinha[]){
+ const s=new Set<string>();
+ for(const l of linhas)for(const p of [l.elaborador,l.verificador,l.aprovador]){const k=normalize(p??"");if(k&&!NAO_RECURSO.has(k))s.add(k);}
+ return s.size;
+}
+export function classificarProgramacao(cat:CatalogoDisciplinas,projectId:string,l:ProgramacaoLinha):Classificacao{
+ return classificarDocumento(cat,{projectId,disciplinaNorma:l.disciplinaNorma,disciplinaCanonica:l.disciplinaCanonica,siglaDoc3:l.siglaDoc3,codigo:l.documento},"PROGRAMACAO");
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * 02. PROGRAMAÇÃO SEMANAL — semana oficial domingo–sábado (semanaDoCorte). Tudo calculado sobre os registros reais de
+ * dbo.tb_WeeklyEngineeringSchedule devolvidos pelo endpoint de programação, consultado com inicio=domingo e fim=sábado.
+ * ---------------------------------------------------------------------------------------------- */
+export const DIAS_SEMANA_CURTOS=["DOM","SEG","TER","QUA","QUI","SEX","SÁB"] as const;
+/** "QUI" para 2026-10-15 (dia da semana em UTC ao meio-dia: sem deslocamento de fuso). */
+export const diaDaSemanaCurto=(data:string)=>DIAS_SEMANA_CURTOS[new Date(data.slice(0,10)+"T12:00:00Z").getUTCDay()];
+
+type LinhaDoProjeto=ProgramacaoLinha&{projectId:string};
+const chaveTexto=(v:string|null)=>normalize(v??"");
+/**
+ * Atividade da programação = projeto + documento + tarefa + fase + data da atividade. Registros com a MESMA chave são
+ * repetições do mesmo item (ex.: linha importada duas vezes) e contam uma vez (fica o menor Id_Registro). Tarefa, fase ou
+ * dia diferentes são atividades distintas e são preservadas. Sem número de documento não há como provar repetição:
+ * o registro é mantido.
+ */
+export function deduplicarProgramacao<T extends LinhaDoProjeto>(linhas:readonly T[]):{linhas:T[];repetidos:number}{
+ const vistos=new Map<string,T>();
+ const ordenadas=[...linhas].sort((a,b)=>a.idRegistro-b.idRegistro);
+ const out:T[]=[];
+ for(const l of ordenadas){
+  const doc=chaveTexto(l.documento);
+  if(!doc){out.push(l);continue;}
+  const k=[l.projectId,doc,chaveTexto(l.tarefa),chaveTexto(l.fase),l.dataAtividade.slice(0,10)].join("|");
+  if(vistos.has(k))continue;
+  vistos.set(k,l);out.push(l);
+ }
+ return {linhas:out,repetidos:linhas.length-out.length};
+}
+
+/** Linhas da semana, opcionalmente só de um dia (filtro opcional; sem filtro = os sete dias). */
+export const filtrarDia=<T extends {dataAtividade:string}>(linhas:readonly T[],dia:string|null)=>
+ dia?linhas.filter(l=>l.dataAtividade.slice(0,10)===dia):[...linhas];
+
+/** Quantidade de atividades por dia da semana (domingo → sábado), para o filtro e o agrupamento. */
+export function atividadesPorDia(linhas:readonly {dataAtividade:string}[],inicioSemana:string){
+ return diasDaSemana(inicioSemana).map(data=>({data,dia:diaDaSemanaCurto(data),quantidade:linhas.filter(l=>l.dataAtividade.slice(0,10)===data).length}));
+}
+
+/** Semana anterior/seguinte que TEM programação (datas com programação do projeto), para navegar a partir de uma semana vazia. */
+export function semanasVizinhasComProgramacao(datas:readonly string[],semana:{start:string;end:string}){
+ const ordenadas=[...new Set(datas.map(d=>d.slice(0,10)))].sort();
+ const antes=[...ordenadas].reverse().find(d=>d<semana.start),depois=ordenadas.find(d=>d>semana.end);
+ return {anterior:antes?semanaDoCorte(antes):null,proxima:depois?semanaDoCorte(depois):null};
+}
+
+
+/* ----------------------------------------------------------------------------------------------
+ * 02. PROGRAMAÇÃO IMPORTADA — o que o banco tem fora da semana consultada. Nada é transposto para a semana atual:
+ * contadores, período e sincronização vêm do resumo que o backend devolve junto com a semana (todas as datas do projeto).
+ * ---------------------------------------------------------------------------------------------- */
+export interface ResumoProgramacaoProjeto{projectId:string;importados:number;comData:number;semData:number;
+ periodo:{inicio:string;fim:string}|null;ultimaSincronizacao:string|null;arquivoOrigem:string|null}
+export function resumoProgramacao(dados:readonly ProgramacaoResposta[]){
+ const projetos:ResumoProgramacaoProjeto[]=dados.map(d=>{
+  const datas=d.datasComProgramacao.map(x=>x.data.slice(0,10)).sort();
+  return {projectId:d.projectId,importados:d.registrosProjeto,semData:d.registrosSemData,comData:d.registrosProjeto-d.registrosSemData,
+   periodo:datas.length?{inicio:datas[0],fim:datas[datas.length-1]}:null,ultimaSincronizacao:d.ultimaSincronizacao,arquivoOrigem:d.arquivoOrigem??null};
+ });
+ const periodos=projetos.flatMap(p=>p.periodo?[p.periodo]:[]);
+ const sincronizacoes=projetos.flatMap(p=>p.ultimaSincronizacao?[p.ultimaSincronizacao]:[]).sort();
+ return {projetos,importados:projetos.reduce((s,p)=>s+p.importados,0),comData:projetos.reduce((s,p)=>s+p.comData,0),
+  semData:projetos.reduce((s,p)=>s+p.semData,0),
+  periodo:periodos.length?{inicio:periodos.map(p=>p.inicio).sort()[0],fim:periodos.map(p=>p.fim).sort().reverse()[0]}:null,
+  ultimaSincronizacao:sincronizacoes.length?sincronizacoes[sincronizacoes.length-1]:null};
+}
+/** Semana (domingo–sábado) da data mais recente com programação; null se nenhum registro tem data. */
+export function ultimaSemanaComProgramacao(datas:readonly string[]){
+ const ultima=[...datas].map(d=>d.slice(0,10)).sort().pop();
+ return ultima?semanaDoCorte(ultima):null;
+}
+/** Janelas contíguas de no máximo `dias` (o endpoint aceita até 62) cobrindo [inicio, fim]. */
+export function janelasDoPeriodo(inicio:string,fim:string,dias=56){
+ const out:{inicio:string;fim:string}[]=[];
+ for(let i=inicio;i<=fim;i=addDias(i,dias)){const f=addDias(i,dias-1);out.push({inicio:i,fim:f<fim?f:fim});}
+ return out;
+}
+/* ----------------------------------------------------------------------------------------------
+ * 01. VISÃO GERAL (19/10/2026) — MESMA fonte da 02: dbo.tb_WeeklyEngineeringSchedule por projeto, semana domingo–sábado,
+ * deduplicarProgramacao + classificarProgramacao (Normalizador no consolidado). Nada vem de gates/LDP como "previsto".
+ * Documento = projeto + código (um documento com várias atividades conta uma vez); linha sem código = item próprio (mesma
+ * regra da 02). Emissão: conciliada pelo projeto + código com a LDP oficial (DocumentEmissionRules: status aprovado ou data
+ * de emissão) até o corte do realizado (20/10: HOJE na semana em curso, sábado na semana concluída — nunca o sábado futuro);
+ * sem prova, o documento fica "sem comprovação" — nunca emitido nem atrasado por suposição.
+ * ---------------------------------------------------------------------------------------------- */
+export type SituacaoEmissao="emitido"|"pendente"|"sem-comprovacao";
+/** Documento da LDP usado SÓ para conciliar a emissão (nunca para prever). */
+export interface DocumentoLdpEmissao{codigo:string|null;emitido:boolean;cancelado:boolean;dataEmissao:string|null;isActivity?:boolean}
+export interface DocumentoProgramadoSemana{chave:string;projectId:string;codigo:string|null;disciplina:string;dias:string[];atividades:number;
+ situacao:SituacaoEmissao;motivo:string|null;atrasado:boolean;
+ /** Data prevista de emissão na semana (meta acumulada): atividade de EMISSÃO inequívoca, senão a última atividade do documento. */
+ dataPrevista:string;fontePrevista:FontePrevista}
+export interface ContagemVisaoGeral{documentos:number;atividades:number;emitidos:number;semComprovacao:number}
+const codigoDoc=(v:string|null|undefined)=>(v??"").trim().toUpperCase();
+
+/** Situação no CORTE: "emitido-depois" = emitido com data posterior ao corte (prova que NÃO estava emitido no corte). */
+export type SituacaoNoCorte=SituacaoEmissao|"emitido-depois";
+/**
+ * Conciliação com a LDP oficial (projeto + código) em relação a um CORTE (dia): base comum da 01 (corte = sábado) e da
+ * Programação Diária automática (corte = ontem). Status atual só prova a emissão no corte se o corte ainda não passou
+ * (hoje ≤ corte); depois disso, emitido SEM data fica sem comprovação. emitidoDepois decide como contar a emissão posterior.
+ */
+export function situacaoEmissaoNoCorte(codigo:string|null,ldp:readonly DocumentoLdpEmissao[]|undefined,corte:string,hoje:string,
+ emitidoDepois:"pendente"|"emitido-depois"):{situacao:SituacaoNoCorte;motivo:string|null;dataEmissao:string|null}{
+ const sem=(motivo:string)=>({situacao:"sem-comprovacao" as const,motivo,dataEmissao:null});
+ if(!codigoDoc(codigo))return sem("Atividade sem código de documento");
+ if(!ldp)return sem("LDP do projeto indisponível");
+ const iguais=ldp.filter(d=>!d.isActivity&&codigoDoc(d.codigo)===codigoDoc(codigo));
+ if(!iguais.length)return sem("Código não encontrado na LDP do projeto");
+ const ativos=iguais.filter(d=>!d.cancelado);
+ if(!ativos.length)return sem("Documento cancelado na LDP");
+ const estado=(d:DocumentoLdpEmissao):SituacaoNoCorte=>{
+  if(!d.emitido)return "pendente";
+  const data=dataValida(d.dataEmissao);
+  if(data)return data<=corte?"emitido":emitidoDepois;
+  return hoje<=corte?"emitido":"sem-comprovacao";
+ };
+ const estados=new Set(ativos.map(estado));
+ if(estados.size>1)return sem("Código repetido na LDP com situações diferentes");
+ const [s]=[...estados];
+ const datas=ativos.map(d=>dataValida(d.dataEmissao)).filter((d):d is string=>!!d).sort();
+ return {situacao:s,motivo:s==="sem-comprovacao"?"Emitido na LDP sem data de emissão (não comprova a emissão até o fim da semana)":null,
+  dataEmissao:s==="emitido"||s==="emitido-depois"?datas[datas.length-1]??null:null};
+}
+
+export function visaoGeralDaSemana({dados,projetos,cat,semana,hoje,ldp}:{dados:readonly ProgramacaoResposta[];projetos:readonly {id:string;name:string}[];
+ cat:CatalogoDisciplinas;semana:{start:string;end:string};hoje:string;ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>}){
+ const todas=dados.flatMap(d=>d.linhas.map(l=>({...l,projectId:d.projectId})));
+ // Nunca misturar outra semana: o endpoint já recorta, e aqui se garante pela data da atividade.
+ const daSemana=todas.filter(l=>{const d=l.dataAtividade.slice(0,10);return d>=semana.start&&d<=semana.end;});
+ const {linhas,repetidos}=deduplicarProgramacao(daSemana);
+ const c=corteDaMeta(semana,hoje);
+ // Atraso = data prevista ANTES deste dia: semana encerrada = tudo até sábado; semana corrente = antes de hoje (hoje e futuro nunca são atraso).
+ const limiteAtraso=hoje>semana.end?addDias(semana.end,1):hoje;
+ const docs=new Map<string,{projectId:string;codigo:string|null;disciplina:string;dias:Set<string>;emissao:Set<string>;atividades:number}>();
+ for(const l of linhas){
+  const k=codigoDoc(l.documento)?`${l.projectId}::${codigoDoc(l.documento)}`:`${l.projectId}::#${l.idRegistro}`;
+  const d=docs.get(k)??{projectId:l.projectId,codigo:l.documento,disciplina:classificarProgramacao(cat,l.projectId,l).chave,dias:new Set<string>(),emissao:new Set<string>(),atividades:0};
+  d.dias.add(l.dataAtividade.slice(0,10));d.atividades++;docs.set(k,d);
+  if(ehAtividadeDeEmissao(l.tarefa))d.emissao.add(l.dataAtividade.slice(0,10));
+ }
+ const documentos:DocumentoProgramadoSemana[]=[...docs].map(([chave,d])=>{
+  const dias=[...d.dias].sort(),emissao=[...d.emissao].sort();
+  const dataPrevista=emissao.length?emissao[emissao.length-1]:dias[dias.length-1];
+  // Situação no corte do realizado (hoje na semana em curso; sábado na semana concluída) — a MESMA dos gauges e da aderência.
+  const n=documentoNoCorte({projectId:d.projectId,codigo:d.codigo,disciplina:d.disciplina,dataPrevista},ldp,c,hoje);
+  return {chave,projectId:d.projectId,codigo:d.codigo,disciplina:d.disciplina,dias,atividades:d.atividades,situacao:n.situacao,motivo:n.motivo,
+   atrasado:n.vencido&&n.situacao==="pendente",dataPrevista,fontePrevista:emissao.length?"emissao":"ultima-atividade"};
+ });
+ const contar=(xs:readonly DocumentoProgramadoSemana[]):ContagemVisaoGeral=>({documentos:xs.length,atividades:xs.reduce((s,x)=>s+x.atividades,0),
+  emitidos:xs.filter(x=>x.situacao==="emitido").length,semComprovacao:xs.filter(x=>x.situacao==="sem-comprovacao").length});
+ const total=contar(documentos);
+ const motivos=[...agrupar(documentos.filter(x=>x.motivo),x=>x.motivo!)].map(([motivo,xs])=>({motivo,quantidade:xs.length}))
+  .sort((a,b)=>b.quantidade-a.quantidade||a.motivo.localeCompare(b.motivo,"pt-BR"));
+ // TODOS os projetos selecionados, na ordem da seleção — inclusive os sem programação (zero).
+ const porProjeto=projetos.map(p=>({projectId:p.id,nome:p.name||p.id,...contar(documentos.filter(x=>x.projectId===p.id))}));
+ const meta=metaAcumuladaDaSemana({itens:documentos,semana,hoje,ldp});
+ const porDisciplina=[...agrupar(documentos,x=>x.disciplina)].map(([chave,xs])=>({chave,nome:rotulo(cat,chave),...contar(xs),meta:meta.porDisciplina.get(chave)!}))
+  .sort((a,b)=>b.documentos-a.documentos||a.nome.localeCompare(b.nome,"pt-BR"));
+ // Por dia: documento distinto NAQUELE dia (com atividades em dois dias, aparece nos dois).
+ const porDia=diasDaSemana(semana.start).map(data=>{const xs=documentos.filter(x=>x.dias.includes(data));
+  return {data,documentos:xs.length,emitidos:xs.filter(x=>x.situacao==="emitido").length,atividades:linhas.filter(l=>l.dataAtividade.slice(0,10)===data).length};});
+ // %ADERÊNCIA e %DESVIO = coortes do total da meta (ver bloco abaixo); EM ATRASO = o mesmo backlog do %DESVIO (atrasados === meta.total.desvio).
+ return {semana,linhas,repetidos,foraDaSemana:todas.length-daSemana.length,itens:documentos,...total,
+  pendentes:documentos.filter(x=>x.situacao==="pendente").length,atrasados:documentos.filter(x=>x.atrasado).length,
+  aderencia:meta.total.aderenciaPct,desvio:meta.total.desvioPct,limiteAtraso,motivos,porProjeto,porDisciplina,porDia,
+  aEmitir:Math.max(0,total.documentos-total.emitidos),
+  meta:{estado:meta.estado,corte:meta.corte,corteRealizado:meta.corteRealizado,corteAtraso:meta.corteAtraso,total:meta.total}};
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * 01. META ACUMULADA POR DISCIPLINA (20/10/2026) — sobre o MESMO conjunto de documentos da 01 (projeto + código, deduplicado e
+ * classificado pela Norma/Normalizador): cada documento conta UMA vez, na sua data prevista de emissão (dataPrevista).
+ *   • Data prevista = atividade de EMISSÃO identificada sem ambiguidade na tarefa; senão, a ÚLTIMA atividade do documento na
+ *     semana (suposição documentada: na programação importada a tarefa costuma ser o título do documento, não a etapa).
+ *   • Corte (data civil da Bahia): semana futura = sem meta (0); semana em curso = hoje; semana concluída = sábado.
+ *   • Meta = documentos com data prevista ≤ corte ÷ documentos da disciplina na semana. Os dias acumulam sozinhos (cada documento
+ *     entra uma vez, no seu dia) — a meta nunca diminui ao longo da semana.
+ *   • Realizado = emissão COMPROVADA pela LDP (situacaoEmissaoNoCorte, projeto + código) até o corte do realizado (= o corte;
+ *     na semana futura, hoje). Emitido depois do corte não conta; emitido sem data em corte passado = sem comprovação.
+ * CARTÕES (correção 20/10/2026) — coortes por documento distinto, na data prevista; os mesmos números alimentam gauges e tooltips:
+ *   • %ADERÊNCIA = previstos até o corte (hoje INCLUSIVE: mede o acompanhamento até hoje) com emissão comprovada até o corte do
+ *     realizado ÷ previstos até o corte. Emissão antecipada de documento previsto para depois NÃO entra (não compensa vencido).
+ *   • %DESVIO = BACKLOG: previstos até corteAtraso (semana em curso = ONTEM — hoje só entra depois da meia-noite da Bahia;
+ *     semana concluída = sábado) ainda NÃO emitidos no corte do realizado ÷ previstos até corteAtraso. Cada documento conta uma vez
+ *     (pendência de segunda continua na terça e na quarta como 1); emitido até o corte sai do backlog. Semana concluída = foto do
+ *     fechamento (sábado): emissão posterior não vira pontual. EM ATRASO = a mesma contagem do backlog.
+ *   • Coorte vazia → null (—). Sem comprovação na coorte → null (indeterminado), nunca emitido/pendente por suposição.
+ * SITUAÇÃO DA DISCIPLINA (cor do arco do gauge, adendo 20/10/2026) — classificarSituacaoDisciplina, nesta ordem:
+ *   1. ATRASADA: ≥ 1 documento vencido (data prevista até corteAtraso: ontem / sábado) COMPROVADAMENTE não emitido no corte do
+ *      realizado (= o backlog do %DESVIO). Tem prioridade: emissão antecipada de outro documento nunca compensa o atraso.
+ *   2. INDETERMINADA: sem atraso comprovado, mas há documento vencido SEM comprovação (pode esconder atraso) — cinza, nunca vermelho.
+ *   3. ADIANTADA: documento com data prevista DEPOIS do corte do realizado já comprovadamente emitido até ele (o próprio par
+ *      documento/data; não se usa realizado × meta). Semana concluída: corte = sábado → não há antecipação na foto do fechamento.
+ *   4. NO PRAZO: nada vencido em aberto e nada antecipado. Previsto para HOJE e ainda não emitido = no prazo até a meia-noite
+ *      (Bahia); meta 0 hoje sem emitidos = no prazo; semana futura sem antecipação = no prazo. Sem comprovação só em documento de
+ *      hoje/futuro não bloqueia (não pode ser atraso) — a mesma regra da aderência.
+ * ---------------------------------------------------------------------------------------------- */
+export type FontePrevista="emissao"|"ultima-atividade";
+/** Tarefa que É a emissão ("EMISSÃO", "EMISSÃO DO DOCUMENTO", "ISSUANCE", "EMISSÃO PARA APROVAÇÃO", "EMISSÃO REV 0"). Um título que só
+ *  contém a palavra ("SISTEMA DE EMISSÃO DE GASES") não é atividade de emissão: na dúvida, não é. */
+const TAREFA_EMISSAO=/^(EMISSAO|ISSUANCE|DOCUMENT ISSUANCE)( (DO|DE) DOCUMENTO)?( (PARA|FOR) [A-Z0-9 ]+| REV [A-Z0-9]+)?$/;
+export const ehAtividadeDeEmissao=(tarefa:string|null|undefined)=>
+ TAREFA_EMISSAO.test(normalize(tarefa??"").replace(/[^A-Z0-9 ]+/g," ").replace(/\s+/g," ").trim());
+
+export type EstadoSemanaMeta="futura"|"corrente"|"concluida";
+/** Corte da meta e do realizado para a semana exibida, a partir de HOJE (data civil da Bahia). */
+export function corteDaMeta(semana:{start:string;end:string},hoje:string){
+ const estado:EstadoSemanaMeta=hoje<semana.start?"futura":hoje>semana.end?"concluida":"corrente";
+ return {estado,corte:estado==="futura"?null:estado==="concluida"?semana.end:hoje,corteRealizado:hoje<semana.end?hoje:semana.end,
+  /** Último dia previsto que já pode ser backlog: semana em curso = ONTEM; concluída = sábado; futura = nenhum. */
+  corteAtraso:estado==="futura"?null:estado==="concluida"?semana.end:addDias(hoje,-1)};
+}
+export type SituacaoDisciplina="adiantada"|"no-prazo"|"atrasada"|"indeterminada";
+export const ROTULO_SITUACAO:Record<SituacaoDisciplina,string>={adiantada:"Adiantada","no-prazo":"No prazo",atrasada:"Atrasada",indeterminada:"Indeterminada"};
+/** Situação da disciplina no corte (regras no bloco acima): atraso comprovado > vencido sem prova > antecipação > no prazo. */
+export function classificarSituacaoDisciplina({desvio,indeterminados,antecipados}:{desvio:number;indeterminados:number;antecipados:number}):SituacaoDisciplina{
+ if(desvio>0)return "atrasada";
+ if(indeterminados>0)return "indeterminada";
+ return antecipados>0?"adiantada":"no-prazo";
+}
+export interface MetaNoCorte{documentos:number;meta:number;metaPct:number|null;realizados:number;realizadoPct:number|null;
+ /** Aderência: dos `meta` previstos até o corte, os emitidos até o corte do realizado; sem comprovação entre eles → aderenciaPct null. */
+ aderidos:number;aderenciaPct:number|null;indeterminadosMeta:number;
+ /** Desvio (backlog): dos `vencidos` (previstos até corteAtraso), os ainda não emitidos; sem comprovação entre eles → desvioPct null. */
+ vencidos:number;desvio:number;desvioPct:number|null;indeterminados:number;semComprovacao:number;
+ /** Previstos DEPOIS do corte do realizado e já emitidos até ele; situacao = cor do arco do gauge (classificarSituacaoDisciplina). */
+ antecipados:number;situacao:SituacaoDisciplina}
+type DocumentoMeta=Pick<DocumentoProgramadoSemana,"projectId"|"codigo"|"disciplina"|"dataPrevista">;
+type CorteMeta=ReturnType<typeof corteDaMeta>;
+
+/** Um documento no corte: situação da emissão no corte do realizado, se está na meta (alvo) e se já venceu (backlog possível). */
+function documentoNoCorte(d:DocumentoMeta,ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>,c:CorteMeta,hoje:string){
+ const s=situacaoEmissaoNoCorte(d.codigo,ldp.get(d.projectId),c.corteRealizado,hoje,"pendente");
+ return {situacao:(s.situacao==="emitido-depois"?"pendente":s.situacao) as SituacaoEmissao,motivo:s.motivo,
+  alvo:c.corte!==null&&d.dataPrevista<=c.corte,vencido:c.corteAtraso!==null&&d.dataPrevista<=c.corteAtraso,
+  /** Data prevista depois do corte do realizado (hoje; sábado na semana concluída = nunca): emitido aqui = antecipado. */
+  futuro:d.dataPrevista>c.corteRealizado};
+}
+
+/** Meta acumulada, aderência e desvio (total e por disciplina) da semana no corte de hoje — ver regras no bloco acima. */
+export function metaAcumuladaDaSemana({itens,semana,hoje,ldp}:{itens:readonly DocumentoMeta[];semana:{start:string;end:string};hoje:string;
+ ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>}){
+ const c=corteDaMeta(semana,hoje);
+ const avaliados=itens.map(d=>({d,...documentoNoCorte(d,ldp,c,hoje)}));
+ const medir=(xs:typeof avaliados):MetaNoCorte=>{
+  const conta=(ys:typeof avaliados,s:SituacaoEmissao)=>ys.filter(y=>y.situacao===s).length;
+  const alvo=xs.filter(x=>x.alvo),vencidos=xs.filter(x=>x.vencido);
+  const realizados=conta(xs,"emitido"),semComprovacao=conta(xs,"sem-comprovacao");
+  const aderidos=conta(alvo,"emitido"),indeterminadosMeta=conta(alvo,"sem-comprovacao");
+  const desvio=conta(vencidos,"pendente"),indeterminados=conta(vencidos,"sem-comprovacao");
+  const antecipados=conta(xs.filter(x=>x.futuro),"emitido");
+  return {documentos:xs.length,meta:alvo.length,metaPct:xs.length?alvo.length/xs.length*100:null,realizados,
+   realizadoPct:xs.length&&!semComprovacao?realizados/xs.length*100:null,
+   aderidos,aderenciaPct:alvo.length&&!indeterminadosMeta?aderidos/alvo.length*100:null,indeterminadosMeta,
+   vencidos:vencidos.length,desvio,desvioPct:vencidos.length&&!indeterminados?desvio/vencidos.length*100:null,indeterminados,semComprovacao,
+   antecipados,situacao:classificarSituacaoDisciplina({desvio,indeterminados,antecipados})};
+ };
+ return {...c,total:medir(avaliados),porDisciplina:new Map([...agrupar(avaliados,x=>x.d.disciplina)].map(([k,xs])=>[k,medir(xs)]))};
+}
+/** Série da meta acumulada nos 7 dias (domingo → sábado): documentos com data prevista até cada dia (não decresce). */
+export function serieMetaAcumulada(datasPrevistas:readonly string[],semana:{start:string}){
+ return diasDaSemana(semana.start).map(data=>{const meta=datasPrevistas.filter(d=>d<=data).length;
+  return {data,meta,metaPct:datasPrevistas.length?meta/datasPrevistas.length*100:null};});
+}
+/** Grade dos gauges da 01 (por página, até 10): até 4 = 2 colunas; 5–10 = 3 colunas; linhas = as necessárias (mín. 2). */
+export const gradeDosGauges=(n:number)=>{const colunas=n<=4?2:3;return {colunas,linhas:Math.max(2,Math.ceil(n/colunas))};};
+/** Marca da META no velocímetro de 180° (centro 100,100; arco r=80, faixa 65–95): traço radial cruzando a faixa e seta por fora,
+ *  apontando para o arco. pct fica entre 0 e 100 (o arco nunca distorce). */
+export function geometriaMarcaMeta(pct:number){
+ const v=Math.max(0,Math.min(100,Number.isFinite(pct)?pct:0)),a=Math.PI*(1-v/100);
+ const r2=(n:number)=>Math.round(n*100)/100+0;
+ const p=(r:number,d=0)=>[r2(100+r*Math.cos(a)+d*Math.sin(a)),r2(100-r*Math.sin(a)+d*Math.cos(a))] as const;
+ const [x1,y1]=p(60),[x2,y2]=p(96);
+ return {pct:v,x1,y1,x2,y2,seta:[p(96),p(108,5.5),p(108,-5.5)].map(q=>q.join(",")).join(" ")};
+}
+/** LDP oficial por projeto (somente para conciliar emissão na 01). */
+export const ldpParaEmissao=(reports:readonly {projectId:string;documentos:readonly DocumentoLdpEmissao[]}[])=>
+ new Map(reports.map(r=>[r.projectId,r.documentos]));
+
+/** Une as janelas de UM projeto: linhas pelo Id_Registro (sem duplicar), resumo do projeto preservado. */
+export function mesclarJanelas(respostas:readonly ProgramacaoResposta[]):ProgramacaoResposta|null{
+ if(!respostas.length)return null;
+ const linhas=new Map<number,ProgramacaoLinha>();
+ for(const r of respostas)for(const l of r.linhas)if(!linhas.has(l.idRegistro))linhas.set(l.idRegistro,l);
+ const inicios=respostas.map(r=>r.inicio.slice(0,10)).sort(),fins=respostas.map(r=>r.fim.slice(0,10)).sort();
+ return {...respostas[0],inicio:inicios[0],fim:fins[fins.length-1],
+  linhas:[...linhas.values()].sort((a,b)=>a.dataAtividade.localeCompare(b.dataAtividade)||a.idRegistro-b.idRegistro)};
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * PROGRAMAÇÃO DIÁRIA AUTOMÁTICA (TV, 20/10/2026) — slide com dataReferencia "AUTO". MESMA fonte da 02 (programação
+ * semanal por projeto, janela [ontem, hoje]), MESMA deduplicação (deduplicarProgramacao) e MESMA classificação de disciplina;
+ * conciliação de emissão da 01 (situacaoEmissaoNoCorte) com corte = ONTEM. Por disciplina:
+ *   • PREVISTO HOJE = atividades programadas para hoje;
+ *   • PENDENTE DE ONTEM = documento programado ONTEM que a LDP oficial COMPROVA não emitido (não emitido hoje, sem data);
+ *   • SEM COMPROVAÇÃO = programado ontem sem prova (sem código, fora da LDP, cancelado, repetido, emitido sem data) —
+ *     nunca chamado de pendente/atrasado;
+ *   • emitidos até ontem e emitidos depois (regularizados) só entram na contagem.
+ * Nada além de ontem (não é histórico).
+ * ---------------------------------------------------------------------------------------------- */
+export interface AtividadeDiaria extends ProgramacaoLinha{projectId:string;chave:string;hh:number|null}
+export interface DocumentoOntem{chave:string;projectId:string;codigo:string|null;disciplina:string;atividades:AtividadeDiaria[];hh:number|null;
+ situacao:SituacaoNoCorte;motivo:string|null;dataEmissao:string|null}
+export interface DisciplinaDiaria{chave:string;nome:string;hoje:AtividadeDiaria[];documentosHoje:number;hhHoje:number|null;
+ pendentes:DocumentoOntem[];hhPendente:number|null;semComprovacao:DocumentoOntem[];emitidosOntem:number;regularizados:number}
+
+const docKey=(l:{projectId:string;documento:string|null;idRegistro:number})=>
+ codigoDoc(l.documento)?`${l.projectId}::${codigoDoc(l.documento)}`:`${l.projectId}::#${l.idRegistro}`;
+const somaHh=(xs:readonly {hh:number|null}[])=>xs.some(x=>x.hh!==null)?xs.reduce((s,x)=>s+(x.hh??0),0):null;
+
+export function analiseDiariaAutomatica({dados,cat,hoje,ldp}:{dados:readonly ProgramacaoResposta[];cat:CatalogoDisciplinas;hoje:string;
+ ldp:ReadonlyMap<string,readonly DocumentoLdpEmissao[]>}){
+ const ontem=addDias(hoje,-1);
+ const todas=dados.flatMap(d=>d.linhas.map(l=>({...l,projectId:d.projectId})));
+ // Só ontem e hoje: qualquer outra data que a consulta devolva é descartada (nunca vira histórico).
+ const naJanela=todas.filter(l=>{const d=l.dataAtividade.slice(0,10);return d===hoje||d===ontem;});
+ const {linhas,repetidos}=deduplicarProgramacao(naJanela);
+ const atividades:AtividadeDiaria[]=linhas.map(l=>({...l,chave:classificarProgramacao(cat,l.projectId,l).chave,hh:hhLinha(l)}));
+ const deHoje=atividades.filter(l=>l.dataAtividade.slice(0,10)===hoje);
+ const porDocOntem=agrupar(atividades.filter(l=>l.dataAtividade.slice(0,10)===ontem),docKey);
+ const ontemDocs:DocumentoOntem[]=[...porDocOntem].map(([chave,xs])=>{
+  const s=situacaoEmissaoNoCorte(xs[0].documento,ldp.get(xs[0].projectId),ontem,hoje,"emitido-depois");
+  return {chave,projectId:xs[0].projectId,codigo:xs[0].documento,disciplina:xs[0].chave,atividades:xs,hh:somaHh(xs),...s,
+   motivo:s.motivo?.replace("até o fim da semana","até ontem")??null};
+ });
+ const documentos=(xs:readonly AtividadeDiaria[])=>new Set(xs.map(docKey)).size;
+ const chaves=[...new Set([...deHoje.map(x=>x.chave),...ontemDocs.map(x=>x.disciplina)])];
+ const disciplinas:DisciplinaDiaria[]=chaves.map(chave=>{
+  const h=deHoje.filter(x=>x.chave===chave).sort((a,b)=>(a.documento??"").localeCompare(b.documento??"","pt-BR")||a.idRegistro-b.idRegistro);
+  const o=ontemDocs.filter(x=>x.disciplina===chave).sort((a,b)=>(a.codigo??"").localeCompare(b.codigo??"","pt-BR"));
+  const pendentes=o.filter(x=>x.situacao==="pendente");
+  return {chave,nome:rotulo(cat,chave),hoje:h,documentosHoje:documentos(h),hhHoje:somaHh(h),pendentes,hhPendente:somaHh(pendentes),
+   semComprovacao:o.filter(x=>x.situacao==="sem-comprovacao"),emitidosOntem:o.filter(x=>x.situacao==="emitido").length,
+   regularizados:o.filter(x=>x.situacao==="emitido-depois").length};
+ }).sort((a,b)=>(a.chave===SEM_DISCIPLINA?1:0)-(b.chave===SEM_DISCIPLINA?1:0)||a.nome.localeCompare(b.nome,"pt-BR"));
+ const pendentes=ontemDocs.filter(x=>x.situacao==="pendente");
+ return {hoje,ontem,repetidos,foraDaJanela:todas.length-naJanela.length,disciplinas,
+  totais:{atividadesHoje:deHoje.length,documentosHoje:documentos(deHoje),hhHoje:somaHh(deHoje),
+   documentosOntem:ontemDocs.length,pendentes:pendentes.length,hhPendente:somaHh(pendentes),
+   semComprovacao:ontemDocs.filter(x=>x.situacao==="sem-comprovacao").length,
+   emitidosOntem:ontemDocs.filter(x=>x.situacao==="emitido").length,regularizados:ontemDocs.filter(x=>x.situacao==="emitido-depois").length}};
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * EDITOR DA TV — "Uma tela por disciplina" (20/10/2026). Disciplinas oferecidas para UM projeto, com a MESMA chave que a tela
+ * diária usa (criarCatalogo de 1 projeto, sem Normalizador — idêntico ao catálogo da tela): (a) as cadastradas na Norma de
+ * Coordenação do projeto (endpoint /disciplinas do servidor) e (b) as que aparecem na programação de ontem/hoje (classificação
+ * da 02). Nada é digitado nem inventado: sem Norma e sem programação, a lista fica vazia.
+ * ---------------------------------------------------------------------------------------------- */
+export interface OpcaoDisciplinaDiaria{chave:string;nome:string;naNorma:boolean;atividadesHoje:number;atividadesOntem:number}
+export function opcoesDisciplinaDiaria({norma,dados,projeto,hoje}:{norma:DisciplinasNorma|null;dados:ProgramacaoResposta|null;
+ projeto:{id:string;name?:string};hoje:string}):OpcaoDisciplinaDiaria[]{
+ const cat=criarCatalogo(norma?[norma]:[],[projeto]);
+ const ontem=addDias(hoje,-1);
+ const naJanela=(dados?.linhas??[]).filter(l=>{const d=l.dataAtividade.slice(0,10);return d===hoje||d===ontem;}).map(l=>({...l,projectId:projeto.id}));
+ const contagem=new Map<string,{hoje:number;ontem:number}>();
+ for(const l of deduplicarProgramacao(naJanela).linhas){
+  const k=classificarProgramacao(cat,projeto.id,l).chave,c=contagem.get(k)??{hoje:0,ontem:0};
+  if(l.dataAtividade.slice(0,10)===hoje)c.hoje++;else c.ontem++;
+  contagem.set(k,c);
+ }
+ const daNorma=new Set(cat.porNome.get(projeto.id)?.values()??[]);
+ return [...new Set([...daNorma,...contagem.keys()])].map(chave=>({chave,nome:rotulo(cat,chave),naNorma:daNorma.has(chave),
+  atividadesHoje:contagem.get(chave)?.hoje??0,atividadesOntem:contagem.get(chave)?.ontem??0}))
+  .sort((a,b)=>(a.chave===SEM_DISCIPLINA?1:0)-(b.chave===SEM_DISCIPLINA?1:0)
+   ||Number(b.atividadesHoje+b.atividadesOntem>0)-Number(a.atividadesHoje+a.atividadesOntem>0)||a.nome.localeCompare(b.nome,"pt-BR"));
+}

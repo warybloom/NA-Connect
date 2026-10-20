@@ -57,17 +57,17 @@ export function ElegantTable({ data, onFolderClick, onDownloadClick, onVersionsC
         const item = row.original;
         return (
           <div className="flex items-center gap-3">
-            {item.type === 'folder' ? <Folder className="w-5 h-5 text-primary" /> : <FileIcon className="w-5 h-5 text-muted-foreground" />}
+            {item.type === 'folder' ? <Folder className="w-5 h-5 shrink-0 text-primary" /> : <FileIcon className="w-5 h-5 shrink-0 text-muted-foreground" />}
             {item.type === 'folder' ? (
                <a 
                  href="#" 
                  onClick={(e) => { e.preventDefault(); onFolderClick(item.id); }} 
-                 className="hover:underline cursor-pointer font-medium text-foreground"
+                 className="hover:underline cursor-pointer font-medium text-foreground truncate" title={item.name}
                >
                  {item.name}
                </a>
             ) : (
-              <span className="font-medium text-foreground">{item.name}</span>
+              <span className="font-medium text-foreground truncate" title={item.name}>{item.name}</span>
             )}
           </div>
         );
@@ -82,7 +82,8 @@ export function ElegantTable({ data, onFolderClick, onDownloadClick, onVersionsC
       minSize: 180,
     },
     ...attributeHeaders.map((header): ColumnDef<TableRowData> => ({
-      accessorKey: `customAttributes.${header}`,
+      id: `attribute:${header}`,
+      accessorFn: row => row.customAttributes[header],
       header: header,
       size: 150,
       minSize: 120,
@@ -95,7 +96,7 @@ export function ElegantTable({ data, onFolderClick, onDownloadClick, onVersionsC
         const item = row.original;
         if (item.type !== 'item') return null;
         return (
-          <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <div className="flex gap-2 justify-end">
             <Button size="sm" variant="outline" onClick={() => onDownloadClick(item.storageUrn || '')} disabled={!item.storageUrn}>
               <Download className="w-4 h-4 mr-1" /> Download
             </Button>
@@ -105,7 +106,7 @@ export function ElegantTable({ data, onFolderClick, onDownloadClick, onVersionsC
           </div>
         );
       },
-      size: 220,
+      size: 260,
       enableResizing: false,
     }
   ], [attributeHeaders, onFolderClick, onDownloadClick, onVersionsClick]);
@@ -118,8 +119,8 @@ export function ElegantTable({ data, onFolderClick, onDownloadClick, onVersionsC
   });
 
   return (
-    <div className={cn("elegant-table", className)}>
-      <Table className="w-full" style={{ tableLayout: 'fixed' }}>
+    <div className={cn("min-w-0 overflow-x-auto rounded-xl border border-border bg-card/70", className)}>
+      <Table aria-label="Arquivos e pastas ACC" style={{ tableLayout: 'fixed', width: table.getTotalSize(), minWidth: '100%' }}>
         <TableHeader>
           {table.getHeaderGroups().map(headerGroup => (
             <TableRow key={headerGroup.id}>

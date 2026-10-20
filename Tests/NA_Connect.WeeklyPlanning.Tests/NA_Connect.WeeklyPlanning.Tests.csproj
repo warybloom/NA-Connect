@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
+    <PackageReference Include="EPPlus" Version="7.1.3" />
+    <Using Include="Xunit" /><Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.Logging" /><Using Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/WeeklyPlanning/*.cs" Link="Models/%(Filename)%(Extension)" />
+    <Compile Include="../../Services/WeeklyPlanning/*.cs" Link="Services/%(Filename)%(Extension)" />
+    <Compile Include="../../Controllers/WeeklyPlanning/*.cs" Link="Controllers/%(Filename)%(Extension)" />
+    <Compile Include="../../Services/Reports/WeeklyReport.cs" Link="ExistingAccessContract.cs" />
+    <Compile Include="../../Services/Permissions/PermissionContracts.cs" Link="Permissions/PermissionContracts.cs" />
+    <Compile Include="../../Services/Permissions/RequirePermissionAttribute.cs" Link="Permissions/RequirePermissionAttribute.cs" />
+  </ItemGroup>
+</Project>
