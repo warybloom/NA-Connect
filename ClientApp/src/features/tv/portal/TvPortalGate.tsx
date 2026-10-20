@@ -5,19 +5,27 @@ import { localTvInterval } from "./portalTransport";
 
 interface PortalSession { restricted: boolean; canConfigure: boolean }
 interface Choice { id: string; name: string; supported: boolean }
+interface DeviceStatus { available: boolean; registered: boolean; cookieRejected?: boolean; expiresAt: string | null; idleDays: number }
 
 export function TvPortalGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<PortalSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const abort = new AbortController();
-    fetch("/api/tv-portal/session", { credentials: "same-origin", signal: abort.signal }).then(async r => {
-      if (!r.ok) throw Error(r.status === 401 ? "Sessão expirada. Entre novamente." : "Não foi possível validar o acesso.");
+    let retry: number | undefined;
+    // TV ligada antes do servidor (ou backend reiniciando): tenta de novo sozinha; só 401 pede login.
+    const check = () => fetch("/api/tv-portal/session", { credentials: "same-origin", signal: abort.signal }).then(async r => {
+      if (!r.ok) throw Object.assign(Error(r.status === 401 ? "Sessão expirada. Entre novamente." : "Não foi possível validar o acesso. Tentando novamente…"), { status: r.status });
       const s = await r.json();
       if (typeof s.restricted !== "boolean") throw Error("Resposta de acesso inválida.");
-      setSession(s);
-    }).catch(e => { if (!abort.signal.aborted) setError(e.message); });
-    return () => abort.abort();
+      setError(null); setSession(s);
+    }).catch(e => {
+      if (abort.signal.aborted) return;
+      setError(e.message);
+      if (e?.status !== 401) retry = window.setTimeout(check, 15000);
+    });
+    void check();
+    return () => { abort.abort(); window.clearTimeout(retry); };
   }, []);
   if (error) return <div role="alert" className="p-8">{error} <a href="/login">Entrar</a></div>;
   if (!session) return <div role="status" className="p-8">Validando acesso…</div>;
@@ -31,6 +39,28 @@ function TvPortal() {
   const [seconds, setSeconds] = useState(30);
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [device, setDevice] = useState<DeviceStatus | null>(null);
+  const [deviceMessage, setDeviceMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (playing) return;
+    const abort = new AbortController();
+    fetch("/api/tv-portal/device", { credentials: "same-origin", signal: abort.signal })
+      .then(async r => { if (r.ok) setDevice(await r.json()); }).catch(() => undefined);
+    return () => abort.abort();
+  }, [playing]);
+  // Opt-in explícito: o servidor grava só o hash e devolve um cookie HttpOnly; o JS nunca vê nem guarda credencial.
+  const alterarDispositivo = async (manter: boolean) => {
+    setDeviceMessage(null);
+    const r = await fetch("/api/tv-portal/device", { method: manter ? "POST" : "DELETE", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" }, body: manter ? JSON.stringify({ label: "TV" }) : undefined }).catch(() => null);
+    if (!r?.ok) {
+      const body = r ? await r.json().catch(() => null) : null;
+      setDeviceMessage(body?.message ?? "Não foi possível alterar a conexão desta TV.");
+      return;
+    }
+    const status = await fetch("/api/tv-portal/device", { credentials: "same-origin" }).then(s => s.ok ? s.json() : null).catch(() => null);
+    setDevice(status);
+  };
   useEffect(() => {
     window.history.replaceState(null, "", "/tv/iniciar");
     if (playing) return;
@@ -69,6 +99,15 @@ function TvPortal() {
         void document.documentElement.requestFullscreen?.().catch(() => undefined);
         setPlaying(true);
       }}>Iniciar apresentação</button>
+      {device?.available && <div className="space-y-2 rounded border border-border p-3 text-sm" data-testid="tv-dispositivo">
+        {device.registered
+          ? <p>Esta TV fica conectada sem novo login até {device.expiresAt ? new Date(device.expiresAt).toLocaleDateString("pt-BR") : "—"}, renovando enquanto estiver em uso (expira após {device.idleDays} dias desligada). O administrador pode revogar a qualquer momento.</p>
+          : <p>Use somente em TV/computador dedicado: mantém esta conta TV conectada após reinícios do servidor e do navegador.</p>}
+        <button type="button" className="rounded border px-3 py-2" onClick={() => void alterarDispositivo(!device.registered)}>
+          {device.registered ? "Desconectar este dispositivo" : "Manter esta TV conectada"}</button>
+        {device.cookieRejected && <p role="alert">Este navegador recusou o cookie seguro: abra a TV pelo endereço HTTPS do N&A Connect para mantê-la conectada.</p>}
+        {deviceMessage && <p role="alert">{deviceMessage}</p>}
+      </div>}
       <a className="block text-sm underline" href="/Authentication/OAuth/Logout">Sair</a>
     </section>
   </main>;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TvDeviceSessions } from "./TvDeviceSessions";
 type Assignment = { revision: number; grants: { presentationId: string; userIds: number[] }[] };
 interface Data { assignments: Assignment; users: { userId: number; name: string }[]; presentations: { id: string; name: string; supported: boolean }[] }
 export function TvPortalAssignments() {
@@ -26,5 +27,6 @@ export function TvPortalAssignments() {
       if (!r.ok) { setMessage(r.status === 409 ? "Alterado em outra sessão. Recarregue antes de salvar." : "Não foi possível salvar."); return; }
       const saved: Assignment = await r.json(); setData(d => d ? { ...d, assignments: saved } : null); setMessage("Atribuições salvas.");
     }}>Salvar atribuições TV</button>
+    <TvDeviceSessions />
   </section>;
 }

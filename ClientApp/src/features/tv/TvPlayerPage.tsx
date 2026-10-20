@@ -1,4 +1,4 @@
-import { localTvInterval, setTvPortalScope } from "./portal/portalTransport";
+import { classificarFalhaTv, localTvInterval, mensagemFalhaTv, setTvPortalScope, TV_FALHAS_TOLERADAS } from "./portal/portalTransport";
 // Gestão à Vista — player da TV em tela cheia (fora do Layout: sem sidebar/header). Lê a configuração salva em
 // Configurações → Configuração de Telas para TV (GET /api/tv-config) e exibe as telas em rodízio, reutilizando o
 // ProductionScreen (o mesmo dashboard do Controle de Produção). Cada tela busca seus dados no endpoint do
@@ -50,10 +50,22 @@ export default function TvPlayerPage({ portal }: { portal?: { presentationId: st
   useEffect(() => {
     if (!portal) return;
     const abort = new AbortController();
+    let falhas = 0;
     const timer = window.setInterval(() => {
       fetch(`/api/tv-portal/presentations/${encodeURIComponent(portal.presentationId)}`, { credentials: "same-origin", signal: abort.signal })
-        .then(async r => { if (!r.ok) throw Error("Acesso revogado ou sessão expirada."); const p = await r.json() as TvPresentation; setApresentacoes([p]); })
-        .catch(e => { if (!abort.signal.aborted) { setErro(e.message); setApresentacoes([]); } });
+        .then(async r => {
+          if (!r.ok) throw Object.assign(Error(mensagemFalhaTv(r.status)), { status: r.status });
+          const p = await r.json() as TvPresentation;
+          falhas = 0; setErro(null); setApresentacoes([p]);
+        })
+        .catch(e => {
+          if (abort.signal.aborted) return;
+          const status = typeof e?.status === "number" ? e.status as number : null;
+          // Revogado/encerrado: sai da tela já. Transitório: segura o já autorizado e só desiste após várias tentativas;
+          // o intervalo continua e a TV volta sozinha quando o servidor responder.
+          if (classificarFalhaTv(status) === "transitorio" && ++falhas < TV_FALHAS_TOLERADAS) return;
+          setErro(mensagemFalhaTv(status)); setApresentacoes([]);
+        });
     }, 15000);
     return () => { abort.abort(); window.clearInterval(timer); };
   }, [portal?.presentationId]);

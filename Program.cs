@@ -116,6 +116,11 @@ builder.Services.AddScoped<APS.WebApp.Services.Tv.Portal.ITvPortalProjectRegistr
 builder.Services.AddScoped<APS.WebApp.Services.Tv.Portal.TvPortalIdentityService>();
 builder.Services.AddScoped<APS.WebApp.Services.Tv.Portal.ITvPortalRoleDesignation, APS.WebApp.Services.Tv.Portal.SqlTvPortalRoleDesignation>();
 builder.Services.AddSingleton(sp => new APS.WebApp.Services.Tv.Portal.TvPortalAssignmentStore(Path.Combine(sp.GetRequiredService<IConfiguration>()["TvConfiguration:Directory"] ?? Path.Combine(sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath, "App_Data"), "tv-portal-assignments.json")));
+// Sessão de DISPOSITIVO da conta TV restrita (opt-in, desligada por padrão em TvPortal:DeviceSession:Enabled).
+// Registro persistente só com hash do token, ao lado das atribuições: sobrevive a restart sem DDL.
+builder.Services.Configure<APS.WebApp.Services.Tv.Portal.TvDeviceSessionOptions>(builder.Configuration.GetSection(APS.WebApp.Services.Tv.Portal.TvDeviceSessionOptions.Section));
+builder.Services.AddSingleton(sp => new APS.WebApp.Services.Tv.Portal.TvDeviceSessionStore(Path.Combine(sp.GetRequiredService<IConfiguration>()["TvConfiguration:Directory"] ?? Path.Combine(sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath, "App_Data"), "tv-device-sessions.json")));
+builder.Services.AddScoped<APS.WebApp.Services.Tv.Portal.TvDeviceSessionService>();
 builder.Services.AddScoped<APS.WebApp.Services.Permissions.IProjectAccessService>(sp =>
     sp.GetRequiredService<APS.WebApp.Services.Tv.Portal.TvPortalPermissionService>());
 // Sincronização ACC -> usuários/projetos/perfil padrão (login: só o próprio usuário; admin: por projeto).
@@ -404,6 +409,7 @@ else
 
 app.UseStaticFiles();
 app.UseSession();
+app.UseMiddleware<APS.WebApp.Services.Tv.Portal.TvDeviceSessionMiddleware>();
 app.UseMiddleware<APS.WebApp.Services.Tv.Portal.TvPortalMiddleware>();
 app.UseRouting();
 app.UseCors(MyAllowSpecificOrigins);

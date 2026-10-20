@@ -61,7 +61,10 @@ public sealed class TvPortalMiddleware(RequestDelegate next)
         }
         var allowed = HttpMethods.IsGet(context.Request.Method) && (path == "/api/tv-portal/session" || path == "/api/tv-portal/presentations"
             || path.StartsWith("/api/tv-portal/presentations/", StringComparison.Ordinal)
-            || path.Equals("/Authentication/OAuth/CheckStatus", StringComparison.OrdinalIgnoreCase));
+            || path.Equals("/Authentication/OAuth/CheckStatus", StringComparison.OrdinalIgnoreCase))
+            // Sessão de dispositivo da própria TV (status/registrar/esquecer). Lista e revogação administrativas ficam fora.
+            || path == "/api/tv-portal/device" && (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsPost(context.Request.Method)
+                || HttpMethods.IsDelete(context.Request.Method));
         var logout = path.Equals("/Authentication/OAuth/Logout", StringComparison.OrdinalIgnoreCase);
         var spa = HttpMethods.IsGet(context.Request.Method) && !path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
             && (path == "/" || path == "/tv/iniciar" || path == "/gestao-a-vista" || path == "/login");
