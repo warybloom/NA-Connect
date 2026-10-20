@@ -1,18 +1,25 @@
-# Configura��es privadas
-appsettings.json
-appsettings.Development.json
-appsettings.Local.json
-appsettings.*.Local.json
-.env
-.env.*
+# Pastas de compilação (Onde estão os arquivos pesados)
+[Bb]in/
+[Oo]bj/
 
-# Logs
-Logs/
-*.log
-
-# Build e arquivos locais
-bin/
-obj/
-.vs/
+# Dependências de Front-end
 node_modules/
+
+# Configurações do Visual Studio e VS Code
+.vs/
+.vscode/
 *.user
+*.suo
+
+# Arquivos temporários e Logs
+*.log
+*.cache
+*.tmp
+Logs/
+
+# Builds de verificação (nunca dentro do projeto)
+build_verify_output/
+
+appsettings.json
+
+appsettings.Development.json
