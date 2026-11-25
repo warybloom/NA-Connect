@@ -1,0 +1,9 @@
+N&A Connect - release oficial selecionada em 25/11/2026
+Publicada em: 2026-11-23 14:57:06
+Backend: release_20261117_fer001_discovery
+Frontend: release_20261117_fer001_discovery
+Frontend index SHA256: E4D9D7C3CC05CB2C74A230B62C1DE6882B8388C6CF86447C1A22816BE718948D
+Frontend asset SHA256: F0FFEC3309570C263C6B4E482540E0F6E2C2B548B384F4D5FAD49AD526C2AC1D
+Backend executable SHA256: 38251B4C752CCAF2DFDD222323E40A7DE60E9CF33459EB37DC2413A7FE00777B
+Backup binario local: C:\Dev\_services\NAConnect\official_recovery_20261123
+Nota: este commit registra a versao binaria publicada, nao afirma que o codigo-fonte local corresponde exatamente aos binarios.
