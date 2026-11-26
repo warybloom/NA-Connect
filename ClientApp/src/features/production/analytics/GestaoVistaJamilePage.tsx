@@ -23,6 +23,7 @@ import {
  ROTULO_SITUACAO,type SituacaoDisciplina
 } from "./gestaoVistaJamileLogic";
 import {calcularSaldoPositivoPorDisciplina} from "./saldoPositivoEmissao";
+import {calcularPendenciasSemanais} from "./pendenciasSemanais";
 import "./gestaoVistaJamile.css";
 import { NA_LOGO } from "@/features/theme/brandAssets";
 import ProjetoFaseAgrupamento,{SeletorVisaoMultiprojeto,type VisaoMultiprojeto} from "./projetoFase/ProjetoFaseAgrupamento";
@@ -238,6 +239,13 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
  const saldo=saldoAtivo?calcularSaldoPositivoPorDisciplina(todosDados,vg.itens,emissaoConfig!,cat,cancelados,semana,datasEmissao,statusLdp):null;
  const saldoDisciplinas=new Map(saldo?.porDisciplina.map(d=>[d.disciplina,d])??[]);
  const saldoProjetos=new Map(saldo?.porProjeto.map(d=>[d.projectId,d])??[]);
+ const pendencias=saldo?calcularPendenciasSemanais({
+   itens:vg.itens, semana, hoje, programacao:todosDados,
+   documentosLdp:reports.flatMap(r=>r.documentos.map(d=>({
+     projectId:r.projectId,codigo:d.codigo,cancelado:d.cancelado,
+     statusCliente:d.statusCliente,dataEmissao:d.dataEmissao
+   }))),statusValidos:emissaoConfig!
+ }):null;
  const maxDia=Math.max(1,...vg.porDia.map(x=>x.documentos));
  const porProjeto=vg.porProjeto.map(p=>{
    const saldoProjeto=saldoProjetos.get(p.projectId);
@@ -303,7 +311,10 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
  const classeKpis="gv-kpi-situacao-"+estadoKpis;
  const aderenciaReal=saldo&&vg.documentos>0?100*saldo.emitidos/vg.documentos:null;
  const classeAderencia=saldo?(saldo.saldo>0?"gv-kpi-situacao-adiantada":saldo.saldo<0?"gv-kpi-situacao-atrasada":"gv-kpi-situacao-no-prazo"):classeKpis;
- const aEmitirReal=saldo?Math.max(0,vg.documentos-saldo.emitidos):vg.aEmitir;
+ const aEmitirReal=pendencias?pendencias.aEmitir:vg.aEmitir;
+ const emAtrasoReal=pendencias?pendencias.atrasados:vg.atrasados;
+ const desvioReal=pendencias?pendencias.desvio:vg.desvio;
+ const classeDesvio=pendencias?(pendencias.atrasados>0?"gv-kpi-situacao-atrasada":"gv-kpi-situacao-no-prazo"):classeKpis;
  const notaAderenciaReal=saldo?String(saldo.emitidos)+" emitidos / "+String(vg.documentos)+" programados; saldo "+(saldo.saldo>=0?"+":"")+String(saldo.saldo):null;
  const dicaEstadoKpis="Situação consolidada da programação: "+ROTULO_SITUACAO[estadoKpis]+". Ambos os percentuais seguem a mesma cor; hoje ainda está no prazo, atraso anterior tem prioridade sobre antecipação. ";
  const notaKpi=(texto:string,alerta=false)=>alerta?texto:<span className="gv-tile-nota-neutra">{texto}</span>;
@@ -329,15 +340,18 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
    <Tile title="EMITIDOS" value={carregando?"...":String(saldo?.emitidos??vg.emitidos)}
     dica={saldo?`Documentos com status validado pelo planejamento e data de emissao da LDP na semana ${br(semana.start)} a ${br(semana.end)}; inclui excedentes alem dos programados. Saldo liquido ${saldo.saldo>=0?"+":""}${saldo.saldo}.`
       :`Documentos programados com emissao comprovada ate ${br(m.corteRealizado)}.`}/>
-   <Tile title="EM ATRASO" value={carregando?"…":String(vg.atrasados)}
-    dica={ateAtraso?`Mesmo backlog do %DESVIO: ${t.desvio} documento(s) com data prevista até ${ateAtraso} sem emissão comprovada até ${br(m.corteRealizado)}.`:"Semana futura: nada em atraso."}/>
+   <Tile title="EM ATRASO" value={carregando?"—":String(emAtrasoReal)}
+    dica={pendencias?"Documentos previstos para esta semana que estão vencidos, sem emissão válida e não foram cancelados.":dicaDesvio}/>
    <Tile title="A EMITIR" value={carregando?"—":String(aEmitirReal)}
-    dica={saldo?"Saldo líquido a emitir: máximo entre zero e documentos programados menos documentos emitidos nesta semana. Pendências por disciplina continuam visíveis nos gráficos.":"Documentos da programação da semana ainda não emitidos."}/>
+    dica={pendencias?"Somente documentos previstos para esta semana, sem emissão válida e não cancelados. Emissões antecipadas de outros documentos não eliminam pendências específicas.":"Documentos da programação da semana ainda não emitidos."}/>
    <Tile title="%ADERÊNCIA À PROGRAMAÇÃO" className={classeAderencia}
     value={carregando?"—":saldo?percent(aderenciaReal):percent(vg.aderencia)}
     dica={saldo?"Aderência de produção semanal = documentos emitidos / documentos programados. Crédito positivo permitido acima de 100%.":dicaEstadoKpis+dicaAderencia}
     nota={carregando?undefined:notaAderenciaReal??notaAderencia}/>
-   <Tile title="%DESVIO DA PROGRAMAÇÃO" className={classeKpis} value={carregando?"…":percent(vg.desvio)} dica={dicaEstadoKpis+dicaDesvio} nota={carregando?undefined:notaDesvio}/>
+   <Tile title="%DESVIO DA PROGRAMAÇÃO" className={classeDesvio}
+    value={carregando?"—":percent(desvioReal)}
+    dica={pendencias?"Percentual de documentos vencidos e não emitidos, desconsiderando os cancelados.":dicaEstadoKpis+dicaDesvio}
+    nota={pendencias?String(pendencias.atrasados)+" de "+String(pendencias.vencidos)+" vencidos":carregando?undefined:notaDesvio}/>
   </div>
   <div className="gv-overview">
    <Section title="EVOLUÇÃO DIÁRIA DA PROGRAMAÇÃO" cls="gv-ov-evolution">

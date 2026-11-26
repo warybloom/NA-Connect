@@ -117,7 +117,7 @@ test("Tela 01: emissão por disciplina = emitidos ÷ previstos da semana; gate C
  const fonte=readFileSync(path.resolve(process.cwd().endsWith("ClientApp")?process.cwd():path.join(process.cwd(),"ClientApp"),"src/features/production/analytics/GestaoVistaJamilePage.tsx"),"utf8");
  // 19/10/2026: a tela 01 passou a usar a programação semanal (visaoGeralProgramacao.test.ts); a fração continua visível.
  // 20/10/2026: fração = realizado no corte da meta (mesmo conjunto de documentos), ainda visível no gauge.
- assert.ok(fonte.includes("fracao={saldoDisciplinas.get(x.chave)?"));
+ assert.ok(fonte.includes("fracao={saldoDisciplinas.get(x.chave)"));
  assert.ok(fonte.includes("x.meta.realizados} de ${x.meta.documentos}"));
 });
 test("Tela 03: setas em grade de 4 colunas iguais, limitada à largura, com texto escalado pelo contêiner",()=>{
