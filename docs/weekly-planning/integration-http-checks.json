@@ -1,0 +1,50 @@
+﻿[
+    {
+        "Origin":  "http://localhost:5277",
+        "Endpoint":  "/api/weekly-planning/documents",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5277",
+        "Endpoint":  "/api/weekly-planning/legacy",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5277",
+        "Endpoint":  "/api/planner-dashboard/preview",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5277",
+        "Endpoint":  "/api/planner-dashboard/preview.xlsx",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5173",
+        "Endpoint":  "/api/weekly-planning/documents",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5173",
+        "Endpoint":  "/api/weekly-planning/legacy",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5173",
+        "Endpoint":  "/api/planner-dashboard/preview",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    },
+    {
+        "Origin":  "http://localhost:5173",
+        "Endpoint":  "/api/planner-dashboard/preview.xlsx",
+        "Status":  401,
+        "Type":  "application/json; charset=utf-8"
+    }
+]

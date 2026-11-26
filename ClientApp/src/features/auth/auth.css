@@ -1,0 +1,617 @@
+/* Ficheiro: ClientApp/src/features/auth/auth.css
+   Auth Shell N&A + transição em pixels. Herda os tokens de .na-login (login.css aprovado); prefixos na-auth / na-pixels. */
+
+/* ---------- CTA N&A habilitado (o visual aprovado do botão secundário é preservado) ---------- */
+
+.na-login-btn--secondary:not(:disabled) {
+  color: var(--na-ink-on-dark);
+  border-color: rgba(255, 255, 255, 0.42);
+}
+
+.na-login-btn--secondary:not(:disabled):hover {
+  background: rgba(7, 13, 26, 0.62);
+  border-color: var(--na-cyan-300);
+}
+
+.na-login-btn--secondary:not(:disabled):active {
+  background: rgba(7, 13, 26, 0.75);
+}
+
+.na-login-btn--secondary .na-login-btn__icon {
+  color: var(--na-cyan-300);
+}
+
+.na-login-btn--secondary:not(:disabled):hover .na-login-btn__icon {
+  transform: translateX(3px);
+}
+
+/* ---------- Auth Shell ---------- */
+
+.na-auth {
+  --na-paper: #f7f9fc;
+  --na-ink: #0b1424;
+  --na-ink-2: #3b475c;
+  --na-ink-3: #5d6a80;
+  --na-line: #cfd8e4;
+  --na-line-strong: #9fb0c6;
+  --na-danger: #b4232f;
+  --na-warning: #8a5a00;
+  --na-field-bg: #fff;
+  --na-field-muted: #eef2f7;
+  --na-link: var(--na-blue);
+  --na-submit-bg: var(--na-navy-900);
+  --na-submit-hover: var(--na-navy-800);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Lado da identidade: mesma atmosfera do hero, sem vídeo. */
+.na-auth__identity {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--na-navy-950) 0%, var(--na-navy-800) 62%, #183455 100%);
+}
+
+.na-auth__identity-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: calc(var(--na-gutter) - 1px) calc(var(--na-gutter) - 1px);
+  -webkit-mask-image: radial-gradient(110% 85% at 70% 35%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 88%);
+  mask-image: radial-gradient(110% 85% at 70% 35%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 88%);
+}
+
+.na-auth__identity-head {
+  padding: var(--na-gutter) var(--na-gutter) 0;
+}
+
+.na-auth__brand {
+  display: block;
+  height: clamp(40px, 3.6vw, 56px);
+  width: auto;
+}
+
+.na-auth__identity-body {
+  align-self: center;
+  padding: clamp(40px, 7vh, 72px) var(--na-gutter);
+}
+
+.na-auth__title {
+  margin: 0;
+  font-size: clamp(2.75rem, 4.6vw, 4.75rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.na-auth__tagline {
+  margin: clamp(18px, 2.4vh, 26px) 0 0;
+  font-size: clamp(1rem, 1.15vw, 1.1875rem);
+  line-height: 1.5;
+  color: var(--na-ink-soft);
+}
+
+.na-auth__tagline span {
+  display: block;
+}
+
+.na-auth__identity-foot {
+  min-width: 0;
+}
+
+/* Lado do formulário: papel claro, sem cartão, muito respiro. */
+.na-auth__panel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  background: var(--na-paper);
+  color: var(--na-ink);
+}
+
+.na-auth__panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--na-gutter) var(--na-gutter) 0;
+}
+
+.na-auth__panel-body {
+  align-self: center;
+  justify-self: center;
+  box-sizing: border-box;
+  width: min(100%, calc(420px + 2 * var(--na-gutter)));
+  padding: clamp(32px, 6vh, 64px) var(--na-gutter);
+}
+
+.na-auth__panel-foot {
+  margin: 0;
+  padding: 0 var(--na-gutter) var(--na-gutter);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--na-ink-3);
+}
+
+.na-auth :focus-visible {
+  outline: 2px solid var(--na-cyan);
+  outline-offset: 3px;
+}
+
+/* ---------- Formulário ---------- */
+
+.na-auth-form,
+.na-auth-info {
+  display: grid;
+  gap: 22px;
+}
+
+.na-auth-form__head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.na-auth-form__eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--na-cyan);
+}
+
+.na-auth-form__title {
+  margin: 0;
+  font-size: clamp(2rem, 2.6vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--na-ink);
+}
+
+.na-auth-form__title:focus {
+  outline: none;
+}
+
+.na-auth-form__lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--na-ink-2);
+}
+
+.na-auth-field {
+  display: grid;
+  gap: 8px;
+}
+
+.na-auth-field__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.na-auth-field__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--na-ink);
+}
+
+.na-auth-field__control {
+  position: relative;
+}
+
+.na-auth-field__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--na-line);
+  border-radius: 4px;
+  background: var(--na-field-bg);
+  color: var(--na-ink);
+  font: inherit;
+  font-size: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.na-auth-field__input--password {
+  padding-right: 56px;
+}
+
+.na-auth-field__input:hover:not(:disabled) {
+  border-color: var(--na-line-strong);
+}
+
+.na-auth-field__input:focus {
+  outline: none;
+  border-color: var(--na-cyan);
+  box-shadow: 0 0 0 3px rgba(17, 146, 175, 0.22);
+}
+
+.na-auth-field__input[aria-invalid="true"] {
+  border-color: var(--na-danger);
+}
+
+.na-auth-field__input:disabled {
+  background: var(--na-field-muted);
+  color: var(--na-ink-3);
+}
+
+.na-auth-field__toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--na-ink-3);
+  cursor: pointer;
+}
+
+.na-auth-field__toggle:hover:not(:disabled) {
+  color: var(--na-ink);
+  background: var(--na-field-muted);
+}
+
+.na-auth-field__toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.na-auth-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--na-link);
+  text-decoration: underline;
+  text-decoration-color: rgba(35, 90, 138, 0.35);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.na-auth-link:hover:not(:disabled) {
+  color: var(--na-ink);
+  text-decoration-color: currentColor;
+}
+
+.na-auth-link:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Altura reservada: a mensagem aparece sem deslocar o botão. */
+.na-auth-form__feedback {
+  min-height: 1.5em;
+  margin: -6px 0 -4px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--na-danger);
+}
+
+.na-auth-form__feedback[data-tone="warning"] {
+  color: var(--na-warning);
+}
+
+.na-auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--na-submit-bg);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.na-auth-submit:hover:not(:disabled) {
+  background: var(--na-submit-hover);
+}
+
+.na-auth-submit:active:not(:disabled) {
+  background: var(--na-navy-950);
+}
+
+.na-auth-submit:disabled {
+  cursor: progress;
+  background: var(--na-navy);
+}
+
+.na-auth-submit__icon,
+.na-auth-submit__spinner {
+  width: 18px;
+  height: 18px;
+}
+
+.na-auth-submit__icon {
+  color: var(--na-cyan-300);
+  transition: transform 220ms var(--na-ease-out);
+}
+
+.na-auth-submit:hover:not(:disabled) .na-auth-submit__icon {
+  transform: translateX(3px);
+}
+
+.na-auth-submit__spinner {
+  animation: na-auth-spin 900ms linear infinite;
+}
+
+@keyframes na-auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.na-auth-form__alt {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--na-ink-2);
+}
+
+.na-auth-info__body {
+  display: grid;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--na-ink);
+}
+
+.na-auth-info__body p {
+  margin: 0;
+}
+
+.na-auth-info__hint {
+  font-size: 14px;
+  color: var(--na-ink-2);
+}
+
+.na-auth-back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border: 1px solid var(--na-line);
+  border-radius: 4px;
+  background: var(--na-field-bg);
+  color: var(--na-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.na-auth-back:hover {
+  border-color: var(--na-line-strong);
+}
+
+.na-auth-back svg {
+  width: 16px;
+  height: 16px;
+}
+
+.na-auth-back--quiet {
+  height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--na-ink-2);
+  font-weight: 500;
+}
+
+.na-auth-back--quiet:hover {
+  color: var(--na-ink);
+}
+
+/* ---------- Entrada (um único momento, após a transição) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .na-auth__panel-body > * {
+    animation: na-login-rise 700ms var(--na-ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .na-auth-field__input,
+  .na-auth-submit,
+  .na-auth-submit__icon {
+    transition: none;
+  }
+  .na-auth-submit__spinner {
+    animation-duration: 2400ms;
+  }
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 1100px) {
+  .na-auth {
+    grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr);
+  }
+}
+
+/* Tablet/mobile: formulário primeiro em importância; identidade vira uma faixa compacta no topo. */
+@media (max-width: 860px) {
+  .na-auth {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .na-auth__identity {
+    grid-template-rows: auto;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 16px;
+    padding: 20px var(--na-gutter);
+  }
+
+  .na-auth__identity-head,
+  .na-auth__identity-body {
+    padding: 0;
+  }
+
+  .na-auth__brand {
+    height: 36px;
+  }
+
+  .na-auth__title {
+    justify-self: end;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .na-auth__tagline,
+  .na-auth__identity-foot {
+    display: none;
+  }
+
+  .na-auth__panel-top {
+    padding-top: 16px;
+  }
+
+  .na-auth__panel-body {
+    align-self: start;
+    padding-top: clamp(24px, 5vh, 48px);
+  }
+}
+
+@media (max-width: 420px) {
+  .na-auth__title {
+    display: none;
+  }
+}
+
+/* ---------- Transição em pixels ---------- */
+
+.na-pixels {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(var(--na-pixel-cols), 1fr);
+  grid-template-rows: repeat(var(--na-pixel-rows), 1fr);
+  pointer-events: all;
+}
+
+.na-pixels__cell {
+  background: #0b1424;
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* Alterna navy e navy N&A: a cobertura lê como mosaico, não como um bloco único. */
+.na-pixels__cell:nth-child(3n) {
+  background: #12213d;
+}
+
+.na-pixels__cell:nth-child(11n) {
+  background: #1192af;
+}
+
+.na-pixels[data-phase="covering"] .na-pixels__cell {
+  animation: na-pixel-in 120ms steps(3, end) var(--na-pixel-delay) forwards;
+}
+
+.na-pixels[data-phase="revealing"] .na-pixels__cell {
+  transform: none;
+  opacity: 1;
+  animation: na-pixel-out 140ms steps(3, end) var(--na-pixel-delay) forwards;
+}
+
+@keyframes na-pixel-in {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+@keyframes na-pixel-out {
+  from {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+
+.na-pixels--fade {
+  display: block;
+  background: #0b1424;
+  opacity: 0;
+}
+
+.na-pixels--fade[data-phase="covering"] {
+  animation: na-pixel-fade-in 160ms ease-out forwards;
+}
+
+.na-pixels--fade[data-phase="revealing"] {
+  opacity: 1;
+  animation: na-pixel-fade-out 160ms ease-in forwards;
+}
+
+@keyframes na-pixel-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes na-pixel-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------- Tema ESCURO (classe global .dark): só o painel do formulário muda; o lado da identidade já é navy. ---------- */
+.dark .na-auth {
+  --na-paper: #0f1a2c;
+  --na-ink: #e8eef7;
+  --na-ink-2: #b9c6d8;
+  --na-ink-3: #93a3ba;
+  --na-line: #2c3c55;
+  --na-line-strong: #4a6081;
+  --na-danger: #ff8a8f;
+  --na-warning: #ffc46b;
+  --na-field-bg: #15233a;
+  --na-field-muted: #1b2a42;
+  --na-link: var(--na-cyan-300);
+  --na-submit-bg: #0e7a93;
+  --na-submit-hover: #0b6378;
+}

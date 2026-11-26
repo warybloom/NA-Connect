@@ -1,42 +1,47 @@
-// Caminho: src/main.tsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import { Toaster } from 'react-hot-toast' // Importa o componente Toaster
+import { TvPortalEntry } from "./features/tv/portal/TvPortalEntry";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+// ✅ Importante: O index.css deve ser importado aqui para aplicar o reset do Tailwind e os tokens dos temas Claro/Escuro
+import './index.css';
+import { Toaster } from 'react-hot-toast';
+import { ThemeProvider } from './features/theme/ThemeProvider';
 
+/**
+ * Ponto de entrada da aplicação Forges Sync Connect.
+ * O Toaster está configurado para fornecer feedback visual às operações do DataController.cs,
+ * como a sincronização de LDP e a criação de placeholders.
+ */
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {/* O componente App é a sua aplicação principal */}
-    <App />
-
-    {/* O Toaster fica aqui, no topo da árvore de componentes.
-      Ele vai ouvir e exibir qualquer notificação 'toast' chamada em qualquer lugar da aplicação.
-    */}
-    <Toaster
-      position="top-right" // Define a posição das notificações na tela
-      reverseOrder={false} // Mantém a ordem padrão das notificações
-      toastOptions={{
-        // Estilos padrão para os diferentes tipos de toast
-        duration: 5000, // Duração de 5 segundos por padrão
-        style: {
-          background: '#363636',
-          color: '#fff',
-        },
-        // Estilos específicos para sucesso e erro
-        success: {
+    {/* Tema global (Claro/Escuro/Automático) — envolve TODA a aplicação, inclusive Login e Home. */}
+    <ThemeProvider>
+      <TvPortalEntry><App /></TvPortalEntry>
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 5000,
+          // Cores pelos tokens do tema (index.css), para acompanhar Claro/Escuro.
           style: {
-            background: '#28a745', // Fundo verde para sucesso
-            color: 'white',
+            background: 'hsl(var(--popover))',
+            color: 'hsl(var(--popover-foreground))',
+            border: '1px solid hsl(var(--border))',
           },
-        },
-        error: {
-          style: {
-            background: '#dc3545', // Fundo vermelho para erro
-            color: 'white',
+          success: {
+            style: {
+              background: '#065F46', // Verde escuro para sucessos de sincronização (contraste com texto branco nos dois temas)
+              color: 'white',
+            },
           },
-        },
-      }}
-    />
+          error: {
+            style: {
+              background: '#991B1B', // Vermelho para erros de API (404/500)
+              color: 'white',
+            },
+          },
+        }}
+      />
+    </ThemeProvider>
   </React.StrictMode>,
-)
+);

@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <title>N&A Connect</title>
+    <!-- Tema antes da primeira pintura (evita piscar). Mesma chave/regras de src/features/theme/themeLogic.ts. -->
+    <script>
+      (function () {
+        var pref = "dark";
+        try { var v = localStorage.getItem("na-connect-theme"); if (v === "light" || v === "dark" || v === "system") pref = v; } catch (e) {}
+        var dark = pref === "dark" || (pref === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        var el = document.documentElement;
+        el.classList.remove("light", "dark");
+        el.classList.add(dark ? "dark" : "light");
+        el.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

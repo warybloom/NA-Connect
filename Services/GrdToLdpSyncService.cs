@@ -115,8 +115,10 @@ public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, str
             // Isola o sufixo (ex: GRD-001)
             string cleanTransmittal = rawT.Substring(rawT.IndexOf("GRD", StringComparison.OrdinalIgnoreCase));
 
-            // Conversão de Data
-            if (!DateTime.TryParse(rawDate, out DateTime emissionDate)) 
+            // Conversão de Data — GrdDateParser tenta o parser padrão primeiro e só recorre ao fallback de
+            // mês abreviado PT/EN (ex.: "25/Agu/2026") quando o padrão falha; nenhum formato que já
+            // funcionava muda de comportamento.
+            if (!GrdDateParser.TentarParse(rawDate, out DateTime emissionDate))
             {
                 _logger.LogWarning($"      ⚠️ Data '{rawDate}' inválida em G4. Ignorando.");
                 return;
@@ -127,6 +129,7 @@ public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, str
             int colPurpose = 7;  // Coluna G (ISSUED POUPURSE)
             int startRow = 24;   // Início da lista de documentos
             int countProcessadosNestaGrd = 0;
+            int cabecalhosIgnorados = 0;
 
             int lastRow = ws.Dimension?.End.Row ?? 500;
 
@@ -136,6 +139,15 @@ public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, str
                 string purpose = ws.Cells[row, colPurpose].Text?.Trim();
 
                 if (string.IsNullOrEmpty(docNumber)) continue;
+                // GRDs convertidas de PDF (aba "Table 1") deslocam o layout: a linha de cabeçalho da
+                // lista de documentos ("Codigo N&A" em C / finalidade em G) cai DENTRO da região de dados
+                // (>= linha 24) e se repete em cada GRD — era ela que aparecia como "SOBREPOSIÇÃO: Codigo
+                // N&A". Cabeçalho nunca entra no consolidado.
+                if (GrdLdpWriteback.EhCabecalhoDaListaGrd(docNumber))
+                {
+                    cabecalhosIgnorados++;
+                    continue;
+                }
 
                 var novaInfo = new GrdInfo 
                 { 
@@ -168,7 +180,7 @@ public async Task<string> SyncGrdsToLdpAsync(string hubId, string projectId, str
                 
                 countProcessadosNestaGrd++;
             }
-            _logger.LogInformation($"      ✅ {countProcessadosNestaGrd} documentos processados na planilha {cleanTransmittal}.");
+            _logger.LogInformation($"      ✅ {countProcessadosNestaGrd} documentos processados na planilha {cleanTransmittal} (cabeçalhos ignorados={cabecalhosIgnorados}).");
         }
     }
 }
@@ -201,44 +213,25 @@ private async Task<string> UpdateLdpWithConsolidatedData(string hubId, string pr
 
         int atualizados = 0;
 
-        // 3. PROCESSAMENTO (Mantido)
+        // 3. PROCESSAMENTO
         using (var package = new OfficeOpenXml.ExcelPackage(new FileInfo(tempPath)))
         {
-            var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP")) 
+            var ws = package.Workbook.Worksheets.FirstOrDefault(w => w.Name.ToUpper().Contains("LDP"))
                      ?? package.Workbook.Worksheets[0];
-            
-            int colKey = -1;
-            int colTransmittal = -1;
 
-            for (int c = 1; c <= ws.Dimension.End.Column; c++)
-            {
-                string h = ws.Cells[7, c].Text?.Trim().ToUpper();
-                if (string.IsNullOrEmpty(h)) continue;
-                if (h.Contains("N&A DOCUMENT NUMBER")) colKey = c;
-                if (h.Contains("TRANSMITTAL") || h.Contains("REMESSA") || h.Contains("GRD")) colTransmittal = c;
-            }
+            var colunas = GrdLdpWriteback.ResolverColunas(ws, GrdLdpWriteback.LinhaCabecalhoLdp);
+            _logger.LogInformation(
+                "[GRD WRITEBACK][HEADERS] Aba={Aba} | Key={Key}{KeyFallback} | EmissionDate={Emission} | Transmittal={Transmittal} | IssuedPurpose={Purpose}",
+                ws.Name, colunas.Key, colunas.KeyPorFallback ? " (fallback)" : string.Empty,
+                GrdLdpWriteback.DescreverColuna(colunas.EmissionDate), GrdLdpWriteback.DescreverColuna(colunas.Transmittal), GrdLdpWriteback.DescreverColuna(colunas.IssuedPurpose));
 
-            if (colKey == -1) colKey = 4;
+            var resumo = GrdLdpWriteback.AplicarConsolidado(ws, colunas, dadosGrd);
+            atualizados = resumo.DocumentosAlterados;
+            _logger.LogInformation(
+                "[GRD WRITEBACK][RESUMO] Consolidados={Consolidados} | MatchesLdp={Matches} | DocumentosAlterados={Alterados} | SemMatch={SemMatch}",
+                dadosGrd.Count, resumo.MatchesLdp, resumo.DocumentosAlterados, resumo.SemMatch);
 
-            if (colTransmittal != -1)
-            {
-                for (int r = 8; r <= ws.Dimension.End.Row; r++)
-                {
-                    string doc = ws.Cells[r, colKey].Text?.Trim();
-                    if (string.IsNullOrEmpty(doc)) continue;
-
-                    if (dadosGrd.TryGetValue(doc, out var info))
-                    {
-                        string valorAtual = ws.Cells[r, colTransmittal].Text?.Trim();
-                        if (!string.Equals(valorAtual, info.TransmittalNumber, StringComparison.OrdinalIgnoreCase))
-                        {
-                            ws.Cells[r, colTransmittal].Value = info.TransmittalNumber;
-                            atualizados++;
-                        }
-                    }
-                }
-                if (atualizados > 0) package.Save();
-            }
+            if (atualizados > 0) package.Save();
         }
 
         // 4. UPLOAD CORRIGIDO
@@ -286,5 +279,150 @@ private async Task<string> UpdateLdpWithConsolidatedData(string hubId, string pr
                 }
             }
         }
+    }
+
+    internal sealed class GrdLdpColunas
+    {
+        public int Key { get; set; } = GrdLdpWriteback.ColunaChavePadrao;
+        public bool KeyPorFallback { get; set; } = true;
+        public int Transmittal { get; set; } = -1;
+        public int EmissionDate { get; set; } = -1;
+        public int IssuedPurpose { get; set; } = -1;
+    }
+
+    internal readonly record struct GrdWritebackResumo(int MatchesLdp, int DocumentosAlterados, int SemMatch);
+
+    /// <summary>
+    /// Parte pura (sem ACC) do writeback GRD -> LDP da Etapa 04: resolução tolerante dos cabeçalhos da
+    /// LDP (inclusive as grafias históricas do template: "TRANMISTAL NUMBER", "EMISSION DATA",
+    /// "ISSUED POUPURSE") e aplicação dos 3 campos por documento.
+    /// </summary>
+    internal static class GrdLdpWriteback
+    {
+        public const int LinhaCabecalhoLdp = 7;
+        public const int LinhaInicioDadosLdp = 8;
+        public const int ColunaChavePadrao = 4;
+
+        private static readonly string[] AliasesKey = { "N&A DOCUMENT NUMBER" };
+        private static readonly string[] AliasesEmission = { "EMISSION DATA", "EMISSION DATE", "DATA DE EMISSAO", "DATA EMISSAO" };
+        private static readonly string[] AliasesPurpose = { "ISSUED POUPURSE", "ISSUED PURPOSE", "FINALIDADE" };
+        private static readonly string[] AliasesTransmittal = { "TRANSMITTAL", "TRANMISTAL", "TRANSMITAL", "REMESSA" };
+        // Alias genérico já suportado antes ("GRD"): só usado se nenhum alias específico de transmittal existir.
+        private static readonly string[] AliasesTransmittalGenericos = { "GRD" };
+
+        private static readonly string[] CabecalhosListaGrd = { "CODIGO N&A", "N&A DOCUMENT NUMBER", "N&A CODE" };
+
+        public static string Normalizar(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+            var decomposto = texto.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(decomposto.Length);
+            foreach (var ch in decomposto)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            return Regex.Replace(sb.ToString(), @"\s+", " ").Trim().ToUpperInvariant();
+        }
+
+        /// <summary>Linha de cabeçalho da lista de documentos da GRD ("Codigo N&A", "Código N&A", ...).</summary>
+        public static bool EhCabecalhoDaListaGrd(string valorColunaDocumento)
+        {
+            string n = Normalizar(valorColunaDocumento);
+            return n.Length > 0 && CabecalhosListaGrd.Any(c => n.Contains(c, StringComparison.Ordinal));
+        }
+
+        public static GrdLdpColunas ResolverColunas(ExcelWorksheet ws, int linhaCabecalho)
+        {
+            var colunas = new GrdLdpColunas();
+            int ultimaColuna = ws.Dimension?.End.Column ?? 0;
+            int transmittalGenerico = -1;
+
+            // Primeira ocorrência vence; uma coluna nunca é atribuída a dois campos.
+            for (int c = 1; c <= ultimaColuna; c++)
+            {
+                string h = Normalizar(ws.Cells[linhaCabecalho, c].Text);
+                if (h.Length == 0) continue;
+
+                if (colunas.KeyPorFallback && ContemAlgum(h, AliasesKey)) { colunas.Key = c; colunas.KeyPorFallback = false; }
+                else if (colunas.EmissionDate == -1 && ContemAlgum(h, AliasesEmission)) colunas.EmissionDate = c;
+                else if (colunas.IssuedPurpose == -1 && ContemAlgum(h, AliasesPurpose)) colunas.IssuedPurpose = c;
+                else if (colunas.Transmittal == -1 && ContemAlgum(h, AliasesTransmittal)) colunas.Transmittal = c;
+                else if (transmittalGenerico == -1 && ContemAlgum(h, AliasesTransmittalGenericos)) transmittalGenerico = c;
+            }
+
+            if (colunas.Transmittal == -1) colunas.Transmittal = transmittalGenerico;
+            return colunas;
+        }
+
+        public static string DescreverColuna(int coluna) => coluna == -1 ? "NAO_ENCONTRADA" : coluna.ToString();
+
+        public static GrdWritebackResumo AplicarConsolidado(ExcelWorksheet ws, GrdLdpColunas colunas, IReadOnlyDictionary<string, GrdInfo> dadosGrd)
+        {
+            int matches = 0, alterados = 0;
+            var chavesComMatch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int ultimaLinha = ws.Dimension?.End.Row ?? 0;
+
+            for (int r = LinhaInicioDadosLdp; r <= ultimaLinha; r++)
+            {
+                string doc = ws.Cells[r, colunas.Key].Text?.Trim();
+                if (string.IsNullOrEmpty(doc) || !dadosGrd.TryGetValue(doc, out var info)) continue;
+
+                matches++;
+                chavesComMatch.Add(doc);
+                if (AplicarGrdNaLinha(ws, r, colunas, info)) alterados++;
+            }
+
+            int semMatch = dadosGrd.Keys.Count(k => !chavesComMatch.Contains(k));
+            return new GrdWritebackResumo(matches, alterados, semMatch);
+        }
+
+        /// <summary>Retorna true se QUALQUER um dos 3 campos da linha mudou (contagem por documento).</summary>
+        public static bool AplicarGrdNaLinha(ExcelWorksheet ws, int r, GrdLdpColunas colunas, GrdInfo info)
+        {
+            bool documentoAlterado = false;
+
+            if (colunas.Transmittal != -1)
+            {
+                string valorAtual = ws.Cells[r, colunas.Transmittal].Text?.Trim();
+                if (!string.Equals(valorAtual, info.TransmittalNumber, StringComparison.OrdinalIgnoreCase))
+                {
+                    ws.Cells[r, colunas.Transmittal].Value = info.TransmittalNumber;
+                    documentoAlterado = true;
+                }
+            }
+
+            if (colunas.EmissionDate != -1)
+            {
+                var celulaData = ws.Cells[r, colunas.EmissionDate];
+                bool mesmaData = celulaData.Value is DateTime dataAtual
+                    ? dataAtual.Date == info.EmissionDate.Date
+                    : GrdDateParser.TentarParse(celulaData.Text?.Trim(), out DateTime dataTexto) && dataTexto.Date == info.EmissionDate.Date;
+
+                if (!mesmaData)
+                {
+                    celulaData.Value = info.EmissionDate.Date;
+                    if (string.IsNullOrWhiteSpace(celulaData.Style.Numberformat.Format) || celulaData.Style.Numberformat.Format == "General")
+                        celulaData.Style.Numberformat.Format = "dd/MM/yyyy";
+                    documentoAlterado = true;
+                }
+            }
+
+            if (colunas.IssuedPurpose != -1)
+            {
+                string valorAtual = ws.Cells[r, colunas.IssuedPurpose].Text?.Trim();
+                string novoValor = info.IssuedPurpose?.Trim() ?? string.Empty;
+                if (!string.Equals(valorAtual, novoValor, StringComparison.OrdinalIgnoreCase))
+                {
+                    ws.Cells[r, colunas.IssuedPurpose].Value = novoValor;
+                    documentoAlterado = true;
+                }
+            }
+
+            return documentoAlterado;
+        }
+
+        private static bool ContemAlgum(string cabecalhoNormalizado, string[] aliases) =>
+            aliases.Any(a => cabecalhoNormalizado.Contains(a, StringComparison.Ordinal));
     }
 }

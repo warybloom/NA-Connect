@@ -1,0 +1,23 @@
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'audit')
+    EXEC('CREATE SCHEMA audit');
+IF OBJECT_ID('audit.LegacyProjectRegistry','U') IS NULL
+BEGIN
+    CREATE TABLE audit.LegacyProjectRegistry
+    (
+        ProjectIdAcc NVARCHAR(100) NOT NULL PRIMARY KEY,
+        HubIdAcc NVARCHAR(100) NOT NULL,
+        ProjectName NVARCHAR(300) NOT NULL,
+        TimesheetProject NVARCHAR(100) NOT NULL,
+        CrOs NVARCHAR(100) NOT NULL,
+        Afe NVARCHAR(100) NOT NULL,
+        DocumentValidation NVARCHAR(40) NOT NULL DEFAULT N'PROVISORIO',
+        CreatedBy NVARCHAR(255) NOT NULL,
+        CreatedAtUtc DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAtUtc DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT CK_LegacyProject_Validation CHECK (DocumentValidation IN ('PROVISORIO','REVISADO'))
+    );
+    CREATE INDEX IX_LegacyProject_Timesheet ON audit.LegacyProjectRegistry(TimesheetProject,CrOs,Afe);
+END;
+COMMIT TRANSACTION;

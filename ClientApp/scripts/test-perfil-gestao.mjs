@@ -1,0 +1,10 @@
+import {build} from 'esbuild';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const root=path.resolve('..');
+const entry=path.join(root,'_agent_handoffs/perfil-gestao-20261020/frontend-tests.ts');
+const bundle=path.join(mkdtempSync(path.join(tmpdir(),'perfil-gestao-')),'tests.mjs');
+await build({entryPoints:[entry],outfile:bundle,bundle:true,format:'esm',platform:'node',alias:{'@':path.resolve('src')},logLevel:'error'});
+await import(pathToFileURL(bundle).href);

@@ -1,3 +1,4 @@
+using APS.WebApp.Services.Permissions;
 // Caminho: Controllers/WebhooksController.cs (VERSÃO FINAL E COMPLETA)
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Configuration; // Adicione este using
 
 namespace APS.WebApp.Controllers
 {
+    [PermissionExempt("Callback servidor-a-servidor da Autodesk (sem sessão de usuário).")]
     [ApiController]
     [Route("api/[controller]")]
     public class WebhooksController : ControllerBase

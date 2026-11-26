@@ -1,0 +1,14 @@
+/* Plant 3D — gráfico de gates por fase (F5). Só tokens var(--gv-*) do Gestão à Vista; sem azul de destaque e sem barra lateral. */
+.p3d-gv .p3d-gate{display:grid;grid-template-columns:minmax(5em,9em) minmax(0,1fr) 4.2em;align-items:center;gap:.5em;font-size:.82em}
+.p3d-gv .p3d-gate+.p3d-gate{margin-top:.35em}
+.p3d-gv .p3d-gate-nome{font-weight:700;color:var(--gv-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p3d-gv .p3d-gate-atual .p3d-gate-nome{text-decoration:underline;text-underline-offset:.2em}
+.p3d-gv .p3d-gate-barras{display:flex;flex-direction:column;gap:.18em}
+.p3d-gv .p3d-gate-trilho{height:.55em;border-radius:.3em;background:var(--gv-gauge-track);overflow:hidden}
+.p3d-gv .p3d-gate-trilho i{display:block;height:100%}
+.p3d-gv .p3d-gate-trilho-vazio{background:transparent;border:1px dashed var(--gv-line-strong)}
+.p3d-gv .p3d-gate-meta{text-align:right;color:var(--gv-ink-soft);font-variant-numeric:tabular-nums}
+.p3d-gv .p3d-gates-lista{display:flex;flex-direction:column}
+.p3d-gv .p3d-navfase{display:flex;flex-wrap:wrap;gap:.4em;margin-bottom:.9em}
+.p3d-gv .p3d-navfase a{padding:.25em .8em;border:1px solid var(--gv-line-strong);border-radius:1em;font-size:.85em;font-weight:700;color:var(--gv-ink-soft);text-decoration:none}
+.p3d-gv .p3d-navfase a[aria-current="page"]{color:var(--gv-ink);border-color:var(--gv-ink);background:var(--gv-foot-bg)}

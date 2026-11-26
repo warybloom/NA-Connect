@@ -1,0 +1,55 @@
+/* Agrupamento PROJETO → FASE → DISCIPLINA (multiprojeto). CSS próprio, prefixo .pf-; usa os tokens --gv-* do
+   .gv-shell (claro/escuro já resolvidos lá) com fallback, para funcionar também fora dele. */
+.pf-visao{display:inline-flex;border:1px solid var(--gv-line-strong,#9aa6b4);border-radius:.4em;overflow:hidden;background:var(--gv-surface,#fff)}
+.pf-visao button{border:0;background:transparent;padding:.45em .9em;font-weight:800;font-size:.8em;letter-spacing:.02em;color:var(--gv-ink-soft,#4a5d78)}
+.pf-visao button+button{border-left:1px solid var(--gv-line,#cfd5dc)}
+.pf-visao .pf-visao-ativa{background:var(--gv-navy-surface,#0b1150);color:var(--gv-on-color,#fff)}
+.pf-visao button:focus-visible,.pf-bloco button:focus-visible,.pf-scroll:focus-visible{outline:2px solid var(--gv-sky,#1a72c9);outline-offset:2px}
+
+.pf-bloco{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;border:1px solid var(--gv-navy-surface,#0b1150);background:var(--gv-surface,#fff)}
+.pf-titulo{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5em;padding:.45em .8em;
+  background:var(--gv-navy-surface,#0b1150);color:var(--gv-on-color,#fff);font-weight:800;letter-spacing:.02em}
+.pf-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:.6em;font-size:.82em;font-weight:600}
+.pf-acoes button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:.3em;padding:.15em .6em}
+.pf-acoes label{display:inline-flex;align-items:center;gap:.3em;cursor:pointer}
+.pf-scroll{flex:1;min-height:0;overflow:auto}
+.pf-tabela{width:100%;min-width:52em;border-collapse:collapse;font-size:.92em}
+.pf-tabela thead th{position:sticky;top:0;z-index:2;background:var(--gv-surface,#fff);border-bottom:1px solid var(--gv-rule,#222);
+  padding:.45em .6em;text-align:right;font-size:.85em;white-space:nowrap}
+.pf-tabela thead th:first-child,.pf-tabela tbody th,.pf-tabela tfoot th{text-align:left}
+.pf-tabela td{padding:.3em .6em;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--gv-line,#cfd5dc)}
+/* Primeira coluna fixa na rolagem horizontal: projeto/fase/disciplina sempre identificados. */
+.pf-tabela tbody th,.pf-tabela tfoot th,.pf-tabela thead th:first-child{position:sticky;left:0;z-index:1;background:inherit;
+  padding:.3em .6em;font-weight:600;border-bottom:1px solid var(--gv-line,#cfd5dc);min-width:22em;max-width:34em}
+.pf-tabela thead th:first-child{z-index:3;background:var(--gv-surface,#fff)}
+.pf-tabela th button{display:flex;align-items:center;gap:.4em;width:100%;border:0;background:transparent;text-align:left;padding:0;font:inherit;color:inherit}
+.pf-linha-projeto{background:var(--gv-date-bg,#dbe7f3)}
+.pf-linha-projeto th,.pf-linha-projeto td{font-weight:800;border-top:2px solid var(--gv-steel-dark,#4b6888)}
+.pf-linha-projeto small{margin-left:auto;font-size:.75em;font-weight:700;color:var(--gv-ink-soft,#4a5d78)}
+.pf-nome-projeto{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pf-linha-fase{background:var(--gv-foot-bg,#f3f5f8)}
+.pf-linha-fase th,.pf-linha-fase td{font-weight:700}
+.pf-sem-fase th button{font-style:italic}
+.pf-linha-disciplina{background:var(--gv-surface,#fff)}
+.pf-linha-nao-atribuido{background:var(--gv-warn-bg,#fff7e6)}
+.pf-linha-nao-atribuido th,.pf-linha-nao-atribuido td{color:var(--gv-warn,#9a5b00);font-weight:700}
+.pf-linha-nota td,.pf-linha-atividades>td{text-align:left;white-space:normal;font-size:.85em;color:var(--gv-ink-soft,#4a5d78);background:var(--gv-surface,#fff)}
+.pf-linha-atividades button{display:inline-flex;align-items:center;gap:.3em;border:0;background:transparent;font:inherit;color:var(--gv-sky,#1a72c9);font-weight:700}
+.pf-recuo-1{padding-left:1.2em!important}
+.pf-recuo-2{display:inline-flex;align-items:center;gap:.3em;padding-left:2.6em}
+.pf-codigo{font-weight:800}
+.pf-alerta{color:var(--gv-warn,#9a5b00);flex:0 0 auto}
+.pf-consolidado{background:var(--gv-foot-bg,#f3f5f8)}
+.pf-consolidado th,.pf-consolidado td{font-weight:800;border-top:2px solid var(--gv-rule,#222)}
+.pf-atividades{overflow-x:auto;margin:.3em 0 .6em 2.6em}
+.pf-atividades table{border-collapse:collapse;font-size:.95em;min-width:60em}
+.pf-atividades th,.pf-atividades td{position:static!important;min-width:0!important;padding:.2em .5em;border-bottom:1px solid var(--gv-line,#cfd5dc);text-align:left;white-space:nowrap}
+.pf-atividades .pf-texto-longo{white-space:normal;min-width:16em!important;max-width:32em}
+.pf-nota,.pf-vazio{flex:0 0 auto;margin:.4em .8em;font-size:.8em;color:var(--gv-ink-soft,#4a5d78)}
+/* Telas estreitas: a primeira coluna encolhe e o nome longo do projeto quebra (o código continua visível). */
+@media (max-width:760px){
+  .pf-tabela tbody th,.pf-tabela tfoot th,.pf-tabela thead th:first-child{min-width:14em}
+  .pf-nome-projeto{white-space:normal}
+  .pf-acoes{width:100%}
+}
+@media (prefers-reduced-motion:reduce){.pf-bloco *{transition:none!important}}

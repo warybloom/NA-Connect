@@ -1,0 +1,78 @@
+-- PROPOSTA NÃO EXECUTÁVEL / NÃO EXECUTADA. Não incluir em runner de migrations.
+-- Dependências em aberto: schema real, identidade canônica estável do documento,
+-- cadastro de disciplinas e chaves oficiais de projeto. Tipos e FKs dependem dessa confirmação.
+-- Não substituir nem alterar dbo.tb_WeeklyEngineeringSchedule.
+
+CREATE SCHEMA planejamento;
+
+CREATE TABLE planejamento.Semana (
+ SemanaId uniqueidentifier NOT NULL PRIMARY KEY,
+ Project_ID_ACC nvarchar(100) NOT NULL,
+ Inicio date NOT NULL,
+ Fim date NOT NULL,
+ PrazoSubmissao datetimeoffset NOT NULL,
+ TimeZoneId nvarchar(100) NOT NULL,
+ AbertaPor nvarchar(200) NOT NULL,
+ AbertaEm datetimeoffset NOT NULL,
+ RowVersion rowversion NOT NULL,
+ CONSTRAINT UQ_Semana_ProjetoInicio UNIQUE (Project_ID_ACC,Inicio),
+ CONSTRAINT CK_Semana_Periodo CHECK (Fim >= Inicio AND DATEDIFF(day,Inicio,Fim) <= 6)
+ -- FK de projeto a confirmar; validar sobreposição de períodos em transação serializável.
+);
+
+CREATE TABLE planejamento.SemanaDisciplina (
+ SemanaDisciplinaId uniqueidentifier NOT NULL PRIMARY KEY,
+ SemanaId uniqueidentifier NOT NULL REFERENCES planejamento.Semana(SemanaId),
+ DisciplinaChave nvarchar(200) NOT NULL, -- Identidade no cadastro existente, a confirmar.
+ Estado varchar(10) NOT NULL DEFAULT 'RASCUNHO',
+ Revisao int NOT NULL DEFAULT 0,
+ EnviadoEm datetimeoffset NULL,
+ MotivoDevolucao nvarchar(2000) NULL,
+ RowVersion rowversion NOT NULL,
+ CONSTRAINT UQ_SemanaDisciplina UNIQUE (SemanaId,DisciplinaChave),
+ CONSTRAINT CK_SemanaDisciplina_Estado CHECK (Estado IN ('RASCUNHO','ENVIADO','DEVOLVIDO','APROVADO')),
+ CONSTRAINT CK_SemanaDisciplina_Revisao CHECK (Revisao >= 0)
+);
+
+CREATE TABLE planejamento.ProgramacaoDocumento (
+ ProgramacaoDocumentoId uniqueidentifier NOT NULL PRIMARY KEY,
+ SemanaDisciplinaId uniqueidentifier NOT NULL REFERENCES planejamento.SemanaDisciplina(SemanaDisciplinaId),
+ DocumentoCanonicoChave nvarchar(450) NOT NULL, -- Tipo final depende da identidade existente.
+ DataPlanejada date NOT NULL,
+ ResponsavelChave nvarchar(200) NULL, -- Integrar identidade existente; rascunho pode estar incompleto.
+ HHPrevistoSemana decimal(18,6) NULL,
+ Observacao nvarchar(2000) NULL,
+ CONSTRAINT UQ_ProgramacaoDocumento UNIQUE (SemanaDisciplinaId,DocumentoCanonicoChave),
+ CONSTRAINT CK_ProgramacaoDocumento_HH CHECK (HHPrevistoSemana IS NULL OR HHPrevistoSemana >= 0),
+ CONSTRAINT FK_ProgramacaoDocumento_Canonico FOREIGN KEY (DocumentoCanonicoChave)
+   REFERENCES [__SCHEMA_CANONICO_A_CONFIRMAR__].[__DOCUMENTO_EXISTENTE__]([__CHAVE_ESTAVEL__])
+);
+
+CREATE TABLE planejamento.SubmissaoHistorico (
+ HistoricoId uniqueidentifier NOT NULL PRIMARY KEY,
+ SemanaDisciplinaId uniqueidentifier NOT NULL REFERENCES planejamento.SemanaDisciplina(SemanaDisciplinaId),
+ Revisao int NOT NULL,
+ EstadoAnterior varchar(10) NOT NULL,
+ EstadoNovo varchar(10) NOT NULL,
+ AtorChave nvarchar(200) NOT NULL,
+ Comentario nvarchar(2000) NULL,
+ OcorridoEm datetimeoffset NOT NULL,
+ ProgramacaoSnapshotJson nvarchar(max) NOT NULL,
+ CONSTRAINT UQ_SubmissaoHistorico UNIQUE (SemanaDisciplinaId,Revisao),
+ CONSTRAINT CK_Historico_Json CHECK (ISJSON(ProgramacaoSnapshotJson)=1),
+ CONSTRAINT CK_Historico_Anterior CHECK (EstadoAnterior IN ('RASCUNHO','ENVIADO','DEVOLVIDO','APROVADO')),
+ CONSTRAINT CK_Historico_Novo CHECK (EstadoNovo IN ('RASCUNHO','ENVIADO','DEVOLVIDO','APROVADO'))
+);
+
+-- Regras do futuro writer (não implementado nesta fase):
+-- 1. Autorizar usuário/projeto/disciplina pela autorização atual; token nunca vem do payload.
+-- 2. Transação com comparação RowVersion + incremento Revisao; conflito => HTTP 409.
+-- 3. Referência canônica deve pertencer ao projeto e disciplina; não fazer matching apenas pelo título.
+-- 4. DataPlanejada dentro da semana; responsável obrigatório no envio; HH total nunca copiado como semanal.
+-- 5. Gravar snapshot das chaves/datas/responsáveis/HH/notas em cada envio/decisão, na mesma transação.
+-- 6. APROVADO não aceita alteração de linhas. Revisão futura exige fluxo explícito, nunca UPDATE silencioso.
+-- 7. Histórico append-only, sem exclusão em cascata. Snapshot textual opcional só para auditoria histórica,
+--    nunca catálogo paralelo. Não copiar NomeDocumento/Título/Disciplina para ProgramacaoDocumento.
+-- 8. Disciplinas esperadas criadas ao abrir semana; não inferir só das que enviaram documentos.
+-- 9. Eventos futuros têm EventId e serão persistidos em outbox na mesma transação quando notificações
+--    forem autorizadas. Agendamento de prazo deve ser idempotente por semana/disciplina/evento/revisão.

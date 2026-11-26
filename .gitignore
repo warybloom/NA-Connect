@@ -17,6 +17,9 @@ node_modules/
 *.tmp
 Logs/
 
+# Builds de verificação (nunca dentro do projeto)
+build_verify_output/
+
 appsettings.json
 
 appsettings.Development.json

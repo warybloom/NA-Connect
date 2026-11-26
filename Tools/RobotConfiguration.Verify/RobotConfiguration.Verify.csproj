@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Offline compilation harness; compiles production sources against already installed runtime assemblies.
+       Does not replace the application's project or start its hosted services. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultItems>false</EnableDefaultItems><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>RobotConfiguration.Verify</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="../../appsettings*.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="../../Program.cs;../../Areas/**/*.cs;../../Controllers/**/*.cs;../../Data/**/*.cs;../../Models/**/*.cs;../../Services/**/*.cs;../../Properties/AssemblyInfo.cs" />
+    <_WindowsAssembly Include="../../bin/Debug/net9.0/runtimes/win/lib/*/*.dll" />
+    <Reference Include="../../bin/Debug/net9.0/*.dll" Exclude="../../bin/Debug/net9.0/AccIntegration.WebApp.dll;@(_WindowsAssembly->'../../bin/Debug/net9.0/%(Filename)%(Extension)')" />
+    <Reference Include="@(_WindowsAssembly)" />
+    <Content Include="../../bin/Debug/net9.0/runtimes/win-x64/native/*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

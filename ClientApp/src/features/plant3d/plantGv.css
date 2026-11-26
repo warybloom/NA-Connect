@@ -1,0 +1,52 @@
+/* Plant 3D — apresentação no estilo Gestão à Vista. Reaproveita os TOKENS e classes de gestaoVistaJamile.css (cores, tipografia,
+   tema claro/escuro, .gv-gauge, .gv-legend, .gv-empty) sem editá-lo: o invólucro é ".gv-shell.p3d-gv", que só neutraliza o layout
+   de TV (altura de tela, grade com barra lateral). SEM barra/faixa azul: títulos de fileira são texto + régua, e a legenda do gauge
+   perde a faixa de fundo azul-aço. Nenhuma cor nova: tudo vem de var(--gv-*). */
+.gv-shell.p3d-gv{
+  height:auto;min-height:0;display:block;overflow:visible;border:0;background:transparent;
+  font-size:14px;color:var(--gv-ink);
+}
+.p3d-gv .p3d-fileira{background:var(--gv-surface);border:1px solid var(--gv-line-strong);border-radius:.3em;margin-bottom:1.1em;overflow:hidden}
+.p3d-gv .p3d-fileira>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.4em 1em;padding:.7em 1.1em;border-bottom:2px solid var(--gv-header-line)}
+.p3d-gv .p3d-fileira>header b{font-size:1.15em;font-weight:800;letter-spacing:.03em;color:var(--gv-ink)}
+.p3d-gv .p3d-fileira>header small{font-size:.86em;color:var(--gv-ink-soft)}
+.p3d-gv .p3d-fileira-corpo{padding:1em 1.1em}
+.p3d-gv .p3d-grade{display:grid;gap:.9em;grid-template-columns:repeat(auto-fit,minmax(14em,1fr))}
+.p3d-gv .p3d-grade-3{display:grid;gap:.9em;grid-template-columns:repeat(auto-fit,minmax(16em,1fr))}
+.p3d-gv .p3d-card{min-width:0;display:flex;flex-direction:column;gap:.5em;padding:.7em .8em;border:1px solid var(--gv-line);border-radius:.25em;background:var(--gv-surface)}
+.p3d-gv .p3d-card h4{margin:0;font-size:.95em;font-weight:800;color:var(--gv-ink);letter-spacing:.01em}
+.p3d-gv .p3d-card-nota{margin:0;font-size:.8em;color:var(--gv-ink-soft)}
+.p3d-gv .p3d-duplo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5em}
+
+/* Gauge reaproveitado: altura própria (a do TV vem do grid) e título sem faixa azul. */
+.p3d-gv .gv-gauge{height:10.4em}
+.p3d-gv .gv-gauge figcaption{background:transparent;color:var(--gv-ink);border-bottom:1px solid var(--gv-line);font-size:.82em;padding:.25em .2em}
+
+/* Anel (rosca): segmentos pelos tokens do GV. */
+.p3d-gv .p3d-anel{display:flex;flex-direction:column;align-items:center;gap:.3em;min-width:0}
+.p3d-gv .p3d-anel svg{width:100%;max-width:10.5em;height:auto;display:block}
+.p3d-gv .p3d-anel-trilho{fill:none;stroke:var(--gv-gauge-track);stroke-opacity:.55}
+.p3d-gv .p3d-anel-trilho-vazio{stroke-dasharray:3 4;stroke-opacity:.9}
+.p3d-gv .p3d-seg{fill:none}
+.p3d-gv .p3d-seg-ok{stroke:var(--gv-teal)}
+.p3d-gv .p3d-seg-erro{stroke:var(--gv-gauge-over)}
+.p3d-gv .p3d-seg-nd{stroke:var(--gv-line-strong)}
+.p3d-gv .p3d-seg-alt{stroke:var(--gv-sky)}
+.p3d-gv .p3d-anel-centro{fill:var(--gv-ink);font-size:20px;font-weight:700;font-family:inherit}
+.p3d-gv .p3d-anel-sub{fill:var(--gv-ink-soft);font-size:8.5px;font-weight:600;font-family:inherit}
+.p3d-gv .p3d-anel-titulo{margin:0;font-size:.9em;font-weight:800;text-align:center;color:var(--gv-ink)}
+.p3d-gv .p3d-anel-status{margin:0;font-size:.78em;font-weight:700;text-align:center;color:var(--gv-warn);background:var(--gv-warn-bg);border:1px solid var(--gv-warn-border);border-radius:1em;padding:.15em .7em}
+.p3d-gv .p3d-anel-legenda{margin:0;font-size:.78em;text-align:center;color:var(--gv-ink-soft)}
+
+/* Barra empilhada fina (tipos de problema), mesma linguagem das barras do GV. */
+.p3d-gv .p3d-pilha{display:flex;height:.8em;border-radius:.4em;overflow:hidden;background:var(--gv-gauge-track);opacity:.95}
+.p3d-gv .p3d-pilha i{display:block;height:100%}
+.p3d-gv .p3d-pilha-vazia{background:transparent;border:1px dashed var(--gv-line-strong)}
+.p3d-gv .gv-legend{flex-wrap:wrap;gap:.3em .9em;font-size:.82em}
+.p3d-gv .p3d-aviso{margin:0;padding:.55em .8em;border:1px solid var(--gv-warn-border);background:var(--gv-warn-bg);color:var(--gv-warn);border-radius:.25em;font-size:.88em;font-weight:600}
+.p3d-gv .p3d-aviso-neutro{border-color:var(--gv-line);background:var(--gv-foot-bg);color:var(--gv-ink-soft)}
+.p3d-gv .p3d-cor-previsto{background:var(--gv-navy-surface)}
+.p3d-gv .p3d-cor-pid{background:var(--gv-teal)}
+.p3d-gv .p3d-cor-3d{background:var(--gv-sky)}
+.p3d-gv .p3d-cor-erro{background:var(--gv-gauge-over)}
+.p3d-gv .p3d-cor-nd{background:var(--gv-line-strong)}

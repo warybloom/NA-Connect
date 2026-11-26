@@ -1,441 +1,248 @@
-// Caminho: ClientApp/src/pages/Files.tsx
-// VERSÃO FINAL COMPLETA - Inclui interface atualizada e passo de depuração
-
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import toast from 'react-hot-toast';
-import { AnimatedBackground } from "@/components/ui/animated-background";
-import { Logo } from "@/components/ui/logo";
-import { ElegantTable, TableRowData } from "@/components/ui/elegant-table";
-import { Button } from "@/components/ui/button";
+import { ElegantTable, type TableRowData } from "@/components/ui/elegant-table";
 import { VersionHistoryModal } from "@/components/VersionHistoryModal";
-import { SyncResultModal } from "@/components/SyncResultModal";
-import { CreatePlaceholdersModal } from "@/components/CreatePlaceholdersModal";
-import { PlaceholderResultModal } from "@/components/PlaceholderResultModal";
-import { MissingDocsDbModal } from "@/components/MissingDocsDbModal";
-// 👇 IMPORT NOVO: Modal e Interface de Auditoria
-import { AuditResultModal, AuditResult } from "@/components/AuditResultModal";
-
-import { FilePlus2, SearchCheck } from "lucide-react"; // 👇 Adicionei SearchCheck
+import { FolderOpen } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { useProjectPermissions } from "@/features/permissions/PermissionProvider";
+import { useProjetoAtual } from "@/features/project/ProjetoAtualContext";
+import EnvioNaPasta from "@/features/upload-governado/EnvioNaPasta";
+import { caminhoDaPasta } from "@/features/upload-governado/uploadNaPasta";
+import { useProtecaoPasta } from "@/features/upload-governado/useProtecaoPasta";
+import { trilhaVisivel } from "@/pages/cde/pastasDoProjeto";
 
-// --- Interfaces de Dados ---
+// Tipos e Interfaces
+type AttributeValue = string | number | boolean | null | undefined;
+interface LocationState { projectName?: string; hubId?: string; }
 interface ApiDataItem {
-    id: string; type: 'folders' | 'items';
-    attributes: { displayName: string; lastModifiedTime: string; lastModifiedUserName: string; };
-    relationships?: { tip?: { data?: { id: string; } } }
+  id: string; type: 'folders' | 'items';
+  attributes: { displayName: string; lastModifiedTime: string; lastModifiedUserName: string; };
+  relationships?: { tip?: { data?: { id: string; } } };
 }
 interface ApiVersionItem {
-    urn: string; id: string; type: 'versions';
-    customAttributes?: { id: number; name: string; type: string; value: any }[];
-    relationships?: { storage?: { data?: { id: string; } } }
+  urn: string; id: string; type: 'versions';
+  attributes: { versionNumber: number };
+  customAttributes?: { id: number; name: string; type: string; value: AttributeValue }[];
+  relationships?: { storage?: { data?: { id: string; } } };
 }
 interface Breadcrumb { id: string; name: string; }
-interface SyncResult { totalLdpFiles: number; filesUpdated: number; filesNotFound: string[]; filesUpdatedSuccess: string[]; allLdpFiles: string[]; summaryMessage: string; }
-
-// --- Interface PlaceholderResult ATUALIZADA ---
-interface PlaceholderResult {
-    totalRowsInLdp: number;
-    rowsProcessed: number;
-    placeholdersCreated: number;
-    filesSkippedExisting: number;
-    filesSkippedFiltered: number;
-    createdFiles: string[];
-    skippedExistingFiles: string[];
-    skippedFilteredInfo: string[];
-    errors: string[];
-    summaryMessage: string;
-}
-// --- FIM Interface PlaceholderResult ---
-
 export default function Files() {
-    const navigate = useNavigate();
-    const { projectId, folderId } = useParams<{ projectId: string; folderId: string }>();
-    const [searchParams] = useSearchParams();
-    const hubId = searchParams.get('hubId');
-    const location = useLocation();
-    // console.log("Location State:", location.state);
-    const projectName = location.state?.projectName || "Projeto";
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { projectId, folderId } = useParams<{ projectId: string; folderId: string }>();
+  const [searchParams] = useSearchParams();
 
-    // --- Estados do Componente ---
-    const [content, setContent] = useState<TableRowData[]>([]);
-    const [folderPath, setFolderPath] = useState<Breadcrumb[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<{ id: string, name: string } | null>(null);
-    
-    // States Sync
-    const [isSyncing, setIsSyncing] = useState(false);
-    const [isSyncResultModalOpen, setIsSyncResultModalOpen] = useState(false);
-    const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
-    
-    // States Placeholders
-    const [isPlaceholderModalOpen, setIsPlaceholderModalOpen] = useState(false);
-    const [isPlaceholderResultModalOpen, setIsPlaceholderResultModalOpen] = useState(false);
-    const [placeholderResult, setPlaceholderResult] = useState<PlaceholderResult | null>(null);
-    
-    // States DB Update
-    const [isUpdatingFromDb, setIsUpdatingFromDb] = useState(false);
-    const [missingDocsFromDb, setMissingDocsFromDb] = useState<string[]>([]);
-    const [isMissingDocsModalOpen, setIsMissingDocsModalOpen] = useState(false);
+  // --- RECUPERAÇÃO ROBUSTA DE IDs ---
+  const state = location.state as LocationState | undefined;
+  // Tenta pegar o hubId da URL, do state ou da Query String
+  const rawHubId = useParams<{ hubId: string }>().hubId || searchParams.get('hubId') || state?.hubId;
+  const { projetoAtual } = useProjetoAtual();
+  const projectName = state?.projectName || projetoAtual?.nome || "Projeto";
 
-    // 👇 NOVOS STATES PARA AUDITORIA
-    const [isAuditing, setIsAuditing] = useState(false);
-    const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
-    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  // Garante que o HubId sempre tenha o prefixo "b." se necessário (ajuste conforme seu padrão)
+  const actualHubId = rawHubId?.startsWith('b.') ? rawHubId : (rawHubId ? `b.${rawHubId}` : undefined);
 
-    // --- Busca de Dados ---
-    const fetchData = useCallback(async () => {
-        if (!projectId || !folderId) return;
-        setLoading(true);
-        setFolderPath([]); 
-        // console.log("fetchData called"); 
-        try {
-            const [contentResponse, pathResponse] = await Promise.all([
-                fetch(`/DataManagement/Data/ConteudoPasta?projectId=${projectId}&folderId=${folderId}`),
-                fetch(`/DataManagement/Data/GetFolderPath?projectId=${projectId}&folderId=${folderId}`)
-            ]);
-            
-            if (contentResponse.status === 401 || pathResponse.status === 401) {
-                navigate('/login');
-                return;
+  // ✅ CORREÇÃO ERRO 2: Garante que o ProjectID tenha "b." para bater com o Banco de Dados
+  const dbProjectId = projectId?.startsWith('b.') ? projectId : `b.${projectId}`;
+
+  // Envio direto na pasta: só com cde.docs.upload NO projeto (o backend exige a mesma key).
+  const podeEnviar = useProjectPermissions(dbProjectId).can("cde.docs.upload");
+
+  const [content, setContent] = useState<TableRowData[]>([]);
+  const [folderPath, setFolderPath] = useState<Breadcrumb[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Estados dos Modais
+  const [versionModal, setVersionModal] = useState({ isOpen: false, itemId: "", itemName: "" });
+  // --- BUSCA DE DADOS ---
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    if (!actualHubId || !projectId || !folderId) {
+        console.warn("IDs incompletos:", { actualHubId, projectId, folderId });
+        return;
+    }
+
+    setLoading(true);
+
+    try {
+      const safeProject = encodeURIComponent(projectId);
+      const safeFolder = encodeURIComponent(folderId);
+
+      const [contentRes, pathRes] = await Promise.all([
+        fetch(`/DataManagement/Data/ConteudoPasta?projectId=${safeProject}&folderId=${safeFolder}`, { credentials: 'include', signal }),
+        fetch(`/DataManagement/Data/GetFolderPath?projectId=${safeProject}&folderId=${safeFolder}`, { credentials: 'include', signal })
+      ]);
+
+      if (contentRes.status === 401) { navigate('/login'); return; }
+
+      if (contentRes.ok) {
+        const apiResponse = await contentRes.json();
+        const itemsAndFolders: ApiDataItem[] = apiResponse.data || [];
+        const versions: ApiVersionItem[] = apiResponse.included || [];
+
+        const formattedData: TableRowData[] = itemsAndFolders.map((item) => {
+          let storageUrn: string | undefined = undefined;
+          let vNumber = 1; // Default visual se não achar a versão
+          const customAttrs: Record<string, AttributeValue> = {};
+
+          if (item.type === 'items') {
+            const tipVersionId = item.relationships?.tip?.data?.id;
+
+            if (tipVersionId) {
+              // Tenta casar a versão de várias formas para evitar o erro "V1"
+              const versionData = versions.find(v =>
+                  v.id === tipVersionId ||
+                  v.urn === tipVersionId ||
+                  decodeURIComponent(v.id) === decodeURIComponent(tipVersionId)
+              );
+
+              if (versionData) {
+                  storageUrn = versionData.relationships?.storage?.data?.id;
+                  vNumber = versionData.attributes?.versionNumber || 1;
+                  versionData.customAttributes?.forEach(attr => { customAttrs[attr.name] = attr.value; });
+              }
             }
+          }
 
-            if (contentResponse.ok) {
-                const apiResponse = await contentResponse.json();
-                const itemsAndFolders: ApiDataItem[] = apiResponse.data || [];
-                const versions: ApiVersionItem[] = apiResponse.included || [];
-                const formattedData: TableRowData[] = itemsAndFolders.map((item) => {
-                    let storageUrn: string | undefined = undefined; let customAttributes: Record<string, any> = {};
-                    if (item.type === 'items') {
-                        const tipVersionId = item.relationships?.tip?.data?.id;
-                        if (tipVersionId) {
-                            const versionData = versions.find(v => v.urn === tipVersionId);
-                            storageUrn = versionData?.relationships?.storage?.data?.id;
-                            versionData?.customAttributes?.forEach(attr => { customAttributes[attr.name] = attr.value; });
-                        }
-                    }
-                    return { id: item.id, type: item.type === 'folders' ? 'folder' : 'item', name: item.attributes.displayName, lastModified: `${new Date(item.attributes.lastModifiedTime).toLocaleString('pt-BR')} por ${item.attributes.lastModifiedUserName}`, storageUrn: storageUrn, customAttributes: customAttributes };
-                });
-                formattedData.sort((a, b) => { if (a.type === 'folder' && b.type !== 'folder') return -1; if (a.type !== 'folder' && b.type === 'folder') return 1; return a.name.localeCompare(b.name); });
-                setContent(formattedData);
+          return {
+            id: item.id,
+            name: item.attributes.displayName,
+            type: item.type === 'folders' ? 'folder' : 'item',
+            // elegant-table.tsx do N&A (não transplantado — tem coluna dinâmica por atributo
+            // customizado do ACC, feature que o ForgeSync original não tinha) exige "lastModified"
+            // como string combinada, em vez de updatedAt/author separados.
+            lastModified: `${new Date(item.attributes.lastModifiedTime).toLocaleString('pt-BR')} por ${item.attributes.lastModifiedUserName}`,
+            version: vNumber,
+            updatedAt: new Date(item.attributes.lastModifiedTime).toLocaleDateString('pt-BR'),
+            author: item.attributes.lastModifiedUserName,
+            // ✅ CORREÇÃO ERRO 1: Se não achou URN, passamos o ID do Item.
+            // O handleDownloadClick vai saber buscar a versão correta.
+            storageUrn: storageUrn || `ITEM:${item.id}`,
+            customAttributes: customAttrs
+          };
+        });
+
+        formattedData.sort((a, b) => {
+          if (a.type === 'folder' && b.type !== 'folder') return -1;
+          if (a.type !== 'folder' && b.type === 'folder') return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        setContent(formattedData);
+      }
+
+      if (pathRes.ok) {
+        const pathData = await pathRes.json();
+        setFolderPath(pathData);
+      }
+
+    } catch (error: any) {
+      if (error.name !== 'AbortError') console.error("Erro fetch:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [actualHubId, projectId, folderId, navigate]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
+
+  // --- ✅ CORREÇÃO ERRO 1: DOWNLOAD INTELIGENTE ---
+  const handleDownloadClick = async (identifier: string) => {
+    const lt = toast.loading("Preparando download...");
+
+    try {
+        let finalStorageUrn = identifier;
+
+        // Se o identificador for um ID de Item (porque a URN falhou no carregamento)
+        if (identifier.startsWith("ITEM:")) {
+            const itemId = identifier.replace("ITEM:", "");
+            toast.loading("Buscando versão mais recente...", { id: lt });
+
+            // Busca as versões desse arquivo específico
+            const versionsRes = await fetch(`/DataManagement/Data/GetItemVersions?projectId=${projectId}&itemId=${itemId}`, { credentials: 'include' });
+
+            if (!versionsRes.ok) throw new Error("Não foi possível localizar o arquivo.");
+
+            const versionsData = await versionsRes.json();
+            // Pega a primeira versão (a mais recente)
+            const latestVersion = versionsData.data?.[0];
+
+            if (latestVersion && latestVersion.relationships?.storage?.data?.id) {
+                finalStorageUrn = latestVersion.relationships.storage.data.id;
             } else {
-                toast.error("Falha ao carregar conteúdo.");
-            }
-
-            if (pathResponse.ok) {
-                const pathData = await pathResponse.json();
-                setFolderPath(pathData);
-            } else {
-                setFolderPath([]);
-            }
-
-        } catch (error) {
-            console.error("fetchData general error:", error);
-            toast.error("Erro ao carregar dados.");
-            setFolderPath([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [projectId, folderId, navigate]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    // --- Handlers ---
-
-    const handlePlaceholdersCreated = (result: PlaceholderResult) => {
-        setPlaceholderResult(result);
-        setIsPlaceholderResultModalOpen(true);
-    };
-
-    const handleSyncClick = async () => {
-        if (!hubId || !projectId) {
-            toast.error("Não foi possível identificar o Hub ou o Projeto atual."); return;
-        }
-        setIsSyncing(true);
-        const loadingToast = toast.loading("A iniciar sincronização...");
-        try {
-            // AQUI ESTÁ A CHAMADA PARA O SEU BACKEND
-            const response = await fetch(`/DataManagement/Data/SyncFromProjectLdp?hubId=${hubId}&projectId=${projectId}`, { method: 'POST' });
-            
-            const result = await response.json();
-            if (!response.ok) { throw new Error(result.details || result.message || "Erro desconhecido na sincronização."); }
-            toast.success(result.summaryMessage, { id: loadingToast, duration: 6000 });
-            setSyncResult(result);
-            setIsSyncResultModalOpen(true);
-            fetchData();
-        } catch (error: any) {
-            toast.error(`Erro na sincronização: ${error.message}`, { id: loadingToast });
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
-    const handleUpdateFromDbClick = async () => {
-        if (!hubId || !projectId) {
-            toast.error("Não foi possível identificar o Hub ou o Projeto atual."); return;
-        }
-        setIsUpdatingFromDb(true);
-        setMissingDocsFromDb([]);
-        setIsMissingDocsModalOpen(false);
-        const loadingToast = toast.loading("A ler banco de dados e atualizar LDP...");
-        try {
-            const response = await fetch(`/DataManagement/Data/UpdateLdpFromDatabase?hubId=${hubId}&projectId=${projectId}`, { method: 'POST' });
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.summaryMessage || result.details || result.message || "Erro desconhecido na atualização.");
-            }
-
-            toast.success(result.summaryMessage, { id: loadingToast, duration: 6000 });
-
-            if (result.documentosNaoEncontradosNoDb && result.documentosNaoEncontradosNoDb.length > 0) {
-                setMissingDocsFromDb(result.documentosNaoEncontradosNoDb);
-                setIsMissingDocsModalOpen(true);
-            }
-            fetchData();
-        } catch (error: any) {
-            toast.error(`Erro na atualização: ${error.message}`, { id: loadingToast });
-            setMissingDocsFromDb([]);
-            setIsMissingDocsModalOpen(false);
-        } finally {
-            setIsUpdatingFromDb(false);
-        }
-    };
-
-    const handleInstallWebhook = async () => {
-        const ngrokUrl = prompt("Por favor, insira a sua URL base do ngrok (ex: https://abcd-1234.ngrok-free.app):");
-        if (!ngrokUrl || !hubId || !projectId) {
-            toast.error("A instalação do Webhook foi cancelada ou faltam dados (Hub/Projeto)."); return;
-        }
-        const loadingToast = toast.loading("A instalar o Webhook na Autodesk...");
-        try {
-            const response = await fetch(`/DataManagement/Data/InstallWebhookForLdp?hubId=${hubId}&projectId=${projectId}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ NgrokUrl: ngrokUrl })
-            });
-            const result = await response.json();
-            if (!response.ok) { throw new Error(result.details || result.message); }
-            toast.success(result.message, { id: loadingToast, duration: 6000 });
-        } catch (error: any) {
-            toast.error(`Falha na instalação: ${error.message}`, { id: loadingToast });
-        }
-    };
-
-    // 👇 NOVO HANDLER DE AUDITORIA
-    const handleAuditClick = async () => {
-        if (!hubId || !projectId) {
-            toast.error("Hub ou Projeto não identificado.");
-            return;
-        }
-
-        setIsAuditing(true);
-        const loadingToast = toast.loading("A comparar arquivos ACC vs LDP...");
-
-        try {
-            const response = await fetch(`/DataManagement/Data/CheckAuditFilesAccVsLdp?hubId=${hubId}&projectId=${projectId}`, {
-                method: 'POST'
-            });
-            
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Erro desconhecido na auditoria.");
-            }
-
-            // Define o resultado e abre o modal
-            setAuditResult(data);
-            setIsAuditModalOpen(true);
-            
-            // Mensagem simples no toast, o detalhe vai no modal
-            if (data.count === 0) {
-                toast.success("Auditoria Concluída: Tudo OK!", { id: loadingToast });
-            } else {
-                toast.error(`Atenção: ${data.count} arquivos não listados na LDP.`, { id: loadingToast });
-            }
-
-        } catch (error: any) {
-            console.error(error);
-            toast.error(`Erro na auditoria: ${error.message}`, { id: loadingToast });
-        } finally {
-            setIsAuditing(false);
-        }
-    };
-
-    const handleVersionsClick = (itemId: string, itemName: string) => {
-        setSelectedItem({ id: itemId, name: itemName });
-        setIsVersionModalOpen(true);
-    };
-
-    const handleFolderClick = (newFolderId: string) => {
-        navigate(
-            `/projetos/${projectId}/conteudo/${newFolderId}?hubId=${hubId}`,
-            { state: { projectName: projectName } }
-        );
-    };
-
-    const handleDownloadClick = async (storageUrn: string) => {
-        if (!storageUrn) {
-            toast.error("URN de armazenamento não encontrado."); return;
-        }
-        const loadingToast = toast.loading("A obter link de download...");
-        try {
-            const response = await fetch(`/DataManagement/Data/DownloadArquivo?storageUrn=${storageUrn}`);
-            if (response.ok) {
-                const data = await response.json();
-                toast.dismiss(loadingToast);
-                window.open(data.downloadUrl, '_blank');
-            } else {
-                 const errorData = await response.text();
-                throw new Error(errorData || "Falha ao obter o link de download.");
-            }
-        } catch(error: any) {
-             toast.error(`Erro no download: ${error.message}`, { id: loadingToast });
-        }
-    };
-
-    // --- Preparação para Renderização ---
-    const displayPath = useMemo(() => {
-        if (folderPath.length > 0) {
-            const firstItem = folderPath[0];
-            if (firstItem.name.includes('-') && firstItem.name.toLowerCase() !== 'project files') {
-                const newPath = [...folderPath];
-                newPath[0] = { ...firstItem, name: 'Project Files' };
-                return newPath;
+                throw new Error("Arquivo sem binário para download.");
             }
         }
-        return folderPath;
-    }, [folderPath]);
 
-    const currentFolderName = displayPath.length > 0 ? displayPath[displayPath.length - 1].name : (loading ? "A carregar..." : "Ficheiros");
+        // Faz o download usando a URN encontrada
+        const res = await fetch(`/DataManagement/Data/DownloadArquivo?storageUrn=${encodeURIComponent(finalStorageUrn)}`, { credentials: 'include' });
 
-    // --- JSX ---
-    return (
-        <AnimatedBackground>
-            {/* ========================================================= */}
-            {/* === Modais Renderizados Condicionalmente === */}
-            {/* ========================================================= */}
-            {isVersionModalOpen && selectedItem && projectId && (
-                <VersionHistoryModal
-                    projectId={projectId}
-                    itemId={selectedItem.id}
-                    itemName={selectedItem.name}
-                    onClose={() => setIsVersionModalOpen(false)}
-                />
-            )}
+        if (!res.ok) throw new Error("Falha ao gerar link.");
+        const data = await res.json();
 
-            <SyncResultModal
-                isOpen={isSyncResultModalOpen}
-                onClose={() => setIsSyncResultModalOpen(false)}
-                result={syncResult}
-            />
+        if (data.downloadUrl) {
+            window.open(data.downloadUrl, '_blank');
+            toast.dismiss(lt);
+        } else {
+            throw new Error("Link vazio.");
+        }
+    } catch (e: any) {
+        console.error(e);
+        toast.error(e.message || "Erro no download.", { id: lt });
+    }
+  };
 
-            <CreatePlaceholdersModal
-                isOpen={isPlaceholderModalOpen}
-                onClose={() => setIsPlaceholderModalOpen(false)}
-                onPlaceholdersCreated={handlePlaceholdersCreated}
-                projectId={projectId}
-                hubId={hubId ?? undefined}
-            />
-
-            <PlaceholderResultModal
-                isOpen={isPlaceholderResultModalOpen}
-                onClose={() => setIsPlaceholderResultModalOpen(false)}
-                result={placeholderResult}
-            />
-
-            <MissingDocsDbModal
-                isOpen={isMissingDocsModalOpen}
-                onClose={() => setIsMissingDocsModalOpen(false)}
-                documents={missingDocsFromDb}
-            />
-
-            {/* 👇 NOVO MODAL DE AUDITORIA */}
-            <AuditResultModal 
-                isOpen={isAuditModalOpen} 
-                onClose={() => setIsAuditModalOpen(false)} 
-                result={auditResult} 
-            />
-            {/* ========================================================= */}
-            {/* === Fim dos Modais === */}
-            {/* ========================================================= */}
-
-            <div className="min-h-screen p-6">
-                <header className="flex items-start justify-between mb-8">
-                    <Logo />
-                    <div className="flex-1 text-center px-4">
-                        {projectName && (
-                            <h2 className="text-lg font-semibold text-foreground truncate leading-tight">
-                                {projectName}
-                            </h2>
-                        )}
-                    </div>
-                    <nav className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-foreground hover:text-primary" onClick={() => navigate('/dashboard')}>Contas</Button>
-                        <Button variant="ghost" size="sm" className="text-foreground hover:text-primary" onClick={() => hubId && navigate(`/projects/${hubId}`)}>Projetos</Button>
-                        <a href="/Authentication/OAuth/Logout" className="text-xs text-muted-foreground hover:text-primary px-2">Sair</a>
-                    </nav>
-                </header>
-
-                <div className="w-full max-w-screen-2xl mx-auto px-6">
-                    <Breadcrumbs
-                        path={[
-                            { id: 'dashboard', name: 'Contas' },
-                            { id: hubId ? `projects/${hubId}` : 'projects', name: 'Projetos' },
-                            ...displayPath
-                        ]}
-                        onPathClick={(itemId, index) => {
-                            if (index === 0) navigate('/dashboard');
-                            else if (index === 1 && hubId) navigate(`/projects/${hubId}`);
-                            else if (index > 1 && projectId && hubId) navigate(`/projetos/${projectId}/conteudo/${itemId}?hubId=${hubId}`, { state: { projectName: projectName } });
-                        }}
-                        className="mb-6"
-                    />
-
-                    <div className="flex items-center justify-between mb-8">
-                        <h1 className="text-3xl font-bold text-foreground">{currentFolderName}</h1>
-                        <div className="flex gap-2 flex-wrap justify-end">
-                            <Button onClick={() => setIsPlaceholderModalOpen(true)} variant="outline">
-                                <FilePlus2 className="mr-2 h-4 w-4" /> Criar Placeholders
-                            </Button>
-
-                            {/* 👇 NOVO BOTÃO DE AUDITORIA */}
-                            <Button 
-                                onClick={handleAuditClick} 
-                                disabled={isAuditing} 
-                                variant="secondary" 
-                                className="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600/30 border border-yellow-600/50"
-                            >
-                                <SearchCheck className="mr-2 h-4 w-4" /> 
-                                {isAuditing ? "Auditando..." : "Auditar (ACC vs LDP)"}
-                            </Button>
-                            
-                            <Button onClick={handleSyncClick} disabled={isSyncing}>
-                                {isSyncing ? "Sincronizando..." : "Sincronizar LDP"}
-                            </Button>
-                            <Button onClick={handleUpdateFromDbClick} disabled={isUpdatingFromDb} variant="secondary">
-                                {isUpdatingFromDb ? "Atualizando..." : "Atualizar LDP do Banco"}
-                            </Button>
-                            <Button onClick={handleInstallWebhook} variant="outline" size="icon" title="Instalar Webhook">
-                                <span className="sr-only">Webhook</span>
-                                ⚙️
-                            </Button>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <p className="text-muted-foreground text-center py-10">A carregar conteúdo...</p>
-                    ) : (
-                        <ElegantTable
-                            data={content}
-                            onFolderClick={handleFolderClick}
-                            onDownloadClick={handleDownloadClick}
-                            onVersionsClick={handleVersionsClick}
-                        />
-                    )}
-                </div>
-            </div>
-        </AnimatedBackground>
+  const handleFolderClick = (newFolderId: string) => {
+    navigate(
+      `/projetos/${projectId}/conteudo/${newFolderId}?hubId=${actualHubId}`,
+      { state: { projectName, hubId: actualHubId } }
     );
+  };
+
+  // Ferramentas antigas (Auditar, Sync LDP, SQL Server, Placeholders, Webhook) saíram da INTERFACE desta tela, focada em
+  // pastas/documentos/download/versões/upload. Os endpoints do DataController e os modais em components/ continuam existindo.
+
+  // Breadcrumb VISUAL: começa em "Project Files" (sem "Contas"/"Projetos", sem duplicar a raiz). IDs reais preservados.
+  const displayPath = useMemo(() => trilhaVisivel(folderPath), [folderPath]);
+  const protecao = useProtecaoPasta(actualHubId, dbProjectId, folderId);
+
+  const currentFolderName = displayPath.length > 0 ? displayPath[displayPath.length - 1].name : (loading ? "Carregando..." : "Arquivos");
+
+  return (
+    // Só o shell do N&A Connect (header/sidebar globais): sem o cabeçalho antigo (logo, Contas, Projetos, Sair).
+    <div className="space-y-4 animate-enter">
+      <VersionHistoryModal isOpen={versionModal.isOpen} projectId={projectId ?? ""} itemId={versionModal.itemId} itemName={versionModal.itemName} onClose={() => setVersionModal(prev => ({ ...prev, isOpen: false }))} />
+          <div className="min-w-0 space-y-1">
+              {/* Nome COMPLETO do projeto (sem reticências; quebra de linha controlada se precisar). */}
+              <p className="break-words text-sm font-black uppercase tracking-tight text-primary">{projectName}</p>
+              <Breadcrumbs
+                path={displayPath}
+                onPathClick={(itemId) => {
+                  if (projectId && actualHubId) navigate(`/projetos/${projectId}/conteudo/${itemId}?hubId=${actualHubId}`, { state: { projectName, hubId: actualHubId } });
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                 <FolderOpen className="h-6 w-6 flex-shrink-0 text-primary" />
+                 <h1 className="min-w-0 break-words text-2xl font-black uppercase italic tracking-tighter text-foreground">{currentFolderName}</h1>
+              </div>
+          </div>
+
+          {/* Envio governado pela LDP DENTRO da pasta aberta (arrastar/soltar ou "Enviar arquivos"); key = pasta → fila zera ao trocar de pasta. */}
+          <EnvioNaPasta key={folderId} hubId={actualHubId ?? ""} projectId={dbProjectId} nomeProjeto={projectName} folderId={folderId ?? ""}
+            caminho={caminhoDaPasta(displayPath)} podeEnviar={podeEnviar && !!actualHubId && !!folderId} protegida={protecao}
+            onEnviados={() => void fetchData()}>
+          {loading ? <div className="py-20 text-center animate-pulse text-[10px] font-black uppercase text-primary tracking-widest italic">Conectando...</div> :
+            <ElegantTable
+                data={content}
+                onFolderClick={handleFolderClick}
+                onDownloadClick={handleDownloadClick} // ✅ Agora trata IDs vazios
+                onVersionsClick={(id, name) => setVersionModal({ isOpen: true, itemId: id, itemName: name })}
+            />
+          }
+          </EnvioNaPasta>
+    </div>
+  );
 }

@@ -1,0 +1,6 @@
+{
+  "status": "READ_ONLY_AUDIT_FAILED",
+  "at": "2026-09-19T16:49:52.9616848+00:00",
+  "errorType": "SqlException",
+  "sqlNumber": 0
+}

@@ -1,0 +1,14 @@
+export { default as PlantResumoPage } from "./PlantResumoPage";
+export { default as PlantFaseResultadoPage } from "./PlantFaseResultadoPage";
+export { default as PlantCatalogoPage } from "./PlantCatalogoPage";
+export { default as PlantCriteriosPage } from "./PlantCriteriosPage";
+export { default as PlantGeneralPage } from "./PlantGeneralPage";
+export { default as PlantPhasePage } from "./PlantPhasePage";
+export { default as PlantInventoryPage } from "./PlantInventoryPage";
+export { default as PlantAuditPage } from "./PlantAuditPage";
+export { default as PlantQualityPage } from "./PlantQualityPage";
+export { default as PlantConsistencyPage } from "./PlantConsistencyPage";
+export { default as PlantReportsCenterPage } from "./PlantReportsCenterPage";
+export { default as PlantReportConfigPage } from "./PlantReportConfigPage";
+export { default as PlantPhaseBiPage } from "./PlantPhaseBiPage";
+export { default as Plant4DPage } from "./Plant4DPage";

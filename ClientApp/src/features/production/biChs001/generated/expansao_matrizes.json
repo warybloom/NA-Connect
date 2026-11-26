@@ -1,0 +1,154 @@
+{
+ "8e01a472a4d77433153d": {
+  "niveis": [
+   "WBX.Level 4",
+   "WBX.Level 5",
+   "WBX.Level 6",
+   "WBX.Level 7"
+  ],
+  "recolhidoPorPadrao": [
+   true,
+   true,
+   true,
+   true
+  ],
+  "abertos": [
+   [
+    " BML REFERENCE INFORMATION SUBMISSION"
+   ],
+   [
+    "  ENGINEERING",
+    "MECHANICAL",
+    "LOD 450 INGOTE 3D MODEL",
+    "Preparation"
+   ],
+   [
+    "Engineering - 60%"
+   ],
+   [
+    "Engineering - 60%",
+    "Mechanical",
+    "List"
+   ],
+   [
+    "Engineering - 60%",
+    "Mechanical",
+    "Mechanical Design Criteria"
+   ],
+   [
+    "Engineering - 60%",
+    "Mechanical",
+    "Technical Specification"
+   ],
+   [
+    "Engineering - 60%",
+    "Infrastrcutre"
+   ],
+   [
+    "Engineering - 60%",
+    "Infrastrcutre",
+    "Infrastrcutre Design Citeria"
+   ],
+   [
+    "Engineering - 60%",
+    "Infrastrcutre",
+    "List"
+   ]
+  ]
+ },
+ "485db311e7e38517d3a1": {
+  "niveis": [
+   "WBX.Level 4",
+   "WBX.Level 5",
+   "WBX.Level 6",
+   "WBX.Level 7"
+  ],
+  "recolhidoPorPadrao": [
+   true,
+   true,
+   true,
+   true
+  ],
+  "abertos": [
+   [
+    " BML REFERENCE INFORMATION SUBMISSION"
+   ],
+   [
+    "  ENGINEERING",
+    "MECHANICAL",
+    "LOD 450 INGOTE 3D MODEL",
+    "Preparation"
+   ],
+   [
+    "Engineering - 90%"
+   ],
+   [
+    "Engineering - 90%",
+    "Instrumentation"
+   ],
+   [
+    "Engineering - 90%",
+    "Instrumentation",
+    "Instrumentation Plans"
+   ]
+  ]
+ },
+ "e13e021c8d738fd3a09a": {
+  "niveis": [
+   "WBX.Level 4",
+   "WBX.Level 5",
+   "WBX.Level 6",
+   "WBX.Level 7"
+  ],
+  "recolhidoPorPadrao": [
+   true,
+   true,
+   true,
+   true
+  ],
+  "abertos": [
+   [
+    " BML REFERENCE INFORMATION SUBMISSION"
+   ],
+   [
+    "Engineering - 30%"
+   ],
+   [
+    "Engineering - 30%",
+    "Mechanical"
+   ],
+   [
+    "Engineering - 30%",
+    "Piping"
+   ]
+  ]
+ },
+ "48adb2e2db6a126e6823": {
+  "niveis": [
+   "WBX.Level 4",
+   "WBX.Level 5",
+   "WBX.Level 6",
+   "WBX.Level 7"
+  ],
+  "recolhidoPorPadrao": [
+   true,
+   true,
+   true,
+   true
+  ],
+  "abertos": [
+   [
+    " BML REFERENCE INFORMATION SUBMISSION"
+   ],
+   [
+    "  ENGINEERING",
+    "MECHANICAL",
+    "LOD 450 INGOTE 3D MODEL",
+    "Preparation"
+   ],
+   [
+    "Engineering - 30%"
+   ]
+  ]
+ }
+}

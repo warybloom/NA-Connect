@@ -20,7 +20,7 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ path, onPathClick, className }: BreadcrumbsProps) {
   return (
-    <nav className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}>
+    <nav aria-label="Caminho da pasta" className={cn("flex flex-wrap items-center gap-2 text-sm text-muted-foreground min-w-0", className)}>
       {path.map((item, index) => {
         // Verifica se é o último item da lista
         const isLast = index === path.length - 1;
@@ -28,12 +28,12 @@ export function Breadcrumbs({ path, onPathClick, className }: BreadcrumbsProps) 
         return (
           <Fragment key={item.id}>
             {/* Adiciona o separador "/" antes de cada item, exceto o primeiro */}
-            {index > 0 && <ChevronRight className="h-4 w-4" />}
+            {index > 0 && <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0" />}
 
-            <span
+            <button type="button" disabled={isLast} aria-current={isLast ? 'page' : undefined}
               onClick={() => !isLast && onPathClick(item.id, index)}
               className={cn(
-                "hover:text-primary",
+                "hover:text-primary break-all text-left",
                 {
                   "text-foreground font-medium": isLast, // Estilo diferente para o item atual
                   "cursor-pointer": !isLast,           // Cursor de link para itens clicáveis
@@ -41,7 +41,7 @@ export function Breadcrumbs({ path, onPathClick, className }: BreadcrumbsProps) 
               )}
             >
               {item.name}
-            </span>
+            </button>
           </Fragment>
         );
       })}

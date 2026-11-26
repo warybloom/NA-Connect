@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>NA_Connect.OperationalAudit.Cli</RootNamespace>
+    <AssemblyName>NA_Connect.OperationalAudit.Cli</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Checkpoint 4 (seção 3): nunca duplica regras/runner/classification/repository — consome tudo de
+         Services\OperationalAudit\ via referência de projeto, igual aos projetos de teste. -->
+    <ProjectReference Include="..\..\AccIntegration.WebApp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.Data.SqlClient não é referenciado aqui de propósito: vem transitivamente da
+         ProjectReference (AccIntegration.WebApp -> EF Core SqlServer) — nunca uma segunda versão divergente
+         da mesma dependência. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('appsettings.Development.json')" />
+  </ItemGroup>
+
+</Project>
