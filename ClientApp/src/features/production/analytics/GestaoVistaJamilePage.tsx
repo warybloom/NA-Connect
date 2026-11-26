@@ -295,6 +295,10 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
  // Indeterminado permanece neutro (cinza), sem inventar situacao.
  const estadoKpis=carregando?"indeterminada":t.situacao;
  const classeKpis="gv-kpi-situacao-"+estadoKpis;
+ const aderenciaReal=saldo&&vg.documentos>0?100*saldo.emitidos/vg.documentos:null;
+ const classeAderencia=saldo?(saldo.saldo>0?"gv-kpi-situacao-adiantada":saldo.saldo<0?"gv-kpi-situacao-atrasada":"gv-kpi-situacao-no-prazo"):classeKpis;
+ const aEmitirReal=saldo?Math.max(0,vg.documentos-saldo.emitidos):vg.aEmitir;
+ const notaAderenciaReal=saldo?String(saldo.emitidos)+" emitidos / "+String(vg.documentos)+" programados; saldo "+(saldo.saldo>=0?"+":"")+String(saldo.saldo):null;
  const dicaEstadoKpis="Situação consolidada da programação: "+ROTULO_SITUACAO[estadoKpis]+". Ambos os percentuais seguem a mesma cor; hoje ainda está no prazo, atraso anterior tem prioridade sobre antecipação. ";
  const notaKpi=(texto:string,alerta=false)=>alerta?texto:<span className="gv-tile-nota-neutra">{texto}</span>;
  const notaAderencia=!m.corte?notaKpi("semana futura"):!t.meta?notaKpi(`nenhum previsto até ${br(m.corte).slice(0,5)}`)
@@ -321,43 +325,14 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
       :`Documentos programados com emissao comprovada ate ${br(m.corteRealizado)}.`}/>
    <Tile title="EM ATRASO" value={carregando?"…":String(vg.atrasados)}
     dica={ateAtraso?`Mesmo backlog do %DESVIO: ${t.desvio} documento(s) com data prevista até ${ateAtraso} sem emissão comprovada até ${br(m.corteRealizado)}.`:"Semana futura: nada em atraso."}/>
-   <Tile title="A EMITIR" value={carregando?"…":String(vg.aEmitir)}
-    dica={`Documentos da meta semanal que ainda nao tem emissao comprovada na propria coorte programada. Excedentes de outras coortes nao apagam pendencias individuais.`}
-    nota={!carregando&&semProva?`inclui ${vg.semComprovacao} s/ comprov.`:undefined}/>
-   <Tile title="%ADERÊNCIA À PROGRAMAÇÃO" className={classeKpis} value={carregando?"…":percent(vg.aderencia)} dica={dicaEstadoKpis+dicaAderencia} nota={carregando?undefined:notaAderencia}/>
+   <Tile title="A EMITIR" value={carregando?"—":String(aEmitirReal)}
+    dica={saldo?"Saldo líquido a emitir: máximo entre zero e documentos programados menos documentos emitidos nesta semana. Pendências por disciplina continuam visíveis nos gráficos.":"Documentos da programação da semana ainda não emitidos."}/>
+   <Tile title="%ADERÊNCIA À PROGRAMAÇÃO" className={classeAderencia}
+    value={carregando?"—":saldo?percent(aderenciaReal):percent(vg.aderencia)}
+    dica={saldo?"Aderência de produção semanal = documentos emitidos / documentos programados. Crédito positivo permitido acima de 100%.":dicaEstadoKpis+dicaAderencia}
+    nota={carregando?undefined:notaAderenciaReal??notaAderencia}/>
    <Tile title="%DESVIO DA PROGRAMAÇÃO" className={classeKpis} value={carregando?"…":percent(vg.desvio)} dica={dicaEstadoKpis+dicaDesvio} nota={carregando?undefined:notaDesvio}/>
   </div>
-  {saldo&&<p className="gv-rule" data-testid="gv-vg-saldo-positivo">
-   <b>SALDO POR DISCIPLINA:</b> {vg.documentos} programados; {saldo.emitidos} documentos com status de emissao valido;
-   saldo liquido {saldo.saldo>=0?"+":""}{saldo.saldo}. Excedentes por disciplina:
-   {saldo.porDisciplina.filter(d=>d.saldo>0).map(d=>`${rotuloVisaoGeral(cat,d.disciplina)} +${d.saldo}`).join("; ")||"nenhum"}.
-   <small>Somente documentos com status validado pelo planejamento e Emission_Date dentro da semana selecionada entram no credito. Os valores por disciplina podem ultrapassar 100%.</small>
-  </p>}
-  {!carregando&&<p className="gv-rule" data-testid="gv-vg-total-importado">Total do histórico da programação importada: {carregandoTotal?"carregando...":totalImportadoDistinto+" documento(s) distinto(s)"}; semana selecionada: {vg.documentos} documento(s) distinto(s). Status configurados como emissão no histórico da programação: {carregandoTotal?"carregando...":historicoPorStatus+" documento(s) distinto(s)"}. A diferença decorre do período; documentos de outras semanas não entram nos indicadores semanais.</p>}
-  {!carregandoTotal&&documentosHistoricoStatus.length>0&&<details className="gv-rule" data-testid="gv-vg-historico-status">
-   <summary style={{cursor:"pointer"}}>Conferir {documentosHistoricoStatus.length} documento(s) da programação com status válido de emissão no histórico (clique para listar os códigos)</summary>
-   <div style={{maxHeight:300,overflowY:"auto"}}>
-    <table style={{width:"100%",textAlign:"left"}}>
-     <thead><tr><th>Projeto</th><th>Número do documento</th><th>Status</th><th>Data prevista</th></tr></thead>
-     <tbody>{documentosHistoricoStatus.map(d=><tr key={d.projectId+"::"+d.codigo}>
-      <td>{selection.find(x=>x.id===d.projectId)?.name??d.projectId}</td>
-      <td>{d.codigo}</td><td>{d.status}</td><td>{br(d.data)}</td>
-     </tr>)}</tbody>
-    </table>
-   </div>
-   <small>Esta lista identifica status na programação histórica, não comprova a data de emissão no corte de uma semana.</small>
-  </details>}
-  {!carregando&&<p className="gv-rule" data-testid="gv-vg-auditoria-fonte">
-   Auditoria da importação: {auditoriaFonte.registros} linha(s) válidas no projeto;
-   {auditoriaFonte.foraSemana} linha(s) com data fora da semana selecionada ({br(semana.start)} a {br(semana.end)});
-   {auditoriaFonte.semData} sem data prevista; {auditoriaFonte.at} atividade(s) AT excluídas;
-   {semCodigoNaSemana} linha(s) da semana sem código; {vg.repetidos} repetição(ões) deduplicadas.
-   Estes valores são linhas de atividade, não documentos únicos; os programados da semana não dependem do status de emissão.
-  </p>}
-  {!carregando&&vg.documentos>0&&<p className="gv-rule" data-testid="gv-vg-contagem">{vg.documentos} documento(s) distinto(s) (projeto + código) (somente documentos; DOC4 diferente de AT)
-   {vg.repetidos>0&&<>; {vg.repetidos} registro(s) repetido(s) da importação contado(s) uma vez</>}.
-   {" "}Conciliação com a LDP até {br(m.corteRealizado)}: {vg.emitidos} emitido(s), {vg.pendentes} não emitido(s){semProva&&<>, <b>{vg.semComprovacao} sem comprovação</b> ({vg.motivos.map(m=>`${m.motivo}: ${m.quantidade}`).join("; ")})</>}.
-   {(t.indeterminadosMeta>0||t.indeterminados>0)&&<> Aderência/desvio indeterminados (—): há documento sem comprovação de emissão na coorte avaliada.</>}</p>}
   <div className="gv-overview">
    <Section title="EVOLUÇÃO DIÁRIA DA PROGRAMAÇÃO" cls="gv-ov-evolution">
     <Legend items={[["gv-dot-sky","Documentos programados no dia"],["gv-dot-navy","Emitidos"]]}/>
@@ -392,21 +367,13 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
       gridTemplateRows:`repeat(${gradeGauges.linhas},minmax(0,1fr))`}}>{visiveis.map(x=><Gauge key={x.chave} title={x.nome}
       value={saldoDisciplinas.get(x.chave)?.percentual??x.meta.realizadoPct}
       fracao={saldoDisciplinas.get(x.chave)?`${saldoDisciplinas.get(x.chave)!.emitidos} de ${x.documentos}`:`${x.meta.realizados} de ${x.meta.documentos}`}
-      meta={{pct:x.meta.metaPct,texto:textoMeta(x.meta),dica:dicaMeta(x.nome,x.meta)}} nota={notaGauge(x.meta)} situacao={x.meta.situacao}
+      meta={{pct:x.meta.metaPct,texto:textoMeta(x.meta),dica:dicaMeta(x.nome,x.meta)}} nota={notaGauge(x.meta)} situacao={(saldoDisciplinas.get(x.chave)?.saldo??0)>0?"adiantada":x.meta.situacao}
       detail={saldoDisciplinas.get(x.chave)?`Emitidos na semana com status valido: ${saldoDisciplinas.get(x.chave)!.emitidos}; programados: ${x.documentos}; saldo ${saldoDisciplinas.get(x.chave)!.saldo>=0?"+":""}${saldoDisciplinas.get(x.chave)!.saldo}. Aderencia e desvio permanecem calculados sobre a coorte semanal.`:`${dicaSituacao(x.meta)} · ${dicaMeta(x.nome,x.meta)}`}/>)}</div>:<Empty>Sem programação na semana.</Empty>}
     {paginas>1&&<div className="gv-pager"><button disabled={pagina<=0} onClick={()=>setPagina(p=>p-1)} aria-label="Página anterior"><ChevronLeft size={14}/></button>
      <span>{Math.min(pagina,paginas-1)+1}/{paginas}</span>
      <button disabled={pagina>=paginas-1} onClick={()=>setPagina(p=>p+1)} aria-label="Próxima página"><ChevronRight size={14}/></button></div>}
    </Section>
   </div>
-  <p className="gv-rule">Fonte: programação semanal (mesma da 02. PROGRAMAÇÃO), semana domingo–sábado. Documento = projeto + código
-   (várias atividades do mesmo documento contam uma vez; atividade AT ou sem código fica fora da 01), na data prevista de emissão (atividade de
-   emissão na tarefa ou, sem ela, a última atividade do documento na semana). Emitido = emissão oficial da LDP do mesmo projeto e código (status
-   aprovado ou data de emissão) até {br(m.corteRealizado)}{m.estado==="concluida"?" (fechamento da semana)":""}. Aderência = previstos até {m.corte?br(m.corte):"—"} emitidos ÷ previstos
-   até {m.corte?br(m.corte):"—"}. Desvio e em atraso = mesmo backlog: previstos até {m.corteAtraso?br(m.corteAtraso):"—"}{m.estado==="corrente"?" (antes de hoje)":""} ainda não emitidos, cada documento
-   uma vez. A emitir = programados − emitidos. Meta acumulada (marca vermelha): {m.corte?`${corteTxt} (Bahia)`:"semana futura: meta zero"}.
-   Cor do arco: vermelho = documento vencido não emitido (prioridade); verde = documento futuro já emitido; azul = no prazo; cinza = sem comprovação suficiente.
-   Sem comprovação = indeterminado (—), nunca atraso. Sem fases ou gates.</p>
  </>;
 }
 

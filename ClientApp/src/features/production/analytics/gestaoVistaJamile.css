@@ -371,6 +371,7 @@
 .gv-gauge-alvo polygon{fill:var(--gv-alvo);stroke:var(--gv-gauge-bg);stroke-width:1.2;stroke-linejoin:round}
 /* Cor do arco pela situação (no prazo = azul padrão). A seta da meta continua SEMPRE vermelha (--gv-alvo). */
 .gv-gauge-com-meta.gv-gauge-sit-adiantada .gv-gauge-fill{stroke:var(--gv-sit-adiantada)}
+.gv-gauge-com-meta.gv-gauge-sit-adiantada .gv-gauge-over-label{fill:var(--gv-sit-adiantada)}
 .gv-gauge-com-meta.gv-gauge-sit-adiantada .gv-gauge-track{stroke:var(--gv-sit-adiantada-faixa)}
 .gv-gauge-com-meta.gv-gauge-sit-no-prazo .gv-gauge-track{stroke:var(--gv-sit-no-prazo-faixa)}
 .gv-gauge-com-meta.gv-gauge-sit-atrasada .gv-gauge-fill{stroke:var(--gv-sit-atrasada)}
