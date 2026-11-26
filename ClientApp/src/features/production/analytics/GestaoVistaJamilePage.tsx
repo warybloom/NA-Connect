@@ -97,7 +97,7 @@ interface MetaGauge{pct:number|null;texto:string;dica:string}
  *  Com `meta` (só 01): seta vermelha da meta na mesma escala e fração; nenhum texto de meta/desvio visível (ficam no tooltip/aria);
  *  embaixo, só a nota discreta "N s/ comprov.". Com `situacao` (só 01): cor do arco — adiantada verde, no prazo azul, atrasada
  *  vermelho, indeterminada cinza (a faixa de fundo ganha um tom da mesma cor para a situação aparecer também com 0%). */
-export function Gauge({title,value,detail,fracao,meta,nota,situacao}:{title:string;value:number|null;detail?:string;fracao?:string;meta?:MetaGauge;nota?:string;
+export function Gauge({title,value,detail,fracao,meta,nota,situacao,valorAlternativo}:{title:string;value:number|null;detail?:string;fracao?:string;meta?:MetaGauge;nota?:string;valorAlternativo?:string;
  situacao?:SituacaoDisciplina}){
  const v=typeof value==="number"&&Number.isFinite(value)?value:null;
  const fill=v===null?0:Math.max(0,Math.min(100,v));
@@ -115,7 +115,7 @@ export function Gauge({title,value,detail,fracao,meta,nota,situacao}:{title:stri
     <line className="gv-gauge-alvo-halo" x1={marca.x1} y1={marca.y1} x2={marca.x2} y2={marca.y2}/>
     <line x1={marca.x1} y1={marca.y1} x2={marca.x2} y2={marca.y2}/><polygon points={marca.seta}/></g>}
    {/* Com meta (01): percentual menor e alguns px acima, longe do arco e da marca; fração menor logo abaixo. */}
-   <text x="100" y={meta?87:92} textAnchor="middle" className="gv-gauge-value">{percent(v)}</text>
+   <text x="100" y={meta?87:92} textAnchor="middle" className="gv-gauge-value">{valorAlternativo??percent(v)}</text>
    {fracao&&<text x="100" y={meta?109:116} textAnchor="middle" className="gv-gauge-fracao" data-testid="gv-gauge-fracao">{fracao}</text>}
    {excedido&&<text x="100" y="62" textAnchor="middle" className="gv-gauge-over-label">ACIMA DE 100%</text>}
    <text x="20" y="118" textAnchor="middle" className="gv-gauge-end">0,0%</text>
@@ -255,8 +255,14 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
        planned:0,actual:d.emitidos,title:`Sem meta nesta semana; ${d.emitidos} emitidos com status válido; saldo +${d.emitidos}.`}))
  ];
  const [pagina,setPagina]=useState(0);
- const paginas=Math.max(1,Math.ceil(vg.porDisciplina.length/GAUGES_POR_PAGINA));
- const visiveis=vg.porDisciplina.slice(Math.min(pagina,paginas-1)*GAUGES_POR_PAGINA,(Math.min(pagina,paginas-1)+1)*GAUGES_POR_PAGINA);
+ const disciplinasGauges=[
+  ...vg.porDisciplina,
+  ...[...saldoDisciplinas.values()]
+   .filter(d=>d.emitidos>0&&!vg.porDisciplina.some(x=>x.chave===d.disciplina))
+   .map(d=>({chave:d.disciplina,nome:rotuloVisaoGeral(cat,d.disciplina),documentos:0,meta:null as null}))
+ ];
+ const paginas=Math.max(1,Math.ceil(disciplinasGauges.length/GAUGES_POR_PAGINA));
+ const visiveis=disciplinasGauges.slice(Math.min(pagina,paginas-1)*GAUGES_POR_PAGINA,(Math.min(pagina,paginas-1)+1)*GAUGES_POR_PAGINA);
  const gradeGauges=gradeDosGauges(visiveis.length);
  const vizinhas=semanasVizinhasComProgramacao(dados.flatMap(d=>d.datasComProgramacao.map(x=>x.data)),semana);
  const semProva=vg.semComprovacao>0;
@@ -287,7 +293,7 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
   :x.situacao==="adiantada"?`${x.antecipados} documento(s) previsto(s) para depois de ${br(m.corteRealizado)} já emitido(s); nenhum vencido em aberto`
   :`nenhum documento vencido em aberto${ateAtraso?"":" (nenhum dia anterior a avaliar)"} e nenhum antecipado; previsto para hoje e não emitido continua no prazo`;
  const dicaSituacao=(x:MetaNoCorte)=>`Situação: ${ROTULO_SITUACAO[x.situacao]} — corte ${corteSituacao} (Bahia) · ${motivoSituacao(x)}`;
- const situacoesVistas=new Set(visiveis.map(x=>x.meta.situacao));
+ const situacoesVistas=new Set(visiveis.map(x=>(saldoDisciplinas.get(x.chave)?.saldo??0)>0?"adiantada":x.meta?.situacao??"indeterminada"));
  // Cartões %ADERÊNCIA / %DESVIO: nota curta com a fração da coorte, ou o motivo do "—" (coorte vazia / indeterminado).
  const t=m.total;
  // Ambos os percentuais recebem o MESMO estado consolidado: vermelho se ha atraso
@@ -363,12 +369,17 @@ export function Overview({reports,dados,selection,semana,cat,carregando,onSemana
      </span>
     </div>}
     {/* Grade pelo número de gauges da página: até 4 = 2 colunas; 5–10 = 3 colunas (gauges maiores que 2 × 5 na TV). Paginação de 10 mantida. */}
-    {porDisc.length?<div className="gv-gauge-grid" style={{gridTemplateColumns:`repeat(${gradeGauges.colunas},minmax(0,1fr))`,
+    {disciplinasGauges.length?<div className="gv-gauge-grid" style={{gridTemplateColumns:`repeat(${gradeGauges.colunas},minmax(0,1fr))`,
       gridTemplateRows:`repeat(${gradeGauges.linhas},minmax(0,1fr))`}}>{visiveis.map(x=><Gauge key={x.chave} title={x.nome}
-      value={saldoDisciplinas.get(x.chave)?.percentual??x.meta.realizadoPct}
-      fracao={saldoDisciplinas.get(x.chave)?`${saldoDisciplinas.get(x.chave)!.emitidos} de ${x.documentos}`:`${x.meta.realizados} de ${x.meta.documentos}`}
-      meta={{pct:x.meta.metaPct,texto:textoMeta(x.meta),dica:dicaMeta(x.nome,x.meta)}} nota={notaGauge(x.meta)} situacao={(saldoDisciplinas.get(x.chave)?.saldo??0)>0?"adiantada":x.meta.situacao}
-      detail={saldoDisciplinas.get(x.chave)?`Emitidos na semana com status valido: ${saldoDisciplinas.get(x.chave)!.emitidos}; programados: ${x.documentos}; saldo ${saldoDisciplinas.get(x.chave)!.saldo>=0?"+":""}${saldoDisciplinas.get(x.chave)!.saldo}. Aderencia e desvio permanecem calculados sobre a coorte semanal.`:`${dicaSituacao(x.meta)} · ${dicaMeta(x.nome,x.meta)}`}/>)}</div>:<Empty>Sem programação na semana.</Empty>}
+      valorAlternativo={!x.documentos&&saldoDisciplinas.get(x.chave)?.emitidos?`+${saldoDisciplinas.get(x.chave)!.emitidos}`:undefined}
+      value={!x.documentos&&saldoDisciplinas.get(x.chave)?.emitidos?100:saldoDisciplinas.get(x.chave)?.percentual??x.meta?.realizadoPct??null}
+      fracao={saldoDisciplinas.get(x.chave)
+        ?x.documentos===0?`+${saldoDisciplinas.get(x.chave)!.emitidos} antecipados`:`${saldoDisciplinas.get(x.chave)!.emitidos} de ${x.documentos}`
+        :x.meta?`${x.meta.realizados} de ${x.meta.documentos}`:undefined}
+      meta={x.meta?{pct:x.meta.metaPct,texto:textoMeta(x.meta),dica:dicaMeta(x.nome,x.meta)}:{pct:null,texto:"Sem meta semanal",dica:"Sem documentos programados nesta semana; saldo positivo por emissoes antecipadas."}}
+      nota={x.meta?notaGauge(x.meta):undefined}
+      situacao={(saldoDisciplinas.get(x.chave)?.saldo??0)>0?"adiantada":x.meta?.situacao}
+      detail={saldoDisciplinas.get(x.chave)?`Emitidos na semana com status valido: ${saldoDisciplinas.get(x.chave)!.emitidos}; programados: ${x.documentos}; saldo ${saldoDisciplinas.get(x.chave)!.saldo>=0?"+":""}${saldoDisciplinas.get(x.chave)!.saldo}. Aderencia e desvio permanecem calculados sobre a coorte semanal.`:x.meta?`${dicaSituacao(x.meta)} · ${dicaMeta(x.nome,x.meta)}`:"Sem meta semanal."}/>)}</div>:<Empty>Sem programação na semana.</Empty>}
     {paginas>1&&<div className="gv-pager"><button disabled={pagina<=0} onClick={()=>setPagina(p=>p-1)} aria-label="Página anterior"><ChevronLeft size={14}/></button>
      <span>{Math.min(pagina,paginas-1)+1}/{paginas}</span>
      <button disabled={pagina>=paginas-1} onClick={()=>setPagina(p=>p+1)} aria-label="Próxima página"><ChevronRight size={14}/></button></div>}
